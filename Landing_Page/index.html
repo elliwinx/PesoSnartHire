@@ -25,7 +25,13 @@
         </div>
         <nav class="nav">
           <a href="#services" class="nav-link">SERVICES</a>
-          <a href="#" class="nav-link login-btn">ADMIN LOG IN</a>
+          <!--The ADMIN LOG IN should have modal structure.-->
+          <a
+            href="#"
+            class="nav-link login-btn"
+            data-modal-target="adminLoginModal"
+            >ADMIN LOG IN</a
+          >
         </nav>
       </div>
     </header>
@@ -52,8 +58,12 @@
             directly through a secure and trusted system.
           </p>
           <div class="hero-buttons">
-            <button class="btn btn-primary">APPLICANT</button>
-            <button class="btn btn-secondary">EMPLOYER</button>
+            <button class="btn btn-primary" data-modal-target="applicantModal">
+              APPLICANT
+            </button>
+            <button class="btn btn-secondary" data-modal-target="employerModal">
+              EMPLOYER
+            </button>
           </div>
         </div>
       </div>
@@ -179,5 +189,154 @@
         </div>
       </div>
     </footer>
+
+    <!-- Modal Structure for ADMIN LOG IN -->
+    <div id="adminLoginModal" class="modal">
+      <div class="modal-content">
+        <span class="closeBtn" data-modal-close>&times;</span>
+        <h1>ADMIN LOG IN</h1>
+        <form id="adminLoginForm">
+          <!--<label for="adminID">Admin ID</label>-->
+          <input
+            type="text"
+            id="adminID"
+            name="adminID"
+            placeholder="Admin ID"
+          />
+
+          <!--<label for="adminEmail">Email</label>-->
+          <input
+            type="email"
+            id="adminEmail"
+            name="adminEmail"
+            placeholder="Email"
+          />
+
+          <!--<label for="adminPassword">Password</label>-->
+          <input
+            type="password"
+            id="adminPassword"
+            name="adminPassword"
+            placeholder="Password"
+            required
+          />
+
+          <button type="submit">Log In</button>
+
+          <a href="#" class="forgot-password">Forgot Password?</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Structure for APPLICANT-->
+    <div id="applicantModal" class="modal">
+      <div class="modal-content">
+        <span class="closeBtn" data-modal-close>&times;</span>
+        <h1>APPLICANT LOG IN</h1>
+        <form id="adminLoginForm">
+          <!--<label for="applicantID">Applicant ID</label>-->
+          <input
+            type="text"
+            id="applicantID"
+            name="applicantID"
+            placeholder="Applicant ID"
+          />
+
+          <!--<label for="applicantEmail">Email</label>-->
+          <input
+            type="email"
+            id="applicantEmail"
+            name="applicantEmail"
+            placeholder="Email"
+          />
+
+          <!--<label for="applicantPhoneNumber">Phone Number</label>-->
+          <input
+            type="tel"
+            id="applicantPhoneNumber"
+            name="applicantPhoneNumber"
+            placeholder="Phone Number"
+          />
+
+          <!--<label for="applicantPassword">Password</label>-->
+          <input
+            type="password"
+            id="applicantPassword"
+            name="applicantPassword"
+            placeholder="Password"
+            required
+          />
+
+          <button type="submit">Log In</button>
+
+          <a href="#" class="forgot-password">Forgot Password?</a>
+
+          <div class="separator-line"></div>
+
+          <button
+            onclick="window.location.href='applicantRegistration.html'"
+            class="register-btn"
+          >
+            Register
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Structure for EMPLOYER-->
+    <div id="employerModal" class="modal">
+      <div class="modal-content">
+        <span class="closeBtn" data-modal-close>&times;</span>
+        <h1>EMPLOYER LOG IN</h1>
+        <form id="adminLoginForm">
+          <!--<label for="employerID">Employer ID</label>-->
+          <input
+            type="text"
+            id="employerID"
+            name="employerID"
+            placeholder="Employer ID"
+          />
+
+          <!--<label for="employerEmail">Email</label>-->
+          <input
+            type="email"
+            id="employerEmail"
+            name="employerEmail"
+            placeholder="Email"
+          />
+
+          <!--<label for="employerPhoneNumber">Phone Number</label>-->
+          <input
+            type="tel"
+            id="employerPhoneNumber"
+            name="employerPhoneNumber"
+            placeholder="Phone Number"
+          />
+
+          <!--<label for="employerPassword">Password</label>-->
+          <input
+            type="password"
+            id="employerPassword"
+            name="employerPassword"
+            placeholder="Password"
+            required
+          />
+
+          <button type="submit">Log In</button>
+
+          <a href="#" class="forgot-password">Forgot Password?</a>
+
+          <div class="separator-line"></div>
+
+          <button
+            onclick="window.location.href='employerRegistration.html'"
+            class="register-btn"
+          >
+            Register
+          </button>
+        </form>
+      </div>
+    </div>
+    <script src="script.js"></script>
   </body>
 </html>
