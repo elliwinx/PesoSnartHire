@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PESO SmartHire - Job Vacancies</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f9f9f9;
+      color: #333;
+    }
+
+    .hero {
+    background: url('bg_img.png') center/cover no-repeat;
+    color: white;
+    }
+
+    header {
+    background: transparent;
+    padding: 0.8rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    }
+
+    .logo img {
+    height: 55px;
+    width: auto;
+    display: block;
+    }
+
+    header nav a {
+    margin-left: 25px;
+    text-decoration: none;
+    color: black;
+    font-size: 0.95rem;
+    transition: color 0.2s ease;
+    }
+
+    header nav a:hover {
+    color: #ffcc00; /* highlight color */
+    }
+
+    .welcome {
+    padding: 3rem 2rem;
+    text-align: left;
+    }
+
+    .welcome h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: black;
+    }
+
+    .welcome p {
+    font-size: 1.2rem;
+    color: black;
+    }
+
+    .container {
+      padding: 2rem;
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .search-filter {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-filter input, .search-filter select {
+      padding: 0.7rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 48%;
+    }
+
+    .job-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .job-card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .job-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .job-header img {
+      height: 40px;
+      object-fit: contain;
+    }
+
+    .badge {
+      background: #00703c;
+      color: white;
+      font-size: 0.8rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 12px;
+    }
+
+    .job-card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .job-card p {
+      font-size: 0.9rem;
+      color: #666;
+      margin: 0.2rem 0;
+    }
+
+    .job-actions {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .btn-details {
+      background: #f1f1f1;
+      color: #333;
+    }
+
+    .btn-apply {
+      background: #00703c;
+      color: white;
+    }
+
+    footer {
+      margin-top: 3rem;
+      padding: 2rem;
+      background: #222;
+      color: #bbb;
+      text-align: center;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="hero">
+    <header>
+        <div class="logo"><img src="peso_logo.png" alt="PESO Logo"></div>
+        <nav>
+        <a href="#">Home</a>  
+        <a href="#">Real-Time Information</a>
+        <a href="#">Applications</a>
+        <a href="#">Account & Security</a>
+        <a href="#">Log Out</a>
+        </nav>
+    </header>
+
+    <section class="welcome">
+        <h1>Welcome, Juan!</h1>
+        <p>Here’s what we have today</p>
+    </section>
+    </div>
+
+  <!-- Job Vacancies -->
+  <section class="container">
+    <h2>Available Job Vacancies</h2> <br>
+    <p>Bringing Applicants and Employers with Trust – Find opportunities <br> perfect for fresh graduates and experienced hires.</p> <br>
+
+    <div class="search-filter">
+      <input type="text" placeholder="Search a job"> 
+      <select>
+        <option>Filter</option>
+        <option>Newest</option>
+        <option>Location</option>
+        <option>Company</option>
+      </select>
+    </div>
+
+    <div class="job-grid">
+      <!-- Job Card Example -->
+      <div class="job-card">
+        <div>
+          <div class="job-header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4e/McDonald%27s_Golden_Arches.svg" alt="Logo">
+            <span class="badge">Active</span>
+          </div>
+          <h3>Service Crew</h3>
+          <p><strong>McDonald's</strong></p>
+          <p>Location: Manila</p>
+        </div>
+        <div class="job-actions">
+          <button class="btn btn-details">Details</button>
+          <button class="btn btn-apply">Apply</button>
+        </div>
+      </div>
+
+      <div class="job-card">
+        <div>
+          <div class="job-header">
+            <img src="https://1000logos.net/wp-content/uploads/2017/03/Nestle-Logo.png" alt="Logo">
+            <span class="badge">Active</span>
+          </div>
+          <h3>Production Operator</h3>
+          <p><strong>Nestlé</strong></p>
+          <p>Location: Laguna</p>
+        </div>
+        <div class="job-actions">
+          <button class="btn btn-details">Details</button>
+          <button class="btn btn-apply">Apply</button>
+        </div>
+      </div>
+
+      <!-- Add more job cards here... -->
+    </div>
+  </section>
+
+  <footer>
+    <p>PESO SmartHire © 2025 | Development Team</p>
+  </footer>
+
+  <script>
+    // Example JS: Search filter functionality
+    const searchInput = document.querySelector('.search-filter input');
+    const jobCards = document.querySelectorAll('.job-card');
+
+    searchInput.addEventListener('input', function() {
+      const query = this.value.toLowerCase();
+      jobCards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+  </script>
+</body>
+</html>

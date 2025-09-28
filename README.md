@@ -12,8 +12,3 @@ PESO SmartHire is a web-based recruitment management system that connects applic
 - Backend: PHP  
 - Database: MySQL  
 - Version Control: Git & GitHub  
-
-## Installation  
-1. Clone the repository:  
-   ```bash
-   git clone https://github.com/yourusername/peso-smarthire.git
