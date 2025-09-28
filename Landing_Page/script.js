@@ -82,3 +82,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // Show quick summary by default
   document.getElementById("quick-summary").style.display = "block";
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const checkbox = document.getElementById("agree");
+  const proceedBtn = document.querySelector(".proceed-btn");
+
+  // Initially disable the button
+  proceedBtn.disabled = true;
+
+  checkbox.addEventListener("change", () => {
+    proceedBtn.disabled = !checkbox.checked;
+  });
+});

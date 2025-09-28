@@ -135,4 +135,71 @@ body {
   background-color: #d9e5ee;
   padding: 20px;
   border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.agreement {
+  background: #7b1113;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: left;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.agreement input[type="checkbox"] {
+  transform: scale(1.5);
+  margin-right: 10px;
+  cursor: pointer;
+  accent-color: white; /* makes the checkmark white */
+}
+
+.agreement label {
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.submit-button {
+  text-align: right;
+}
+
+.proceed-btn {
+  background-color: #7b1113;
+  color: white;
+  border: none;
+  padding: 15px;
+  font-size: 1.2rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 20px;
+  justify-content: right;
+  border-radius: 10px;
+}
+
+.proceed-btn:disabled {
+  background-color: grey;
+  cursor: not-allowed;
+}
+
+.proceed-btn:hover:enabled {
+  background-color: white;
+  color: #7b1113;
+  border-radius: 10px;
+  border: 1px solid #7b1113;
+}
+
+.general {
+  font-weight: bold;
+  margin-top: 15px;
+  margin-bottom: 5px;
+}
+
+.specific {
+  margin-left: 30px;
+  margin-bottom: 10px;
 }
