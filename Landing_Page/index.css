@@ -404,7 +404,7 @@ body {
 
 .modal-content input:focus {
   outline: none;
-  border-color: #006341;
+  border: 1px solid #006341;
 }
 
 .modal-content button[type="submit"] {
