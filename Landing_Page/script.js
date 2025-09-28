@@ -59,3 +59,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const buttons = document.querySelectorAll(".tab-btn");
+  const contents = document.querySelectorAll(".content");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      // Hide all content
+      contents.forEach((c) => (c.style.display = "none"));
+
+      // Show target content
+      const targetId = btn.getAttribute("data-target");
+      document.getElementById(targetId).style.display = "block";
+
+      // Update active button
+      buttons.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+
+  // Show quick summary by default
+  document.getElementById("quick-summary").style.display = "block";
+});
