@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Terms and Conditions</title>
+    <title>Applicant Registration</title>
     <link rel="stylesheet" href="registration.css" />
     <link
       rel="stylesheet"
@@ -32,33 +32,42 @@
       </div>
       <div class="form-proper">
         <form id="applicantRegistrationForm" action="" method="post">
+          <!-- Names -->
           <div class="three-columns">
-            <label for="applicantLastName">Last Name</label>
-            <input
-              type="text"
-              id="applicantLastName"
-              name="applicantLastName"
-              placeholder="Last Name"
-              required
-            />
-            <label for="applicantFirstName">First Name</label>
-            <input
-              type="text"
-              id="applicantFirstName"
-              name="applicantFirstName"
-              placeholder="First Name"
-              required
-            />
-            <label for="applicantMiddleName">Middle Name</label>
-            <input
-              type="text"
-              id="applicantMiddleName"
-              name="applicantMiddleName"
-              placeholder="Middle Name"
-            />
+            <div class="form-group">
+              <label for="applicantLastName">Last Name</label>
+              <input
+                type="text"
+                id="applicantLastName"
+                name="applicantLastName"
+                placeholder="Last Name"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="applicantFirstName">First Name</label>
+              <input
+                type="text"
+                id="applicantFirstName"
+                name="applicantFirstName"
+                placeholder="First Name"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="applicantMiddleName">Middle Name</label>
+              <input
+                type="text"
+                id="applicantMiddleName"
+                name="applicantMiddleName"
+                placeholder="Middle Name"
+              />
+            </div>
           </div>
-          <div class="four columns">
-            <div class="one-of-two">
+
+          <!-- Age, Sex, Phone, Email -->
+          <div class="four-columns">
+            <div class="form-group">
               <label for="applicantAge">Age</label>
               <input
                 type="number"
@@ -67,26 +76,324 @@
                 placeholder="Age"
                 required
               />
+            </div>
+            <div class="form-group">
               <label for="applicantSex">Sex</label>
-              <select name="applicantSex" required>
+              <select id="applicantSex" name="applicantSex" required>
+                <option value="">Select Sex</option>
                 <option value="Male">Male</option>
                 <option value="Female">Female</option>
               </select>
             </div>
-            <div class="two-of-two"></div>
+            <div class="form-group">
+              <label for="applicantPhoneNumber">Phone Number</label>
+              <input
+                type="tel"
+                id="applicantPhoneNumber"
+                name="applicantPhoneNumber"
+                placeholder="Phone Number"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="applicantEmailAddress">Email Address</label>
+              <input
+                type="email"
+                id="applicantEmailAddress"
+                name="applicantEmailAddress"
+                placeholder="Email Address"
+                required
+              />
+            </div>
           </div>
-          <div class="three-columns"></div>
-          <div class="one-column"></div>
-          <div class="two columns"></div>
-          <div class="two columns"></div>
-          <div class="one-column"></div>
-          <div class="two columns"></div>
+
+          <!-- Checkbox -->
+          <div class="checkbox-group">
+            <label for="fromLipa">
+              <input type="checkbox" id="fromLipa" name="fromLipa" />
+              I am from Lipa City, Batangas
+            </label>
+          </div>
+
+          <!-- Province, City, Barangay -->
+          <div class="three-columns">
+            <div class="form-group">
+              <label for="applicantProvince">Province</label>
+              <select id="applicantProvince" name="applicantProvince" required>
+                <option value="">Select Province</option>
+                <option value="Batangas">Batangas</option>
+                <option value="Cavite">Cavite</option>
+                <option value="Quezon">Quezon</option>
+                <option value="Laguna">Laguna</option>
+                <option value="Rizal">Rizal</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="applicantCity">Municipality/City</label>
+              <select id="applicantCity" name="applicantCity" required>
+                <option value="">Select City</option>
+                <option value="Lipa City">Lipa City</option>
+              </select>
+              <input
+                type="text"
+                id="applicantCityText"
+                name="applicantCityText"
+                placeholder="Enter your city"
+                style="display: none"
+              />
+            </div>
+            <div class="form-group">
+              <label for="applicantBarangay">Barangay</label>
+              <select id="applicantBarangay" name="applicantBarangay" required>
+                <option value="">Select Barangay</option>
+              </select>
+              <input
+                type="text"
+                id="applicantBarangayText"
+                name="applicantBarangayText"
+                placeholder="Enter your barangay"
+                style="display: none"
+              />
+            </div>
+          </div>
+
+          <!-- Educational Attainment -->
+          <div class="form-group full-width">
+            <label for="applicantEducationalAttainment"
+              >Educational Attainment</label
+            >
+            <select
+              id="applicantEducationalAttainment"
+              name="applicantEducationalAttainment"
+              required
+            >
+              <option value="">Select Educational Attainment</option>
+              <option value="No-Grade-Completed">No Grade Completed</option>
+              <option value="Elementary-Level">Elementary Level</option>
+              <option value="Elementary-Graduate">Elementary Graduate</option>
+              <option value="Junior-High-School-Undergraduate-(K-12)">
+                Junior High School Undergraduate (K-12)
+              </option>
+              <option value="Junior-High-School-Graduate-(K-12)">
+                Junior High School Graduate (K-12)
+              </option>
+              <option value="Senior-High-School-Undergraduate-(K-12)">
+                Senior High School Undergraduate (K-12)
+              </option>
+              <option value="Senior-High-School-Graduate-(K-12)">
+                Senior High School Graduate (K-12)
+              </option>
+              <option
+                value="High-School-Undergraduate-(pre-K-12-usually-age-30+)"
+              >
+                High School Undergraduate (pre-K-12, usually age 30+)
+              </option>
+              <option value="High-School-Graduate-(pre-K-12-usually-age-30+)">
+                High School Graduate (pre-K-12, usually age 30+)
+              </option>
+              <option value="Alternative-Learning-System">
+                Alternative Learning System
+              </option>
+              <option value="Vocational-Level">Vocational Level</option>
+              <option value="Vocational-Graduate">Vocational Graduate</option>
+              <option value="College-Level">College Level</option>
+              <option value="College-Graduate">College Graduate</option>
+              <option value="Some-Masteral-Units">Some Masteral Units</option>
+              <option value="Master's-Degree-Holder">
+                Master's Degree Holder
+              </option>
+              <option value="Some-Doctorate-Units">Some Doctorate Units</option>
+              <option value="Doctorate-Degree-Holder">
+                Doctorate Degree Holder
+              </option>
+            </select>
+          </div>
+
+          <!-- PWD -->
+          <div class="checkbox-group full-width">
+            <label for="pwd">
+              <input type="checkbox" id="pwd" name="pwd" />
+              I identify as a Person with Disability
+            </label>
+          </div>
+          <div id="pwdSpecification" style="display: none">
+            <div class="form-group-checkbox">
+              <label for="applicantIsPWD">If yes, please specify</label>
+              <select id="applicantIsPWD" name="applicantIsPWD">
+                <option value="">Select Disability Type</option>
+                <option value="Visual-Disability">Visual Disability</option>
+                <option value="Hearing-Disability">Hearing Disability</option>
+                <option value="Speech/Communication-Disability">
+                  Speech/Communication Disability
+                </option>
+                <option value="Physical-Disability/Orthopedic-Disability">
+                  Physical Disability / Orthopedic Disability
+                </option>
+                <option value="Intellectual-Disability">
+                  Intellectual Disability
+                </option>
+                <option value="Learning-Disability">Learning Disability</option>
+                <option value="Psychosocial-Disability">
+                  Psychosocial Disability
+                </option>
+                <option value="Chronic-Illness">Chronic Illness</option>
+                <option value="Multiple-Disabilities">
+                  Multiple Disabilities
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Work Experience -->
+          <div class="checkbox-group full-width">
+            <label for="workExperience">
+              <input
+                type="checkbox"
+                id="workExperience"
+                name="workExperience"
+              />
+              I have work experience
+            </label>
+          </div>
+          <div id="workExperienceDetails" style="display: none">
+            <div class="form-group-checkbox">
+              <label for="applicantHasWorkExp"
+                >If yes, please specify how long (in years)</label
+              >
+              <input
+                type="number"
+                id="applicantHasWorkExp"
+                name="applicantHasWorkExp"
+                placeholder="Years of experience"
+              />
+            </div>
+          </div>
+
+          <!-- Reason -->
+          <div class="form-group full-width">
+            <label for="applicantReason"
+              >Reason for Registering in PESO SmartHire</label
+            >
+            <select id="applicantReason" name="applicantReason" required>
+              <option value="">Select Reason</option>
+              <option value="Find-a-full-time-job">Find a full-time job</option>
+              <option value="Find-a-part-time-job">Find a part-time job</option>
+              <option value="For-OJT">For OJT</option>
+            </select>
+          </div>
+
+          <!-- File Uploads -->
+          <div class="two-columns">
+            <div class="form-group">
+              <div class="file-upload">
+                <label for="applicantProfilePic" class="file-upload-label">
+                  Upload Profile Picture (png)
+                </label>
+                <input
+                  type="file"
+                  id="applicantProfilePic"
+                  name="applicantProfilePic"
+                  accept=".png"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="file-upload">
+                <label for="applicantResume" class="file-upload-label">
+                  Upload Resume (pdf)
+                </label>
+                <input
+                  type="file"
+                  id="applicantResume"
+                  name="applicantResume"
+                  accept=".pdf"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="form-group full-width"
+            id="recommendationLetterSection"
+            style="display: none"
+          >
+            <div class="file-upload">
+              <label
+                for="applicantRecommendationLetter"
+                class="file-upload-label"
+              >
+                Upload Recommendation Letter (pdf)
+              </label>
+              <input
+                type="file"
+                id="applicantRecommendationLetter"
+                name="applicantRecommendationLetter"
+                accept=".pdf"
+              />
+            </div>
+          </div>
+
+          <div
+            class="form-group full-width"
+            id="recommendationLetterSection"
+            style="display: none"
+          >
+            <div class="form-group">
+              <div class="file-upload">
+                <label for="applicantRecommendationLetter"
+                  >Upload Recommendation Letter (pdf)</label
+                >
+                <input
+                  type="file"
+                  id="applicantRecommendationLetter"
+                  name="applicantRecommendationLetter"
+                  accept=".pdf"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Important Reminder -->
           <div class="important-reminder">
-            <div class="reminder-content"></div>
+            <h4>Important Reminder</h4>
+            <div class="reminder-content-for-lipenos" id="reminderLipenos">
+              <p>
+                Upon successful registration, a username and password will be
+                sent to your email account. It is advised to change the password
+                once logged in for security purposes.
+              </p>
+            </div>
+            <div
+              class="reminder-content-for-nonlipenos"
+              id="reminderNonLipenos"
+              style="display: none"
+            >
+              <p>
+                Non Lipenos are subjected for approval to verify the legitimacy
+                of the uploaded recommendation letter. Please be advised that
+                you will receive an email containing your username and password.
+                After successfully logging in, immediately change the password
+                for security purposes.
+              </p>
+              <p>
+                In case of needing to reupload a document(s), you will still be
+                given the proper credentials to access the Account & Security
+                section where you will reupload your document(s).
+              </p>
+            </div>
           </div>
-          <button class="applicant-registration-submit" type="submit"></button>
+
+          <!-- Submit -->
+          <div class="form-actions">
+            <button class="applicant-registration-submit-btn" type="submit">
+              Register
+            </button>
+          </div>
         </form>
       </div>
     </div>
+
+    <script src="script.js"></script>
   </body>
 </html>
