@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Terms and Conditions</title>
+    <link rel="stylesheet" href="registration.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <div class="back-button">
+      <a href="#">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+    </div>
+
+    <div class="container">
+      <div class="form-header">
+        <div class="logo">
+          <img
+            src="/PesoSnartHire/Assets/PESO_logo.png"
+            alt="PESO SmartHire Logo"
+          />
+        </div>
+        <div class="title">
+          <h1>APPLICANT ONLINE REGISTRATION</h1>
+        </div>
+      </div>
+      <div class="form-proper">
+        <form id="applicantRegistrationForm" action="" method="post">
+          <div class="three-columns">
+            <label for="applicantLastName">Last Name</label>
+            <input
+              type="text"
+              id="applicantLastName"
+              name="applicantLastName"
+              placeholder="Last Name"
+              required
+            />
+            <label for="applicantFirstName">First Name</label>
+            <input
+              type="text"
+              id="applicantFirstName"
+              name="applicantFirstName"
+              placeholder="First Name"
+              required
+            />
+            <label for="applicantMiddleName">Middle Name</label>
+            <input
+              type="text"
+              id="applicantMiddleName"
+              name="applicantMiddleName"
+              placeholder="Middle Name"
+            />
+          </div>
+          <div class="four columns">
+            <div class="one-of-two">
+              <label for="applicantAge">Age</label>
+              <input
+                type="number"
+                id="applicantAge"
+                name="applicantAge"
+                placeholder="Age"
+                required
+              />
+              <label for="applicantSex">Sex</label>
+              <select name="applicantSex" required>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+              </select>
+            </div>
+            <div class="two-of-two"></div>
+          </div>
+          <div class="three-columns"></div>
+          <div class="one-column"></div>
+          <div class="two columns"></div>
+          <div class="two columns"></div>
+          <div class="one-column"></div>
+          <div class="two columns"></div>
+          <div class="important-reminder">
+            <div class="reminder-content"></div>
+          </div>
+          <button class="applicant-registration-submit" type="submit"></button>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>
