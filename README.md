@@ -11,7 +11,7 @@ PESO SmartHire is a web-based recruitment management system that connects applic
 ## Tech Stack
 
 - Frontend: HTML, CSS, JavaScript (UI/UX in Figma)
-- Backend: PHP
+- Backend: Python
 - Database: MySQL
 - Version Control: Git & GitHub
 

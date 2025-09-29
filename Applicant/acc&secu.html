@@ -1,76 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
- <!-- Styles -->
-  <link rel="stylesheet" href="index.css"/>
-</head>
-<body>
- <!-- Header -->
-  <div class="hero">
-    <header>
-      <div class="logo"><img src="/Assets/PESO_logo.png" alt="PESO Logo"></div>
-      <nav>
-        <a href="index.html">Home</a>  
-        <a href="notif.html">Real-Time Information</a>
-        <a href="application.html">Applications</a>
-        <a href="acc&secu.html">Account & Security</a>
-        <a href="#">Log Out</a>
-      </nav>
+    <!-- Styles -->
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <div class="logo">
+          <img
+            src="/PesoSnartHire/Assets/PESO_logo.png"
+            alt="PESO SmartHire Logo"
+          />
+        </div>
+        <nav class="nav">
+          <a href="applicant_home.html" class="nav-link">Home</a>
+          <a href="notif.html" class="nav-link">Real-Time Information</a>
+          <a href="application.html" class="nav-link">Applications</a>
+          <a href="acc&secu.html" class="nav-link-active">Account & Security</a>
+          <a href="#" class="nav-link">Log Out</a>
+        </nav>
+      </div>
     </header>
-        <section class="welcome">
-      <h1>Welcome, Juan!</h1>
-      <p>Here’s what we have today</p>
+
+    <section class="hero">
+      <div class="hero-background">
+        <img
+          src="/PesoSnartHire/Assets/background.png"
+          alt="New City Hall of Lipa CIty"
+        />
+      </div>
+      <div class="hero-content">
+        <div class="container">
+          <h1 class="hero-title">Welcome</h1>
+          <!-- You can add the applicant's name here using python-->
+          <p class="hero-description">Here’s what we have today</p>
+        </div>
+      </div>
     </section>
-  </div>
 
     <!-- Container Section -->
-     <section class="container">
-    <h2>Account & Security</h2>
-    <p>Manage your profile and application history</p>
+    <section class="container">
+      <h2>Account & Security</h2>
+      <p>Manage your profile and application history</p>
     </section>
 
     <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <div class="footer-left">
-          <h3>PESO SmartHire</h3>
-          <p>Connecting talent with opportunity through innovative recruitment solutions.</p>
-          <a href="#" class="footer-note">Terms and Conditions</a>
-          <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
-        </div>
-        <div class="footer-right">
-          <h3>Development Team</h3>
-          <div class="team-member">
-            <span>Anoya, Ruffa F.</span>
-            <div class="social-links">
-              <a href="#"><i class="devicon-github-plain"></i></a>
-              <a href="#"><i class="devicon-facebook-plain"></i></a>
-              <a href="#"><i class="fa-solid fa-envelope"></i></a>
-            </div>
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-left">
+            <h3>PESO SmartHire</h3>
+            <p>
+              Connecting talent with opportunity through innovative recruitment
+              solutions.
+            </p>
+            <a href="#" class="footer-note">Terms and Conditions</a>
+            <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
           </div>
-          <div class="team-member">
-            <span>Lavita, Reymark A.</span>
-            <div class="social-links">
-              <a href="#"><i class="devicon-github-plain"></i></a>
-              <a href="#"><i class="devicon-facebook-plain"></i></a>
-              <a href="#"><i class="fa-solid fa-envelope"></i></a>
+          <div class="footer-right">
+            <h3>Development Team</h3>
+            <div class="team-member">
+              <span>Anoya, Ruffa F.</span>
+              <div class="social-links">
+                <a href="#"><i class="devicon-github-plain"></i></a>
+                <a href="#"><i class="devicon-facebook-plain"></i></a>
+                <a href="#"><i class="fa-solid fa-envelope"></i></a>
+              </div>
             </div>
-          </div>
-          <div class="team-member">
-            <span>Samonte, Ralph Matthew A.</span>
-            <div class="social-links">
-              <a href="https://github.com/RalphWreckeri2" target="_blank"><i class="devicon-github-plain"></i></a>
-              <a href="https://www.facebook.com/ralphmatthew.13" target="_blank"><i class="devicon-facebook-plain"></i></a>
-              <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"><i class="fa-solid fa-envelope"></i></a>
+            <div class="team-member">
+              <span>Lavita, Reymark A.</span>
+              <div class="social-links">
+                <a href="#"><i class="devicon-github-plain"></i></a>
+                <a href="#"><i class="devicon-facebook-plain"></i></a>
+                <a href="#"><i class="fa-solid fa-envelope"></i></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Samonte, Ralph Matthew A.</span>
+              <div class="social-links">
+                <a href="https://github.com/RalphWreckeri2" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/ralphmatthew.13"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </footer>
-</body>
+    </footer>
+  </body>
 </html>
