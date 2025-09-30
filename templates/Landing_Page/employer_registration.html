@@ -35,326 +35,282 @@
         </div>
       </div>
       <div class="form-proper">
-        <form id="applicantRegistrationForm" action="" method="post">
-          <!-- Names -->
+        <form action="#" method="POST" enctype="multipart/form-data">
+          <!-- Basic Information -->
           <div class="three-columns">
             <div class="form-group">
-              <label for="applicantLastName">Last Name</label>
+              <label for="employerName">Company Name</label>
               <input
                 type="text"
-                id="applicantLastName"
-                name="applicantLastName"
-                placeholder="Last Name"
+                id="employerName"
+                name="employerName"
+                placeholder="Company Name"
                 required
               />
             </div>
             <div class="form-group">
-              <label for="applicantFirstName">First Name</label>
-              <input
-                type="text"
-                id="applicantFirstName"
-                name="applicantFirstName"
-                placeholder="First Name"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="applicantMiddleName">Middle Name</label>
-              <input
-                type="text"
-                id="applicantMiddleName"
-                name="applicantMiddleName"
-                placeholder="Middle Name"
-              />
-            </div>
-          </div>
-
-          <!-- Age, Sex, Phone, Email -->
-          <div class="four-columns">
-            <div class="form-group">
-              <label for="applicantAge">Age</label>
-              <input
-                type="number"
-                id="applicantAge"
-                name="applicantAge"
-                placeholder="Age"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="applicantSex">Sex</label>
-              <select id="applicantSex" name="applicantSex" required>
-                <option value="">Select Sex</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
+              <label for="employerIndustry">Industry</label>
+              <select id="employerIndustry" name="employerIndustry" required>
+                <option value="">Select Industry</option>
+                <option value="Technology & IT">Technology & IT</option>
+                <option value="Finance & Insurance">Finance & Insurance</option>
+                <option value="Healthcare & Pharmaceuticals">
+                  Healthcare & Pharmaceuticals
+                </option>
+                <option value="Education">Education</option>
+                <option value="Manufacturing & Industry">
+                  Manufacturing & Industry
+                </option>
+                <option value="Retail & E-commerce">Retail & E-commerce</option>
+                <option value="Media & Entertainment">
+                  Media & Entertainment
+                </option>
+                <option value="Real Estate & Construction">
+                  Real Estate & Construction
+                </option>
+                <option value="Transportation & Logistics">
+                  Transportation & Logistics
+                </option>
+                <option value="Energy & Utilities">Energy & Utilities</option>
+                <option value="Government & Nonprofit">
+                  Government & Nonprofit
+                </option>
+                <option value="Professional Services">
+                  Professional Services
+                </option>
+                <option value="Hospitality & Travel">
+                  Hospitality & Travel
+                </option>
+                <option value="Others">Others</option>
               </select>
             </div>
             <div class="form-group">
-              <label for="applicantPhoneNumber">Phone Number</label>
+              <label for="employerRecruitment">Type of Recruitment</label>
+              <select
+                id="employerRecruitment"
+                name="employerRecruitment"
+                required
+              >
+                <option value="">Select Type</option>
+                <option value="Local">Local</option>
+                <option value="International">International</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="three-columns">
+            <div class="form-group">
+              <label for="employerContactPerson">Contact Person</label>
+              <input
+                type="text"
+                id="employerContactPerson"
+                name="employerContactPerson"
+                placeholder="Contact Person"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="employerPhoneNumber">Phone Number</label>
               <input
                 type="tel"
-                id="applicantPhoneNumber"
-                name="applicantPhoneNumber"
+                id="employerPhoneNumber"
+                name="employerPhoneNumber"
                 placeholder="Phone Number"
                 required
               />
             </div>
             <div class="form-group">
-              <label for="applicantEmailAddress">Email Address</label>
+              <label for="employerEmail">Email Address</label>
               <input
                 type="email"
-                id="applicantEmailAddress"
-                name="applicantEmailAddress"
-                placeholder="Email Address"
+                id="employerEmail"
+                name="employerEmail"
+                placeholder="Middle Name"
+              />
+            </div>
+          </div>
+
+          <!-- Address -->
+          <div class="four-columns">
+            <div class="form-group">
+              <label for="employerStreet">Street</label>
+              <input
+                type="text"
+                id="employerStreet"
+                name="employerStreet"
+                placeholder="Street"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="employerBarangay">Barangay</label>
+              <input
+                type="text"
+                id="employerBarangay"
+                name="employerBarangay"
+                placeholder="Barangay"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="employerCity">Municipality/City</label>
+              <input
+                type="text"
+                id="employerCity"
+                name="employerCity"
+                placeholder="Municipality/City"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="employerProvince">Province</label>
+              <input
+                type="text"
+                id="employerProvince"
+                name="employerProvince"
+                placeholder="Province"
                 required
               />
             </div>
           </div>
 
-          <!-- Checkbox -->
-          <div class="checkbox-group">
-            <label for="fromLipa">
-              <input type="checkbox" id="fromLipa" name="fromLipa" />
-              I am from Lipa City, Batangas
-            </label>
-          </div>
-
-          <!-- Province, City, Barangay -->
-          <div class="three-columns">
-            <div class="form-group">
-              <label for="applicantProvince">Province</label>
-              <select id="applicantProvince" name="applicantProvince" required>
-                <option value="">Select Province</option>
-                <option value="Batangas">Batangas</option>
-                <option value="Cavite">Cavite</option>
-                <option value="Quezon">Quezon</option>
-                <option value="Laguna">Laguna</option>
-                <option value="Rizal">Rizal</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="applicantCity">Municipality/City</label>
-              <select id="applicantCity" name="applicantCity" required>
-                <option value="">Select City</option>
-                <option value="Lipa City">Lipa City</option>
-              </select>
-              <input
-                type="text"
-                id="applicantCityText"
-                name="applicantCityText"
-                placeholder="Enter your city"
-                style="display: none"
-              />
-            </div>
-            <div class="form-group">
-              <label for="applicantBarangay">Barangay</label>
-              <select id="applicantBarangay" name="applicantBarangay" required>
-                <option value="">Select Barangay</option>
-              </select>
-              <input
-                type="text"
-                id="applicantBarangayText"
-                name="applicantBarangayText"
-                placeholder="Enter your barangay"
-                style="display: none"
-              />
-            </div>
-          </div>
-
-          <!-- Educational Attainment -->
-          <div class="form-group full-width">
-            <label for="applicantEducationalAttainment"
-              >Educational Attainment</label
-            >
-            <select
-              id="applicantEducationalAttainment"
-              name="applicantEducationalAttainment"
-              required
-            >
-              <option value="">Select Educational Attainment</option>
-              <option value="No-Grade-Completed">No Grade Completed</option>
-              <option value="Elementary-Level">Elementary Level</option>
-              <option value="Elementary-Graduate">Elementary Graduate</option>
-              <option value="Junior-High-School-Undergraduate-(K-12)">
-                Junior High School Undergraduate (K-12)
-              </option>
-              <option value="Junior-High-School-Graduate-(K-12)">
-                Junior High School Graduate (K-12)
-              </option>
-              <option value="Senior-High-School-Undergraduate-(K-12)">
-                Senior High School Undergraduate (K-12)
-              </option>
-              <option value="Senior-High-School-Graduate-(K-12)">
-                Senior High School Graduate (K-12)
-              </option>
-              <option
-                value="High-School-Undergraduate-(pre-K-12-usually-age-30+)"
-              >
-                High School Undergraduate (pre-K-12, usually age 30+)
-              </option>
-              <option value="High-School-Graduate-(pre-K-12-usually-age-30+)">
-                High School Graduate (pre-K-12, usually age 30+)
-              </option>
-              <option value="Alternative-Learning-System">
-                Alternative Learning System
-              </option>
-              <option value="Vocational-Level">Vocational Level</option>
-              <option value="Vocational-Graduate">Vocational Graduate</option>
-              <option value="College-Level">College Level</option>
-              <option value="College-Graduate">College Graduate</option>
-              <option value="Some-Masteral-Units">Some Masteral Units</option>
-              <option value="Master's-Degree-Holder">
-                Master's Degree Holder
-              </option>
-              <option value="Some-Doctorate-Units">Some Doctorate Units</option>
-              <option value="Doctorate-Degree-Holder">
-                Doctorate Degree Holder
-              </option>
-            </select>
-          </div>
-
-          <!-- PWD -->
-          <div class="checkbox-group full-width">
-            <label for="pwd">
-              <input type="checkbox" id="pwd" name="pwd" />
-              I identify as a Person with Disability
-            </label>
-          </div>
-          <div id="pwdSpecification" style="display: none">
-            <div class="form-group-checkbox">
-              <label for="applicantIsPWD">If yes, please specify</label>
-              <select id="applicantIsPWD" name="applicantIsPWD">
-                <option value="">Select Disability Type</option>
-                <option value="Visual-Disability">Visual Disability</option>
-                <option value="Hearing-Disability">Hearing Disability</option>
-                <option value="Speech/Communication-Disability">
-                  Speech/Communication Disability
-                </option>
-                <option value="Physical-Disability/Orthopedic-Disability">
-                  Physical Disability / Orthopedic Disability
-                </option>
-                <option value="Intellectual-Disability">
-                  Intellectual Disability
-                </option>
-                <option value="Learning-Disability">Learning Disability</option>
-                <option value="Psychosocial-Disability">
-                  Psychosocial Disability
-                </option>
-                <option value="Chronic-Illness">Chronic Illness</option>
-                <option value="Multiple-Disabilities">
-                  Multiple Disabilities
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Work Experience -->
-          <div class="checkbox-group full-width">
-            <label for="workExperience">
-              <input
-                type="checkbox"
-                id="workExperience"
-                name="workExperience"
-              />
-              I have work experience
-            </label>
-          </div>
-          <div id="workExperienceDetails" style="display: none">
-            <div class="form-group-checkbox">
-              <label for="applicantHasWorkExp"
-                >If yes, please specify how long (in years)</label
-              >
-              <select id="applicantHasWorkExp" name="applicantHasWorkExp">
-                <option value="">Select Years of Experience</option>
-                <option value="Less than 1">Less than 1 year</option>
-                <option value="1-2">1-2 years</option>
-                <option value="3-5">3-5 years</option>
-                <option value="6-10">6-10 years</option>
-                <option value="10+">More than 10 years</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Reason -->
-          <div class="form-group full-width">
-            <label for="applicantReason"
-              >Reason for Registering in PESO SmartHire</label
-            >
-            <select id="applicantReason" name="applicantReason" required>
-              <option value="">Select Reason</option>
-              <option value="Find-a-full-time-job">Find a full-time job</option>
-              <option value="Find-a-part-time-job">Find a part-time job</option>
-              <option value="For-OJT">For OJT</option>
-            </select>
-          </div>
-
-          <!-- File Uploads -->
+          <!-- File Uploads for Local Recruiters-->
           <div class="two-columns">
             <div class="form-group">
               <div class="file-upload">
-                <label for="applicantProfilePic" class="file-upload-label">
-                  Upload Profile Picture (png)
+                <label for="employerCompanyLogo" class="file-upload-label">
+                  Upload Company Logo (png)
                 </label>
                 <input
                   type="file"
-                  id="applicantProfilePic"
-                  name="applicantProfilePic"
+                  id="employerCompanyLogo"
+                  name="employerCompanyLogo"
                   accept=".png"
+                  required
                 />
               </div>
             </div>
 
             <div class="form-group">
               <div class="file-upload">
-                <label for="applicantResume" class="file-upload-label">
-                  Upload Resume (pdf)
+                <label for="employerBusinessPermit" class="file-upload-label">
+                  Upload Business Permit (pdf)
                 </label>
                 <input
                   type="file"
-                  id="applicantResume"
-                  name="applicantResume"
+                  id="employerBusinessPermit"
+                  name="employerBusinessPermit"
                   accept=".pdf"
+                  required
                 />
               </div>
             </div>
           </div>
 
-          <div
-            class="form-group full-width"
-            id="recommendationLetterSection"
-            style="display: none"
-          >
-            <div class="file-upload">
-              <label
-                for="applicantRecommendationLetter"
-                class="file-upload-label"
-              >
-                Upload Recommendation Letter (pdf)
-              </label>
-              <input
-                type="file"
-                id="applicantRecommendationLetter"
-                name="applicantRecommendationLetter"
-                accept=".pdf"
-              />
+          <div class="two-columns">
+            <div class="form-group">
+              <div class="file-upload">
+                <label
+                  for="employerDOLENoPendingCase"
+                  class="file-upload-label"
+                >
+                  Upload DOLE No Pending Case Certificate (pdf)
+                </label>
+                <input
+                  type="file"
+                  id="employerDOLENoPendingCase"
+                  name="employerDOLENoPendingCase"
+                  accept=".pdf"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="file-upload">
+                <label
+                  for="employerDOLEAuthorityToRecruit"
+                  class="file-upload-label"
+                >
+                  Upload DOLE Authority to Recruit (pdf)
+                </label>
+                <input
+                  type="file"
+                  id="employerDOLEAuthorityToRecruit"
+                  name="employerDOLEAuthorityToRecruit"
+                  accept=".pdf"
+                  required
+                />
+              </div>
             </div>
           </div>
 
-          <div
-            class="form-group full-width"
-            id="recommendationLetterSection"
-            style="display: none"
-          >
+          <div class="two-columns">
             <div class="form-group">
               <div class="file-upload">
-                <label for="applicantRecommendationLetter"
-                  >Upload Recommendation Letter (pdf)</label
+                <label
+                  for="employerPhiliobnetRegistration"
+                  class="file-upload-label"
                 >
+                  Upload Philiobnet Registration (png)
+                </label>
                 <input
                   type="file"
-                  id="applicantRecommendationLetter"
-                  name="applicantRecommendationLetter"
+                  id="employerPhiliobnetRegistration"
+                  name="employerPhiliobnetRegistration"
                   accept=".pdf"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="file-upload">
+                <label
+                  for="employerJobOrdersOfClient"
+                  class="file-upload-label"
+                >
+                  Upload Job Orders of Client/s (pdf)
+                </label>
+                <input
+                  type="file"
+                  id="employerJobOrdersOfClient"
+                  name="employerJobOrdersOfClient"
+                  accept=".pdf"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- These file uploads should appear instead of DOLE No pending Case Certificate and DOLE Authority to Recruit if the employer is an International Recruiter. -->
+          <div class="two-columns">
+            <div class="form-group">
+              <div class="file-upload">
+                <label for="employerDMWNoPendingCase" class="file-upload-label">
+                  Upload DMW - No Pending Case Certificate (pdf)
+                </label>
+                <input
+                  type="file"
+                  id="employerDMWNoPendingCase"
+                  name="employerDMWNoPendingCase"
+                  accept=".pdf"
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="file-upload">
+                <label for="employerLicenseToRecruit" class="file-upload-label">
+                  Upload DMW - License to Recruit (pdf)
+                </label>
+                <input
+                  type="file"
+                  id="employerLicenseToRecruit"
+                  name="employerLicenseToRecruit"
+                  accept=".pdf"
+                  required
                 />
               </div>
             </div>
@@ -363,24 +319,18 @@
           <!-- Important Reminder -->
           <div class="important-reminder">
             <h4>Important Reminder</h4>
-            <div class="reminder-content-for-lipenos" id="reminderLipenos">
+            <div class="reminder-content" id="reminderEmployers">
               <p>
-                Upon successful registration, a username and password will be
-                sent to your email account. It is advised to change the password
-                once logged in for security purposes.
+                Employers are subjected for approval to verify the legitimacy of
+                the uploaded documents. Please be advised that you will receive
+                an email containing your username and password. After
+                successfully logging in, immediately change the password for
+                security purposes.
               </p>
-            </div>
-            <div
-              class="reminder-content-for-nonlipenos"
-              id="reminderNonLipenos"
-              style="display: none"
-            >
               <p>
-                Non Lipenos are subjected for approval to verify the legitimacy
-                of the uploaded recommendation letter. Please be advised that
-                you will receive an email containing your username and password.
-                After successfully logging in, immediately change the password
-                for security purposes.
+                The submitted documents are only valid for three months. After
+                that, you are required to reupload your documents with the
+                updated one.
               </p>
               <p>
                 In case of needing to reupload a document(s), you will still be
@@ -392,7 +342,7 @@
 
           <!-- Submit -->
           <div class="form-actions">
-            <button class="applicant-registration-submit-btn" type="submit">
+            <button class="employer-registration-submit-btn" type="submit">
               Register
             </button>
           </div>

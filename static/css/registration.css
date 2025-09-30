@@ -269,7 +269,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .reminder-content-for-lipenos,
-.reminder-content-for-nonlipenos {
+.reminder-content-for-nonlipenos,
+.reminder-content {
   background-color: white;
   border: 2px solid #7b1113;
   border-radius: 4px;
@@ -278,7 +279,8 @@ input[type="file"]::file-selector-button:hover {
 }
 
 .reminder-content-for-lipenos p,
-.reminder-content-for-nonlipenos p {
+.reminder-content-for-nonlipenos p,
+.reminder-content p {
   color: black;
   font-size: 14px;
   margin-bottom: 10px;
@@ -291,7 +293,8 @@ input[type="file"]::file-selector-button:hover {
   padding: 15px;
 }
 
-.applicant-registration-submit-btn {
+.applicant-registration-submit-btn,
+.employer-registration-submit-btn {
   background-color: #8b0000;
   color: white;
   padding: 15px 40px;
@@ -306,13 +309,15 @@ input[type="file"]::file-selector-button:hover {
   min-width: 150px;
 }
 
-.applicant-registration-submit-btn:hover {
+.applicant-registration-submit-btn:hover,
+.employer-registration-submit-btn:hover {
   background-color: #660000;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(139, 0, 0, 0.3);
 }
 
-.applicant-registration-submit-btn:active {
+.applicant-registration-submit-btn:active,
+.employer-registration-submit-btn:active {
   transform: translateY(0);
 }
 
