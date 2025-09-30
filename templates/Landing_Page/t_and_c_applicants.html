@@ -137,23 +137,28 @@
             </p>
           </div>
         </div>
-        <div class="agreement">
-          <input type="checkbox" id="agree" name="agree" />
-          <label for="agree"
-            >I have read and agree to these terms and conditions</label
-          >
-        </div>
-        <div class="submit-button">
-          <button
-            class="proceed-btn"
-            type="button"
-            id="proceed-btn"
-            data-url="{{url_for('applicant_registration')}}"
-            disabled
-          >
-            Accept Terms and Conditions
-          </button>
-        </div>
+        <form
+          action="{{ url_for('applicants.applicants_terms') }}"
+          method="POST"
+        >
+          <div class="agreement">
+            <input
+              type="checkbox"
+              id="accepted_terms"
+              name="accepted_terms"
+              required
+            />
+            <label for="accepted_terms">
+              I have read and agree to these terms and conditions
+            </label>
+          </div>
+
+          <div class="submit-button">
+            <button class="proceed-btn" type="submit" id="proceed-btn" disabled>
+              Accept Terms and Conditions
+            </button>
+          </div>
+        </form>
         <script src="{{ url_for('static', filename='js/landing_page.js') }}"></script>
         <script src="{{ url_for('static', filename='js/button_data_url.js') }}"></script>
       </div>

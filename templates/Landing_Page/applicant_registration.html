@@ -35,7 +35,11 @@
         </div>
       </div>
       <div class="form-proper">
-        <form id="applicantRegistrationForm" action="" method="post">
+        <form
+          action="{{ url_for('applicants.register') }}"
+          method="POST"
+          enctype="multipart/form-data"
+        >
           <!-- Names -->
           <div class="three-columns">
             <div class="form-group">
@@ -300,6 +304,7 @@
                   id="applicantProfilePic"
                   name="applicantProfilePic"
                   accept=".png"
+                  required
                 />
               </div>
             </div>
@@ -314,6 +319,7 @@
                   id="applicantResume"
                   name="applicantResume"
                   accept=".pdf"
+                  required
                 />
               </div>
             </div>
@@ -337,26 +343,6 @@
                 name="applicantRecommendationLetter"
                 accept=".pdf"
               />
-            </div>
-          </div>
-
-          <div
-            class="form-group full-width"
-            id="recommendationLetterSection"
-            style="display: none"
-          >
-            <div class="form-group">
-              <div class="file-upload">
-                <label for="applicantRecommendationLetter"
-                  >Upload Recommendation Letter (pdf)</label
-                >
-                <input
-                  type="file"
-                  id="applicantRecommendationLetter"
-                  name="applicantRecommendationLetter"
-                  accept=".pdf"
-                />
-              </div>
             </div>
           </div>
 

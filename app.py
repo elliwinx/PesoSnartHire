@@ -1,8 +1,12 @@
-# C:\xampp\htdocs\PesoSnartHire\app.py
 from flask import Flask, jsonify, render_template
 from db_connection import create_connection, run_query
+from backend.applicants import applicants_bp  # import the blueprint
 
 app = Flask(__name__)
+app.secret_key = "seven-days-a-week"
+
+# Register the applicant blueprint
+app.register_blueprint(applicants_bp)
 
 
 @app.route("/")

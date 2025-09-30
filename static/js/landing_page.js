@@ -84,8 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-  const checkbox = document.getElementById("agree");
-  const proceedBtn = document.querySelector(".proceed-btn");
+  const checkbox = document.getElementById("accepted_terms");
+  const proceedBtn = document.getElementById("proceed-btn");
 
   // Initially disable the button
   proceedBtn.disabled = true;
@@ -94,8 +94,10 @@ document.addEventListener("DOMContentLoaded", () => {
     proceedBtn.disabled = !checkbox.checked;
   });
 });
+
 document.addEventListener("DOMContentLoaded", () => {
-  // Get form elements
+  // Elements (guarded)
+  const form = document.getElementById("applicantRegistrationForm");
   const fromLipaCheckbox = document.getElementById("fromLipa");
   const provinceSelect = document.getElementById("applicantProvince");
   const citySelect = document.getElementById("applicantCity");
@@ -111,6 +113,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const recommendationLetterSection = document.getElementById(
     "recommendationLetterSection"
   );
+  const recommendationInput = document.getElementById(
+    "applicantRecommendationLetter"
+  );
+  const profilePicInput = document.getElementById("applicantProfilePic");
+  const resumeInput = document.getElementById("applicantResume");
   const reminderLipenos = document.getElementById("reminderLipenos");
   const reminderNonLipenos = document.getElementById("reminderNonLipenos");
 
@@ -189,163 +196,259 @@ document.addEventListener("DOMContentLoaded", () => {
     "Tipacan",
   ];
 
-  // Function to populate barangay dropdown
   function populateBarangayDropdown(barangays) {
+    if (!barangaySelect) return;
     barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-    barangays.forEach((barangay) => {
-      const option = document.createElement("option");
-      option.value = barangay;
-      option.textContent = barangay;
-      barangaySelect.appendChild(option);
+    barangays.forEach((b) => {
+      const opt = document.createElement("option");
+      opt.value = b;
+      opt.textContent = b;
+      barangaySelect.appendChild(opt);
     });
   }
 
-  // Function to convert text to sentence case
   function toSentenceCase(str) {
     return str.toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
   }
 
-  // Handle "I am from Lipa City" checkbox
-  fromLipaCheckbox.addEventListener("change", function () {
-    if (this.checked) {
-      // Auto-populate Province and City
-      provinceSelect.value = "Batangas";
-      citySelect.value = "Lipa City";
+  // Toggle recommendation requirement + UI based on Lipa checkbox
+  function updateRecommendationRequirementFromLipa() {
+    if (!recommendationInput || !recommendationLetterSection) return;
 
-      // Ensure city dropdown is visible and text input is hidden
-      citySelect.style.display = "block";
-      cityTextInput.style.display = "none";
-      citySelect.required = true;
-      cityTextInput.required = false;
-
-      // Show barangay dropdown, hide text input
-      barangaySelect.style.display = "block";
-      barangayTextInput.style.display = "none";
-      barangaySelect.required = true;
-      barangayTextInput.required = false;
-
-      // Populate with Lipa barangays
-      populateBarangayDropdown(lipaBarangays);
-
-      // Hide recommendation letter section
+    if (fromLipaCheckbox && fromLipaCheckbox.checked) {
+      // Lipeno: hide recommendation and make NOT required
       recommendationLetterSection.style.display = "none";
-      document.getElementById("applicantRecommendationLetter").required = false;
-
-      // Show Lipenos reminder
-      reminderLipenos.style.display = "block";
-      reminderNonLipenos.style.display = "none";
+      recommendationInput.required = false;
+      // clear any previously selected file so it isn't submitted accidentally
+      try {
+        recommendationInput.value = "";
+      } catch (err) {
+        /* ignore */
+      }
+      if (reminderLipenos) reminderLipenos.style.display = "block";
+      if (reminderNonLipenos) reminderNonLipenos.style.display = "none";
     } else {
-      // Reset province and city
-      provinceSelect.value = "";
-      citySelect.value = "";
-
-      // Show text inputs for city and barangay
-      citySelect.style.display = "none";
-      cityTextInput.style.display = "block";
-      barangaySelect.style.display = "none";
-      barangayTextInput.style.display = "block";
-
-      cityTextInput.required = true;
-      citySelect.required = false;
-      barangayTextInput.required = true;
-      barangaySelect.required = false;
-
-      // Show recommendation letter section
+      // Non-Lipeno: show recommendation and make REQUIRED
       recommendationLetterSection.style.display = "block";
-      document.getElementById("applicantRecommendationLetter").required = true;
-
-      // Show Non-Lipenos reminder
-      reminderLipenos.style.display = "none";
-      reminderNonLipenos.style.display = "block";
+      recommendationInput.required = true;
+      if (reminderLipenos) reminderLipenos.style.display = "none";
+      if (reminderNonLipenos) reminderNonLipenos.style.display = "block";
     }
-  });
+  }
 
-  // Handle province change for non-Lipa residents
-  provinceSelect.addEventListener("change", function () {
-    if (!fromLipaCheckbox.checked && this.value !== "Batangas") {
-      citySelect.style.display = "none";
-      cityTextInput.style.display = "block";
-      cityTextInput.required = true;
-      citySelect.required = false;
-    } else if (!fromLipaCheckbox.checked && this.value === "Batangas") {
-      citySelect.style.display = "block";
-      cityTextInput.style.display = "none";
-      citySelect.required = true;
-      cityTextInput.required = false;
-    }
-  });
-
-  // Handle PWD checkbox
-  pwdCheckbox.addEventListener("change", function () {
-    if (this.checked) {
-      pwdSpecification.style.display = "block";
-      document.getElementById("applicantIsPWD").required = true;
-    } else {
-      pwdSpecification.style.display = "none";
-      document.getElementById("applicantIsPWD").required = false;
-      document.getElementById("applicantIsPWD").value = "";
-    }
-  });
-
-  // Handle work experience checkbox
-  workExperienceCheckbox.addEventListener("change", function () {
-    if (this.checked) {
-      workExperienceDetails.style.display = "block";
-      document.getElementById("applicantHasWorkExp").required = true;
-    } else {
-      workExperienceDetails.style.display = "none";
-      document.getElementById("applicantHasWorkExp").required = false;
-      document.getElementById("applicantHasWorkExp").value = "";
-    }
-  });
-
-  // Handle city text input formatting
-  cityTextInput.addEventListener("blur", function () {
-    if (this.value) {
-      this.value = toSentenceCase(this.value);
-    }
-  });
-
-  // Handle barangay text input formatting
-  barangayTextInput.addEventListener("blur", function () {
-    if (this.value) {
-      this.value = toSentenceCase(this.value);
-    }
-  });
-
-  // Form submission handler
-  document
-    .getElementById("applicantRegistrationForm")
-    .addEventListener("submit", function (e) {
-      e.preventDefault();
-
-      // Basic validation
-      const requiredFields = this.querySelectorAll("[required]");
-      let isValid = true;
-
-      requiredFields.forEach((field) => {
-        if (!field.value.trim()) {
-          isValid = false;
-          field.style.borderColor = "red";
-        } else {
-          field.style.borderColor = "";
+  // Handler when 'from Lipa' toggled
+  if (fromLipaCheckbox) {
+    fromLipaCheckbox.addEventListener("change", () => {
+      if (fromLipaCheckbox.checked) {
+        if (provinceSelect) provinceSelect.value = "Batangas";
+        if (citySelect) {
+          citySelect.value = "Lipa City";
+          citySelect.style.display = "block";
+          citySelect.required = true;
         }
-      });
-
-      if (!isValid) {
-        alert("Please fill in all required fields.");
-        return;
+        if (cityTextInput) {
+          cityTextInput.style.display = "none";
+          cityTextInput.required = false;
+          cityTextInput.value = "";
+        }
+        if (barangaySelect) {
+          barangaySelect.style.display = "block";
+          barangaySelect.required = true;
+          populateBarangayDropdown(lipaBarangays);
+        }
+        if (barangayTextInput) {
+          barangayTextInput.style.display = "none";
+          barangayTextInput.required = false;
+        }
+      } else {
+        // not from Lipa: allow text input for city/barangay
+        if (provinceSelect) provinceSelect.value = "";
+        if (citySelect) {
+          citySelect.style.display = "none";
+          citySelect.required = false;
+          citySelect.value = "";
+        }
+        if (cityTextInput) {
+          cityTextInput.style.display = "block";
+          cityTextInput.required = true;
+        }
+        if (barangaySelect) {
+          barangaySelect.style.display = "none";
+          barangaySelect.required = false;
+          barangaySelect.value = "";
+        }
+        if (barangayTextInput) {
+          barangayTextInput.style.display = "block";
+          barangayTextInput.required = true;
+        }
       }
 
-      // Here you would typically send the form data to your server
-      alert("Registration submitted successfully!");
-      console.log("Form data:", new FormData(this));
+      // update recommendation UI/requirement
+      updateRecommendationRequirementFromLipa();
+    });
+  }
+
+  // Province change behavior (when not Lipeno)
+  if (provinceSelect) {
+    provinceSelect.addEventListener("change", function () {
+      if (fromLipaCheckbox && fromLipaCheckbox.checked) return;
+      if (this.value === "Batangas") {
+        if (citySelect) {
+          citySelect.style.display = "block";
+          citySelect.required = true;
+          cityTextInput && (cityTextInput.style.display = "none");
+          cityTextInput && (cityTextInput.required = false);
+        }
+        if (barangaySelect) {
+          barangaySelect.style.display = "block";
+          barangaySelect.required = true;
+          populateBarangayDropdown(lipaBarangays);
+        }
+      } else {
+        if (citySelect) {
+          citySelect.style.display = "none";
+          citySelect.required = false;
+        }
+        if (cityTextInput) {
+          cityTextInput.style.display = "block";
+          cityTextInput.required = true;
+        }
+        if (barangaySelect) {
+          barangaySelect.style.display = "none";
+          barangaySelect.required = false;
+        }
+        if (barangayTextInput) {
+          barangayTextInput.style.display = "block";
+          barangayTextInput.required = true;
+        }
+      }
+    });
+  }
+
+  // PWD toggle
+  if (pwdCheckbox) {
+    pwdCheckbox.addEventListener("change", function () {
+      if (this.checked) {
+        pwdSpecification && (pwdSpecification.style.display = "block");
+        const sel = document.getElementById("applicantIsPWD");
+        if (sel) sel.required = true;
+      } else {
+        pwdSpecification && (pwdSpecification.style.display = "none");
+        const sel = document.getElementById("applicantIsPWD");
+        if (sel) {
+          sel.required = false;
+          sel.value = "";
+        }
+      }
+    });
+  }
+
+  // Work experience toggle
+  if (workExperienceCheckbox) {
+    workExperienceCheckbox.addEventListener("change", function () {
+      if (this.checked) {
+        workExperienceDetails &&
+          (workExperienceDetails.style.display = "block");
+        const sel = document.getElementById("applicantHasWorkExp");
+        if (sel) sel.required = true;
+      } else {
+        workExperienceDetails && (workExperienceDetails.style.display = "none");
+        const sel = document.getElementById("applicantHasWorkExp");
+        if (sel) {
+          sel.required = false;
+          sel.value = "";
+        }
+      }
+    });
+  }
+
+  // City/Barangay formatting
+  cityTextInput &&
+    cityTextInput.addEventListener("blur", function () {
+      if (this.value) this.value = toSentenceCase(this.value);
+    });
+  barangayTextInput &&
+    barangayTextInput.addEventListener("blur", function () {
+      if (this.value) this.value = toSentenceCase(this.value);
     });
 
-  // Initialize form state
-  // Set initial state for non-Lipa residents (recommendation letter should be visible)
-  recommendationLetterSection.style.display = "block";
-  document.getElementById("applicantRecommendationLetter").required = true;
-  reminderNonLipenos.style.display = "block";
-  reminderLipenos.style.display = "none";
+  // Initialize recommendation state on load
+  // Ensure recommendation/visibility is consistent with current checkbox/province state
+  if (fromLipaCheckbox) {
+    // run handler logic once so other UI pieces (city/barangay) are consistent too
+    // (this also calls updateRecommendationRequirementFromLipa indirectly)
+    fromLipaCheckbox.dispatchEvent(new Event("change"));
+  } else {
+    updateRecommendationRequirementFromLipa();
+  }
+
+  // === Form submit validation (client-side) ===
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      // perform client-side checks; allow form to submit if all good
+      // check required text/select fields
+      const requiredFields = form.querySelectorAll("[required]");
+      for (let i = 0; i < requiredFields.length; i++) {
+        const f = requiredFields[i];
+        // file inputs: check files length; text/select: check value
+        if (f.type === "file") {
+          if (!f.files || f.files.length === 0) {
+            alert("Please upload all required files.");
+            f.focus();
+            e.preventDefault();
+            return;
+          }
+        } else if (!f.value || !f.value.trim()) {
+          alert("Please fill in all required fields.");
+          f.focus();
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // Additional file type checks (optional but helpful)
+      if (
+        profilePicInput &&
+        profilePicInput.files &&
+        profilePicInput.files[0]
+      ) {
+        const ext = profilePicInput.files[0].name
+          .split(".")
+          .pop()
+          .toLowerCase();
+        if (ext !== "png") {
+          alert("Profile picture must be a PNG file.");
+          e.preventDefault();
+          return;
+        }
+      }
+      if (resumeInput && resumeInput.files && resumeInput.files[0]) {
+        const ext = resumeInput.files[0].name.split(".").pop().toLowerCase();
+        if (ext !== "pdf") {
+          alert("Resume must be a PDF file.");
+          e.preventDefault();
+          return;
+        }
+      }
+      if (
+        recommendationInput &&
+        recommendationInput.required &&
+        recommendationInput.files &&
+        recommendationInput.files[0]
+      ) {
+        const ext = recommendationInput.files[0].name
+          .split(".")
+          .pop()
+          .toLowerCase();
+        if (ext !== "pdf") {
+          alert("Recommendation letter must be a PDF file.");
+          e.preventDefault();
+          return;
+        }
+      }
+
+      // If everything passes, let the browser submit the form normally.
+      // Do not call e.preventDefault() here.
+    });
+  }
 });
