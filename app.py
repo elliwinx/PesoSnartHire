@@ -1,17 +1,21 @@
 from flask import Flask, jsonify, render_template
 from db_connection import create_connection, run_query
-from backend.applicants import applicants_bp  # import the blueprint
+
+# Blueprints
+from backend.applicants import applicants_bp
+from backend.employers import employers_bp
 
 app = Flask(__name__)
 app.secret_key = "seven-days-a-week"
 
-# Register the applicant blueprint
-app.register_blueprint(applicants_bp)
+# Register blueprints with prefixes
+app.register_blueprint(applicants_bp, url_prefix="/applicants")
+app.register_blueprint(employers_bp, url_prefix="/employers")
 
 
+# ===== General Routes =====
 @app.route("/")
 def home():
-    # Load Landing_Page/index.html from templates
     return render_template("Landing_Page/index.html")
 
 
@@ -35,29 +39,15 @@ def forgot_password_reset_token():
     return render_template("Forgot_Password/forgot_password_f3_token_verification.html")
 
 
+# ===== Applicant Routes (direct templates) =====
 @app.route("/applicant-registration")
 def applicant_registration():
     return render_template("Landing_Page/applicant_registration.html")
 
 
-@app.route("/employer-registration")
-def employer_registration():
-    return render_template("Landing_Page/employer_registration.html")
-
-
 @app.route("/applicant-t-and-c")
 def applicant_t_and_c():
     return render_template("Landing_Page/t_and_c_applicants.html")
-
-
-@app.route("/employer-t-and-c")
-def employer_t_and_c():
-    return render_template("Landing_Page/t_and_c_employers.html")
-
-
-@app.route("/employer/home")
-def employer_home():
-    return render_template("Employer/employer_home.html")
 
 
 @app.route("/applicant/home")
@@ -80,6 +70,14 @@ def account_security():
     return render_template("Applicant/acc&secu.html")
 
 
+# ===== Employer Routes (handled by employers_bp) =====
+# Now accessed as:
+# /employers/register
+# /employers/terms
+# /employers/home (add inside blueprint if you want)
+
+
+# ===== DB Connection Test =====
 @app.route("/dbtest")
 def dbtest():
     conn = create_connection()
