@@ -125,7 +125,7 @@
                 type="email"
                 id="employerEmail"
                 name="employerEmail"
-                placeholder="Middle Name"
+                placeholder="Email Address"
               />
             </div>
           </div>
@@ -185,7 +185,7 @@
                   type="file"
                   id="employerCompanyLogo"
                   name="employerCompanyLogo"
-                  accept=".png"
+                  accept="image/png,image/jpeg"
                   required
                 />
               </div>
@@ -207,40 +207,40 @@
             </div>
           </div>
 
-          <div class="two-columns">
-            <div class="form-group">
-              <div class="file-upload">
-                <label
-                  for="employerDOLENoPendingCase"
-                  class="file-upload-label"
-                >
-                  Upload DOLE No Pending Case Certificate (pdf)
-                </label>
-                <input
-                  type="file"
-                  id="employerDOLENoPendingCase"
-                  name="employerDOLENoPendingCase"
-                  accept=".pdf"
-                  required
-                />
+          <div class="dole-group">
+            <div class="two-columns">
+              <div class="form-group">
+                <div class="file-upload">
+                  <label
+                    for="employerDOLENoPendingCase"
+                    class="file-upload-label"
+                  >
+                    Upload DOLE - No Pending Case Certificate (pdf)
+                  </label>
+                  <input
+                    type="file"
+                    id="employerDOLENoPendingCase"
+                    name="employerDOLENoPendingCase"
+                    accept="application/pdf"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div class="form-group">
-              <div class="file-upload">
-                <label
-                  for="employerDOLEAuthorityToRecruit"
-                  class="file-upload-label"
-                >
-                  Upload DOLE Authority to Recruit (pdf)
-                </label>
-                <input
-                  type="file"
-                  id="employerDOLEAuthorityToRecruit"
-                  name="employerDOLEAuthorityToRecruit"
-                  accept=".pdf"
-                  required
-                />
+              <div class="form-group">
+                <div class="file-upload">
+                  <label
+                    for="employerDOLEAuthorityToRecruit"
+                    class="file-upload-label"
+                  >
+                    Upload DOLE - Authority to Recruit (pdf)
+                  </label>
+                  <input
+                    type="file"
+                    id="employerDOLEAuthorityToRecruit"
+                    name="employerDOLEAuthorityToRecruit"
+                    accept="application/pdf"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -252,7 +252,7 @@
                   for="employerPhiliobnetRegistration"
                   class="file-upload-label"
                 >
-                  Upload Philiobnet Registration (png)
+                  Upload Philiobnet Registration (pdf)
                 </label>
                 <input
                   type="file"
@@ -283,35 +283,41 @@
             </div>
           </div>
 
-          <!-- These file uploads should appear instead of DOLE No pending Case Certificate and DOLE Authority to Recruit if the employer is an International Recruiter. -->
-          <div class="two-columns">
-            <div class="form-group">
-              <div class="file-upload">
-                <label for="employerDMWNoPendingCase" class="file-upload-label">
-                  Upload DMW - No Pending Case Certificate (pdf)
-                </label>
-                <input
-                  type="file"
-                  id="employerDMWNoPendingCase"
-                  name="employerDMWNoPendingCase"
-                  accept=".pdf"
-                  required
-                />
+          <!-- INTERNATIONAL recruiter docs (DMW) -->
+          <div class="dmw-group" style="display: none">
+            <div class="two-columns">
+              <div class="form-group">
+                <div class="file-upload">
+                  <label
+                    for="employerDMWNoPendingCase"
+                    class="file-upload-label"
+                  >
+                    Upload DMW - No Pending Case Certificate (pdf)
+                  </label>
+                  <input
+                    type="file"
+                    id="employerDMWNoPendingCase"
+                    name="employerDMWNoPendingCase"
+                    accept="application/pdf"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div class="form-group">
-              <div class="file-upload">
-                <label for="employerLicenseToRecruit" class="file-upload-label">
-                  Upload DMW - License to Recruit (pdf)
-                </label>
-                <input
-                  type="file"
-                  id="employerLicenseToRecruit"
-                  name="employerLicenseToRecruit"
-                  accept=".pdf"
-                  required
-                />
+              <div class="form-group">
+                <div class="file-upload">
+                  <label
+                    for="employerLicenseToRecruit"
+                    class="file-upload-label"
+                  >
+                    Upload DMW - License to Recruit (pdf)
+                  </label>
+                  <input
+                    type="file"
+                    id="employerLicenseToRecruit"
+                    name="employerLicenseToRecruit"
+                    accept="application/pdf"
+                  />
+                </div>
               </div>
             </div>
           </div>

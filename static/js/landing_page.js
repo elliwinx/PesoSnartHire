@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+// T AND C QUICK SUMMARY AND FULL TERMS BUTTONS
 document.addEventListener("DOMContentLoaded", () => {
   const buttons = document.querySelectorAll(".tab-btn");
   const contents = document.querySelectorAll(".content");
@@ -80,9 +81,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Show quick summary by default
+  // T AND C JS
   document.getElementById("quick-summary").style.display = "block";
 });
 
+// T AND C JS TO ENABLE THE BUTTON ONCE CHECKBOX IS CHECKED
 document.addEventListener("DOMContentLoaded", () => {
   const checkbox = document.getElementById("accepted_terms");
   const proceedBtn = document.getElementById("proceed-btn");
@@ -95,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+//APPLICANT REGISTRATION FORM JS
 document.addEventListener("DOMContentLoaded", () => {
   // Elements (guarded)
   const form = document.getElementById("applicantRegistrationForm");
@@ -451,4 +455,26 @@ document.addEventListener("DOMContentLoaded", () => {
       // Do not call e.preventDefault() here.
     });
   }
+});
+
+//EMPLOYER REGISTRATION JS
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("employerRegistrationForm");
+  const recruitmentType = document.getElementById("employerRecruitment");
+  const doleGroup = document.querySelector(".dole-group");
+  const dmwGroup = document.querySelector(".dmw-group");
+
+  // Toggle DOLE/DMW uploads
+  recruitmentType.addEventListener("change", function () {
+    if (this.value === "Local") {
+      doleGroup.style.display = "block";
+      dmwGroup.style.display = "none";
+    } else if (this.value === "International") {
+      doleGroup.style.display = "none";
+      dmwGroup.style.display = "block";
+    } else {
+      doleGroup.style.display = "none";
+      dmwGroup.style.display = "none";
+    }
+  });
 });
