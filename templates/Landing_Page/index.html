@@ -12,14 +12,17 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <link rel="stylesheet" href="index.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/index.css') }}"
+    />
   </head>
   <body>
     <header class="header">
       <div class="container">
         <div class="logo">
           <img
-            src="/PesoSnartHire/Assets/PESO_logo.png"
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
             alt="PESO SmartHire Logo"
           />
         </div>
@@ -39,7 +42,7 @@
     <section class="hero">
       <div class="hero-background">
         <img
-          src="/PesoSnartHire/Assets/background.png"
+          src="{{ url_for('static', filename='Assets/background.png') }}"
           alt="New City Hall of Lipa CIty"
         />
       </div>
@@ -232,7 +235,7 @@
           <button type="submit">Log In</button>
 
           <a
-            href="../Forgot_Password/forgot_password_f2_email.html"
+            href="{{ url_for('forgot_password_email') }}"
             class="forgot-password"
             >Forgot Password?</a
           >
@@ -281,16 +284,15 @@
 
           <button type="submit">Log In</button>
 
-          <a
-            href="../Forgot_Password/forgot_password_f1.html"
-            class="forgot-password"
+          <a href="{{ url_for('forgot_password') }}" class="forgot-password"
             >Forgot Password?</a
           >
 
           <div class="separator-line"></div>
 
           <button
-            onclick="window.location.href='applicantRegistration.html'"
+            type="button"
+            data-url="{{url_for('applicant_t_and_c')}}"
             class="register-btn"
           >
             Register
@@ -340,16 +342,15 @@
 
           <button type="submit">Log In</button>
 
-          <a
-            href="../Forgot_Password/forgot_password_f1.html"
-            class="forgot-password"
+          <a href="{{ url_for('forgot_password') }}" class="forgot-password"
             >Forgot Password?</a
           >
 
           <div class="separator-line"></div>
 
           <button
-            onclick="window.location.href='employerRegistration.html'"
+            type="button"
+            data-url="{{url_for('employer_t_and_c')}}"
             class="register-btn"
           >
             Register
@@ -357,6 +358,7 @@
         </form>
       </div>
     </div>
-    <script src="script.js"></script>
+    <script src="{{ url_for('static', filename='js/landing_page.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/button_data_url.js') }}"></script>
   </body>
 </html>

@@ -14,7 +14,10 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
     <!-- Styles -->
-    <link rel="stylesheet" href="applicant.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/applicant.css') }}"
+    />
   </head>
   <body>
     <!-- Header -->
@@ -22,15 +25,23 @@
       <div class="container">
         <div class="logo">
           <img
-            src="/PesoSnartHire/Assets/PESO_logo.png"
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
             alt="PESO SmartHire Logo"
           />
         </div>
         <nav class="nav">
-          <a href="applicant_home.html" class="nav-link-active">Home</a>
-          <a href="notif.html" class="nav-link">Real-Time Information</a>
-          <a href="application.html" class="nav-link">Applications</a>
-          <a href="acc&secu.html" class="nav-link">Account & Security</a>
+          <a href="{{ url_for('applicant_home') }}" class="nav-link-active"
+            >Home</a
+          >
+          <a href="{{ url_for('notifications') }}" class="nav-link"
+            >Real-Time Information</a
+          >
+          <a href="{{ url_for('applications') }}" class="nav-link"
+            >Applications</a
+          >
+          <a href="{{ url_for('account_security') }}" class="nav-link"
+            >Account & Security</a
+          >
           <a href="#" class="nav-link">Log Out</a>
         </nav>
       </div>
@@ -39,7 +50,7 @@
     <section class="hero">
       <div class="hero-background">
         <img
-          src="/PesoSnartHire/Assets/background.png"
+          src="{{ url_for('static', filename='Assets/background.png') }}"
           alt="New City Hall of Lipa CIty"
         />
       </div>
@@ -128,6 +139,6 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="script.js"></script>
+    <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
   </body>
 </html>

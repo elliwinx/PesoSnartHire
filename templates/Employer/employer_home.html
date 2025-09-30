@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HOME APPLICANT</title>
+    <title>EMPLOYER - HOME</title>
     <!-- Icons -->
     <link
       rel="stylesheet"
@@ -13,8 +13,10 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Styles -->
-    <link rel="stylesheet" href="employer.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/employer.css') }}"
+    />
   </head>
   <body>
     <!-- Header -->
@@ -22,12 +24,14 @@
       <div class="container">
         <div class="logo">
           <img
-            src="/PesoSnartHire/Assets/PESO_logo.png"
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
             alt="PESO SmartHire Logo"
           />
         </div>
         <nav class="nav">
-          <a href="#" class="nav-link-active">Home</a>
+          <a href="{{url_for('employer_home')}}" class="nav-link-active"
+            >Home</a
+          >
           <a href="#" class="nav-link">Application Management</a>
           <a href="#" class="nav-link">Real-Time Notification</a>
           <a href="#" class="nav-link">Account & Security</a>
@@ -39,7 +43,7 @@
     <section class="hero">
       <div class="hero-background">
         <img
-          src="/PesoSnartHire/Assets/background.png"
+          src="{{ url_for('static', filename='Assets/background.png') }}"
           alt="New City Hall of Lipa CIty"
         />
       </div>
@@ -239,6 +243,6 @@
       </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
   </body>
 </html>

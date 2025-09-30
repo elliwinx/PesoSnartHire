@@ -4,8 +4,12 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Applicant Registration</title>
-    <link rel="stylesheet" href="registration.css" />
+    <title>Employer Registration</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/registration.css') }}"
+    />
+
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -13,7 +17,7 @@
   </head>
   <body>
     <div class="back-button">
-      <a href="#">
+      <a href="{{url_for('employer_t_and_c')}}">
         <i class="fa-solid fa-arrow-left"></i>
       </a>
     </div>
@@ -22,12 +26,12 @@
       <div class="form-header">
         <div class="logo">
           <img
-            src="/PesoSnartHire/Assets/PESO_logo.png"
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
             alt="PESO SmartHire Logo"
           />
         </div>
         <div class="title">
-          <h1>APPLICANT ONLINE REGISTRATION</h1>
+          <h1>EMPLOYER ONLINE REGISTRATION</h1>
         </div>
       </div>
       <div class="form-proper">
@@ -396,6 +400,6 @@
       </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="{{ url_for('static', filename='js/landing_page.js') }}"></script>
   </body>
 </html>

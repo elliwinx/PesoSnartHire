@@ -5,7 +5,11 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Terms and Conditions</title>
-    <link rel="stylesheet" href="t_and_c.css" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/t_and_c.css') }}"
+    />
+
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -13,7 +17,7 @@
   </head>
   <body>
     <div class="back-button">
-      <a href="#">
+      <a href="{{url_for('home')}}">
         <i class="fa-solid fa-arrow-left"></i>
       </a>
     </div>
@@ -25,7 +29,7 @@
         </div>
         <div class="title">
           <h1>Terms and Conditions</h1>
-          <p class="subtitle">Job Seeker's Registration - PESO SmartHire</p>
+          <p class="subtitle">Employer Registration - PESO SmartHire</p>
         </div>
       </div>
       <div class="form-body">
@@ -43,27 +47,24 @@
         </div>
         <div class="content-container">
           <div id="quick-summary" class="content" style="display: block">
-            <h3>Applicant - Quick T&C Summary</h3>
+            <h3>Employer – Quick T&C Summary</h3>
             <p class="quick-summary-content">
-              By registering as an applicant, you agree to:
+              By registering as an employer, you agree to:
             </p>
             <ul class="quick-summary-list">
-              <li>Provide accurate personal information and documents</li>
               <li>
-                Submit truthful applications and update your profile regularly.
+                Provide valid company registration and accurate contact info.
               </li>
               <li>
-                Respond promptly to interview requests and attend scheduled
-                appointments.
+                Post only legitimate job vacancies with clear descriptions and
+                compensation.
               </li>
+              <li>Update job status promptly and comply with labor laws.</li>
+              <li>Review applications fairly and provide timely feedback.</li>
               <li>
-                Not create multiple accounts or submit fraudulent documents.
+                Keep applicant data confidential and only use it for
+                recruitment.
               </li>
-              <li>
-                Respect employers and PESO staff, and use the system only for
-                job seeking.
-              </li>
-              <li>Keep your login credentials confidential.</li>
               <li>
                 Understand that violating these rules may result in account
                 suspension.
@@ -76,7 +77,7 @@
             </div>
           </div>
           <div id="full-terms" class="content" style="display: none">
-            <h3>Complete Terms and Conditions for Applicants</h3>
+            <h3>Complete Terms and Conditions for Employers</h3>
             <p class="full-t-and-c-notice">
               Effective Date: Upon system deployment | Last Updated: September
               2025
@@ -88,39 +89,38 @@
             </p>
             <p class="general">2. System Purpose</p>
             <p class="specific">
-              PESO SmartHire helps job seekers apply for employment
-              opportunities through the Public Employment Service Office (PESO)
-              of Lipa City.
+              PESO SmartHire helps employers post job vacancies and manage
+              applicant submissions through the Public Employment Service Office
+              (PESO) of Lipa City.
             </p>
             <p class="general">3. Registration Requirements</p>
             <ul class="registration-requirements">
-              <li>Provide accurate personal information and documents.</li>
-              <li>Keep contact information up to date.</li>
-              <li>
-                Create a secure password and keep login credentials
-                confidential.
-              </li>
+              <li>Provide valid company registration and business permits..</li>
+              <li>Submit accurate company information and contact details.</li>
+              <li>Designate authorized personnel to manage the account.</li>
+              <li>Keep company profile and job postings up to date.</li>
             </ul>
-            <p class="general">4. Application Process</p>
+            <p class="general">4. Job Posting Requirements</p>
             <ul class="application-process">
-              <li>Submit truthful and complete applications.</li>
-              <li>Update your profile regularly.</li>
-              <li>Respond promptly to interview requests.</li>
-              <li>Attend scheduled appointments and interviews on time.</li>
+              <li>Post only legitimate job opportunities.</li>
+              <li>
+                Provide clear job descriptions, requirements, and compensation.
+              </li>
+              <li>Update job status promptly when positions are filled.</li>
+              <li>Comply with labor laws and anti-discrimination policies.</li>
             </ul>
-            <p class="general">5. Prohibited Conduct</p>
+            <p class="general">5. Applicant Management</p>
             <ul class="prohibited-conduct">
-              <li>Creating multiple accounts with false information.</li>
-              <li>Submitting fraudulent documents.</li>
-              <li>Harassing employers or PESO staff.</li>
-              <li>Using the system for purposes other than job seeking.</li>
+              <li>Review applications fairly and without discrimination.</li>
+              <li>Provide timely feedback to qualified applicants.</li>
+              <li>Conduct professional interviews and assessments.</li>
+              <li>Report hiring outcomes to PESO for record-keeping.</li>
             </ul>
             <p class="general">6. Data Privacy</p>
             <p class="specific">
-              Your personal information is collected, encrypted, and stored
-              securely. Data may be shared with approved employers for
-              legitimate recruitment purposes or with DOLE for reporting. You
-              are responsible for keeping your login credentials confidential.
+              Personal information of applicants is protected and shared only
+              for recruitment purposes. Maintain confidentiality of applicant
+              data.
             </p>
             <p class="general">7. Account Suspension</p>
             <p class="specific">
@@ -129,8 +129,8 @@
             </p>
             <p class="general">8. System Limitations</p>
             <p class="specific">
-              The system only manages applications and recruitment facilitation.
-              Walk-in applicants will receive staff-assisted encoding support.
+              The system is limited to recruitment facilitation and applicant
+              management. Payroll or HR management features are not included.
             </p>
           </div>
         </div>
@@ -141,11 +141,18 @@
           >
         </div>
         <div class="submit-button">
-          <button class="proceed-btn" type="button" id="proceed-btn" disabled>
+          <button
+            class="proceed-btn"
+            type="button"
+            id="proceed-btn"
+            data-url="{{url_for('employer_registration')}}"
+            disabled
+          >
             Accept Terms and Conditions
           </button>
         </div>
-        <script src="script.js"></script>
+        <script src="{{ url_for('static', filename='js/landing_page.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/button_data_url.js') }}"></script>
       </div>
     </div>
   </body>
