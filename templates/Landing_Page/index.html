@@ -239,7 +239,7 @@
           <button type="submit">Log In</button>
 
           <a
-            href="{{ url_for('forgot_password_email') }}"
+            href="{{ url_for('forgot_password.forgot_password_email') }}"
             class="forgot-password"
             >Forgot Password?</a
           >
@@ -288,7 +288,9 @@
 
           <button type="submit">Log In</button>
 
-          <a href="{{ url_for('forgot_password') }}" class="forgot-password"
+          <a
+            href="{{ url_for('forgot_password.forgot_password') }}"
+            class="forgot-password"
             >Forgot Password?</a
           >
 
@@ -346,7 +348,9 @@
 
           <button type="submit">Log In</button>
 
-          <a href="{{ url_for('forgot_password') }}" class="forgot-password"
+          <a
+            href="{{ url_for('forgot_password.forgot_password') }}"
+            class="forgot-password"
             >Forgot Password?</a
           >
 
