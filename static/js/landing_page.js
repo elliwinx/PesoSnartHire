@@ -42,22 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
-
-  // Handle form submissions in modals
-  document.addEventListener("submit", (e) => {
-    const form = e.target;
-    const modal = form.closest(".modal");
-
-    if (modal && form.id === "adminLoginForm") {
-      e.preventDefault();
-      console.log("Admin login form submitted");
-      // Add your login logic here
-
-      // Close modal after submission
-      modal.style.display = "none";
-      document.body.style.overflow = "auto";
-    }
-  });
 });
 
 // T AND C QUICK SUMMARY AND FULL TERMS BUTTONS

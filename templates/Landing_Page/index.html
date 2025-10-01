@@ -206,7 +206,11 @@
       <div class="modal-content">
         <span class="closeBtn" data-modal-close>&times;</span>
         <h1>ADMIN LOG IN</h1>
-        <form id="adminLoginForm">
+        <form
+          id="adminLoginForm"
+          action="{{url_for('admin.login')}}"
+          method="POST"
+        >
           <!--<label for="adminID">Admin ID</label>-->
           <input
             type="text"
