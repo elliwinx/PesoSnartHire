@@ -136,7 +136,135 @@ body {
   margin: auto;
 }
 
-/*notif*/
+.content {
+  background-color: #f4f4f4;
+  padding: 2rem;
+  border-radius: 10px;
+}
+
+.two-columns {
+  display: flex;
+  gap: 20px;
+  padding: 15px;
+  align-items: flex-start; /* align inputs at the top */
+}
+
+.two-columns .form-group {
+  flex: 1; /* each takes equal space */
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+  color: #333 !important;
+  font-size: 14px !important;
+}
+
+.admin_id {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: #f8f9fa;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+input[type="email"] {
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.buttons {
+  text-align: right;
+  padding: 5px;
+}
+
+.buttons button {
+  background-color: #8b0000;
+  color: white;
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-block; /* don’t force block centering */
+  margin-top: 10px; /* just space above */
+}
+
+.buttons button:hover {
+  background-color: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+}
+
+.buttons button:active {
+  transform: translateY(0);
+}
+
+.note {
+  font-size: 10px;
+  font-style: italic;
+  padding: 0 20px;
+}
+
+.account-and-security .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.account-and-security .left {
+  flex: 1; /* stays on the left */
+}
+
+.account-and-security .right {
+  position: relative;
+  display: inline-block;
+}
+
+.right i {
+  font-size: 19px;
+  padding-top: 5px;
+}
+
+.right i:hover {
+  cursor: pointer;
+  color: #7b1113;
+}
+
+.dropdown-menu {
+  display: none; /* hidden by default */
+  position: absolute;
+  right: 0; /* aligns under the bars icon */
+  top: 30px;
+  background: #ebebeb;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 150px;
+  z-index: 1000;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px;
+  color: #333;
+  text-decoration: none;
+  text-align: center;
+}
+
+.dropdown-menu a:hover {
+  background: #7b1113;
+  color: white;
+  border-radius: 10px;
+}
 
 .container h2 {
   font-size: 2rem;

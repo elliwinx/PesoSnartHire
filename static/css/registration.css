@@ -311,9 +311,9 @@ input[type="file"]::file-selector-button:hover {
 
 .applicant-registration-submit-btn:hover,
 .employer-registration-submit-btn:hover {
-  background-color: #660000;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(139, 0, 0, 0.3);
+  background-color: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
 }
 
 .applicant-registration-submit-btn:active,

@@ -3,11 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Account & Security</title>
+    <title>ACCOUNT & SECURITY ADMIN</title>
+    <!-- Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
     <!-- Styles -->
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/applicant.css') }}"
+      href="{{ url_for('static', filename='css/admin.css') }}"
     />
   </head>
   <body>
@@ -21,17 +30,12 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{ url_for('applicants.applicant_home') }}" class="nav-link"
-            >Home</a
-          >
-          <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Real-Time Notifications</a
-          >
-          <a href="{{ url_for('applicants.applications') }}" class="nav-link"
-            >Applications</a
-          >
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
+          <a href="#" class="nav-link">Applicants Management</a>
+          <a href="#" class="nav-link">Employers Management</a>
+          <a href="#" class="nav-link">Real-Time Information</a>
           <a
-            href="{{ url_for('applicants.account_security') }}"
+            href="{{url_for('admin.account_settings')}}"
             class="nav-link-active"
             >Account & Security</a
           >
@@ -49,18 +53,74 @@
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome</h1>
-          <!-- You can add the applicant's name here using python-->
+          <h1 class="hero-title">Welcome, Administrator!</h1>
           <p class="hero-description">Here’s what we have today</p>
         </div>
       </div>
     </section>
 
-    <!-- Container Section -->
-    <section class="container">
-      <h2>Account & Security</h2>
-      <p>Manage your profile and application history</p>
+    <!-- Account and Security -->
+    <section class="account-and-security">
+      <div class="container">
+        <div class="left">
+          <h2>Account & Security</h2>
+          <p>Manage your account.</p>
+        </div>
+        <div class="right">
+          <i class="fa-solid fa-bars" id="menuToggle"></i>
+          <!--Hidden Menu-->
+          <div class="dropdown-menu" id="dropdownMenu">
+            <a href="#">Change password</a>
+          </div>
+        </div>
+      </div>
     </section>
+
+    <div class="container">
+      <div class="content">
+        <div class="two-columns">
+          <div class="form-group">
+            <label>Admin ID:</label>
+            <input
+              type="text"
+              class="admin_id"
+              value="{{ admin.admin_code }}"
+              readonly
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Email:</label>
+            <form
+              method="POST"
+              action="{{ url_for('admin.account_settings') }}"
+              id="emailForm"
+            >
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value="{{ admin.email }}"
+                readonly
+              />
+              <div class="buttons">
+                <button type="button" id="editBtn">Edit</button>
+                <button type="submit" id="saveBtn" style="display: none">
+                  Save
+                </button>
+                <button type="button" id="cancelBtn" style="display: none">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <p class="note">
+          <strong>NOTE: </strong>Only the email can be edited. Admin ID remains
+          the same for security purposes.
+        </p>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -72,7 +132,7 @@
               Connecting talent with opportunity through innovative recruitment
               solutions.
             </p>
-            <a href="#" class="footer-note">Terms and Conditions</a>
+            <a href="" class="footer-note">Terms and Conditions</a>
             <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
           </div>
           <div class="footer-right">
@@ -86,7 +146,7 @@
               </div>
             </div>
             <div class="team-member">
-              <span>Lavita, Reymark A.</span>
+              <span>Lavita, Reynmark A.</span>
               <div class="social-links">
                 <a href="#"><i class="devicon-github-plain"></i></a>
                 <a href="#"><i class="devicon-facebook-plain"></i></a>
@@ -113,5 +173,8 @@
         </div>
       </div>
     </footer>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
   </body>
 </html>

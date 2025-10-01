@@ -36,7 +36,9 @@
           <a href="#" class="nav-link">Applicants Management</a>
           <a href="#" class="nav-link">Employers Management</a>
           <a href="#" class="nav-link">Real-Time Information</a>
-          <a href="#" class="nav-link">Account & Security</a>
+          <a href="{{url_for('admin.account_settings')}}" class="nav-link"
+            >Account & Security</a
+          >
           <a href="#" class="nav-link">Log Out</a>
         </nav>
       </div>
@@ -122,6 +124,6 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
   </body>
 </html>

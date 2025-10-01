@@ -14,6 +14,74 @@ def admin_home():
     return render_template("Admin/admin_home.html")
 
 
+# ===== Admin Account & Security =====
+@admin_bp.route("/account", methods=["GET", "POST"])
+def account_settings():
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed", "danger")
+        return redirect(url_for("admin.admin_home"))
+
+    if request.method == "POST":
+        # Only allow email update
+        new_email = request.form.get("email")
+        update_query = "UPDATE admin SET email = %s WHERE admin_id = %s"
+        result = run_query(conn, update_query,
+                           (new_email, session["admin_id"]))
+        conn.close()
+
+        if result:
+            flash("Email updated successfully", "success")
+            session["admin_email"] = new_email
+        else:
+            flash("Failed to update email", "danger")
+
+        return redirect(url_for("admin.account_settings"))
+
+    # GET request → fetch current admin info
+    query = "SELECT admin_code, email FROM admin WHERE admin_id = %s"
+    result = run_query(conn, query, (session["admin_id"],), fetch=True)
+    conn.close()
+
+    admin_data = result[0] if result else None
+    return render_template("Admin/admin_acc.html", admin=admin_data)
+
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed", "danger")
+        return redirect(url_for("admin.admin_home"))
+
+    if request.method == "POST":
+        # Only allow email update
+        new_email = request.form.get("email")
+        update_query = "UPDATE admin SET email = %s WHERE admin_id = %s"
+        result = run_query(conn, update_query,
+                           (new_email, session["admin_id"]))
+        conn.close()
+
+        if result:
+            flash("Email updated successfully", "success")
+            session["admin_email"] = new_email
+        else:
+            flash("Failed to update email", "danger")
+
+        return redirect(url_for("admin.account_settings"))
+
+    # GET request → fetch current admin info
+    query = "SELECT admin_code, email FROM admin WHERE admin_id = %s"
+    result = run_query(conn, query, (session["admin_id"],), fetch=True)
+    conn.close()
+
+    admin_data = result[0] if result else None
+    return render_template("Admin/admin_acc.html", admin=admin_data)
+
+
 # ===== Admin Login =====
 @admin_bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -44,3 +112,40 @@ def login():
             flash("Invalid Admin ID or Email", "danger")
 
     return render_template("Admin/admin_login.html")
+
+
+# ===== Account & Security =====
+@admin_bp.route("/account", methods=["GET", "POST"])
+def account():
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed", "danger")
+        return redirect(url_for("admin.admin_home"))
+
+    if request.method == "POST":
+        # Only allow email update (for now)
+        new_email = request.form.get("email")
+
+        update_query = "UPDATE admin SET email = %s WHERE admin_id = %s"
+        result = run_query(conn, update_query,
+                           (new_email, session["admin_id"]))
+        conn.close()
+
+        if result:
+            flash("Email updated successfully", "success")
+            session["admin_email"] = new_email
+        else:
+            flash("Failed to update email", "danger")
+
+        return redirect(url_for("admin.account"))
+
+    # GET request → fetch current admin info
+    query = "SELECT admin_code, email FROM admin WHERE admin_id = %s"
+    result = run_query(conn, query, (session["admin_id"],), fetch=True)
+    conn.close()
+
+    admin_data = result[0] if result else None
+    return render_template("Admin/admin_account.html", admin=admin_data)
