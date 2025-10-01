@@ -26,14 +26,20 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{ url_for('applicant_home') }}" class="nav-link">Home</a>
-          <a href="{{ url_for('notifications') }}" class="nav-link-active"
-            >Real-Time Information</a
+          <a href="{{ url_for('applicants.applicant_home') }}" class="nav-link"
+            >Home</a
           >
-          <a href="{{ url_for('applications') }}" class="nav-link"
+          <a
+            href="{{ url_for('applicants.notifications') }}"
+            class="nav-link-active"
+            >Real-Time Notifications</a
+          >
+          <a href="{{ url_for('applicants.applications') }}" class="nav-link"
             >Applications</a
           >
-          <a href="{{ url_for('account_security') }}" class="nav-link"
+          <a
+            href="{{ url_for('applicants.account_security') }}"
+            class="nav-link"
             >Account & Security</a
           >
           <a href="#" class="nav-link">Log Out</a>

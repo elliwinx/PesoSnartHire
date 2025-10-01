@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HOME APPLICANT</title>
+    <title>HOME ADMIN</title>
     <!-- Icons -->
     <link
       rel="stylesheet"
@@ -16,7 +16,7 @@
     <!-- Styles -->
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/applicant.css') }}"
+      href="{{ url_for('static', filename='css/admin.css') }}"
     />
   </head>
   <body>
@@ -30,22 +30,13 @@
           />
         </div>
         <nav class="nav">
-          <a
-            href="{{ url_for('applicants.applicant_home') }}"
-            class="nav-link-active"
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link-active"
             >Home</a
           >
-          <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Real-Time Notifications</a
-          >
-          <a href="{{ url_for('applicants.applications') }}" class="nav-link"
-            >Applications</a
-          >
-          <a
-            href="{{ url_for('applicants.account_security') }}"
-            class="nav-link"
-            >Account & Security</a
-          >
+          <a href="#" class="nav-link">Applicants Management</a>
+          <a href="#" class="nav-link">Employers Management</a>
+          <a href="#" class="nav-link">Real-Time Information</a>
+          <a href="#" class="nav-link">Account & Security</a>
           <a href="#" class="nav-link">Log Out</a>
         </nav>
       </div>
@@ -60,7 +51,7 @@
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome</h1>
+          <h1 class="hero-title">Welcome, Administrator!</h1>
           <!-- You can add the applicant's name here using python-->
           <p class="hero-description">Here’s what we have today</p>
         </div>
@@ -68,25 +59,13 @@
     </section>
 
     <!-- Job Vacancies -->
-    <section class="job-vacancy">
+    <section class="analytics-dashboard">
       <div class="container">
-        <h2>Available Job Vacancies</h2>
+        <h2>PESO SmartHire - Administrative Dashboard</h2>
         <p>
-          Bringing Applicants and Employers with Trust – Find opportunities
-          <br />
-          perfect for fresh graduates and experienced hires.
+          Welcome to the administrative control center. Monitor system
+          performance, manage user, and oversee operations.
         </p>
-
-        <div class="search-filter">
-          <input type="text" placeholder="Search a job" />
-          <select>
-            <option>Filter</option>
-          </select>
-        </div>
-
-        <div class="job-grid">
-          <!-- Job Cards will be injected via script.js -->
-        </div>
       </div>
     </section>
 

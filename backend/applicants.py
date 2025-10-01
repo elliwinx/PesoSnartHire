@@ -119,3 +119,24 @@ def register():
         return redirect(url_for("applicants.register"))
 
     return render_template("Landing_Page/applicant_registration.html")
+
+
+# ===== Applicant Navigation Pages =====
+@applicants_bp.route("/home")
+def applicant_home():
+    return render_template("Applicant/applicant_home.html")
+
+
+@applicants_bp.route("/notifications")
+def notifications():
+    return render_template("Applicant/notif.html")
+
+
+@applicants_bp.route("/applications")
+def applications():
+    return render_template("Applicant/application.html")
+
+
+@applicants_bp.route("/account-security")
+def account_security():
+    return render_template("Applicant/acc&secu.html")
