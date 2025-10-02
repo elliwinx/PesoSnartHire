@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, render_template
 from db_connection import create_connection, run_query
-from extensions import mail  # ✅ import from extensions
+from extensions import mail
 
 # Blueprints
 from backend.applicants import applicants_bp

@@ -264,7 +264,11 @@
       <div class="modal-content">
         <span class="closeBtn" data-modal-close>&times;</span>
         <h1>APPLICANT LOG IN</h1>
-        <form id="adminLoginForm">
+        <form
+          id="adminLoginForm"
+          method="POST"
+          action="{{ url_for('applicants.login') }}"
+        >
           <!--<label for="applicantID">Applicant ID</label>-->
           <input
             type="text"

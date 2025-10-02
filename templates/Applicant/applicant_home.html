@@ -60,11 +60,11 @@
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome</h1>
-          <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here’s what we have today</p>
+          <h1 class="hero-title">Welcome{% if session.applicant_name %}, {{ session.applicant_name }}{% endif %}</h1>
+          <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
+    </section>
     </section>
 
     <!-- Job Vacancies -->

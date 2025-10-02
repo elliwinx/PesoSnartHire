@@ -1,6 +1,6 @@
 # backend/applicants.py
 import secrets
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from datetime import datetime
 import os
@@ -14,24 +14,7 @@ applicants_bp = Blueprint("applicants", __name__)
 UPLOAD_FOLDER = "static/uploads"
 
 
-def save_file(file, subfolder):
-    if not file:
-        return None
-    folder_path = os.path.join(UPLOAD_FOLDER, subfolder)
-    os.makedirs(folder_path, exist_ok=True)
-    filename = secure_filename(file.filename)
-    file_path = os.path.join(folder_path, filename)
-    file.save(file_path)
-    return file_path
-
-
-# backend/applicants.py
-
-applicants_bp = Blueprint("applicants", __name__)
-
-UPLOAD_FOLDER = "static/uploads"
-
-
+# ==== APPLICANT REGISTRATION ====
 def save_file(file, subfolder):
     if not file:
         return None
@@ -87,7 +70,6 @@ def register_applicant(form, files):
         # ==== Set status ====
         status = "Approved" if is_from_lipa else "Pending"
 
-        # ==== Generate temporary password ====
         temp_password_plain = secrets.token_urlsafe(8)
         password_hash = generate_password_hash(temp_password_plain)
 
@@ -134,12 +116,14 @@ def register_applicant(form, files):
             "accepted_terms_at": accepted_terms_at,
             "status": status,
             "password_hash": password_hash,
-            "temp_password": password_hash  # store hashed temp password
+            # Store plain text temp password for auditing
+            "temp_password": temp_password_plain
         }
 
         run_query(conn, query, data)
+        conn.commit()  # Commit the transaction to save data to database
 
-       # 2️⃣ Fetch the generated applicant_code
+        # Fetch the generated applicant_code
         applicant_code_row = run_query(
             conn,
             "SELECT applicant_code FROM applicants WHERE email=%s",
@@ -191,8 +175,92 @@ def register_applicant(form, files):
         conn.close()
 
 
-# ===== Routes =====
-@applicants_bp.route("/applicants/terms", methods=["GET", "POST"])
+# ==== APPLICANT LOG IN ====
+@applicants_bp.route("/login", methods=["POST"])
+def login():
+    email = request.form.get("applicantEmail")
+    applicant_id = request.form.get("applicantID")
+    phone = request.form.get("applicantPhoneNumber")
+    password = request.form.get("applicantPassword")
+
+    conn = create_connection()
+    if not conn:
+        flash("DB connection failed.", "danger")
+        return redirect(url_for("home"))
+
+    query = """
+    SELECT * FROM applicants
+    WHERE email=%s AND applicant_code=%s AND phone=%s
+    """
+    result = run_query(conn, query, (email, applicant_id, phone), fetch="one")
+
+    if not result:
+        flash("Invalid login credentials. Please check your Applicant ID, email, and phone number.", "danger")
+        conn.close()
+        return redirect(url_for("home"))
+
+    applicant = result
+
+    if applicant["status"] != "Approved":
+        flash("Your account is pending approval. Please wait for admin confirmation.", "warning")
+        conn.close()
+        return redirect(url_for("home"))
+
+    if not check_password_hash(applicant["password_hash"], password):
+        flash("Incorrect password. Please try again.", "danger")
+        conn.close()
+        return redirect(url_for("home"))
+
+    session["applicant_id"] = applicant["applicant_id"]
+    session["applicant_name"] = applicant["first_name"]
+    session["applicant_email"] = applicant["email"]
+
+    conn.close()
+    flash(f"Welcome back, {applicant['first_name']}!", "success")
+    return redirect(url_for("applicants.applicant_home"))
+
+
+@applicants_bp.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out successfully.", "success")
+    return redirect(url_for("home"))
+
+
+# ===== Applicant Navigation Pages =====
+@applicants_bp.route("/home")
+def applicant_home():
+    if "applicant_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+    return render_template("Applicant/applicant_home.html")
+
+
+@applicants_bp.route("/notifications")
+def notifications():
+    if "applicant_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+    return render_template("Applicant/notif.html")
+
+
+@applicants_bp.route("/applications")
+def applications():
+    if "applicant_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+    return render_template("Applicant/application.html")
+
+
+@applicants_bp.route("/account-security")
+def account_security():
+    if "applicant_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+    return render_template("Applicant/acc&secu.html")
+
+
+@applicants_bp.route("/terms", methods=["GET", "POST"])
 def applicants_terms():
     if request.method == "POST":
         if not request.form.get("accepted_terms"):
@@ -216,24 +284,3 @@ def register():
         return redirect(url_for("applicants.register"))
 
     return render_template("Landing_Page/applicant_registration.html")
-
-
-# ===== Applicant Navigation Pages =====
-@applicants_bp.route("/home")
-def applicant_home():
-    return render_template("Applicant/applicant_home.html")
-
-
-@applicants_bp.route("/notifications")
-def notifications():
-    return render_template("Applicant/notif.html")
-
-
-@applicants_bp.route("/applications")
-def applications():
-    return render_template("Applicant/application.html")
-
-
-@applicants_bp.route("/account-security")
-def account_security():
-    return render_template("Applicant/acc&secu.html")

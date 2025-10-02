@@ -33,7 +33,10 @@ def run_query(connection, query, params=None, fetch=None):
       - "one": return a single row (dict) or None
       - "all": return all rows (list of dicts)
     """
-    cursor = connection.cursor(dictionary=True)
+    # For SELECT queries, use buffered cursor to avoid unread result errors
+    buffered = fetch is not None
+
+    cursor = connection.cursor(dictionary=True, buffered=buffered)
     result = None
     try:
         cursor.execute(query, params or ())
