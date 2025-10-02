@@ -83,35 +83,46 @@ def account_settings():
 
 
 # ===== Admin Login =====
-@admin_bp.route("/login", methods=["GET", "POST"])
+@admin_bp.route("/login", methods=["POST"])
 def login():
-    if request.method == "POST":
-        admin_code = request.form.get("adminID")
-        email = request.form.get("adminEmail")
-        password = request.form.get("adminPassword")
+    # Get form data
+    admin_code = request.form.get("adminID")
+    email = request.form.get("adminEmail")
+    password = request.form.get("adminPassword")
 
-        conn = create_connection()
-        if not conn:
-            flash("Database connection failed", "danger")
-            return redirect(url_for("admin.login"))
+    # Validate empty fields
+    if not admin_code or not email or not password:
+        flash("Please fill in all fields.", "danger")
+        return redirect(url_for("home"))  # landing page
 
-        query = "SELECT * FROM admin WHERE admin_code = %s AND email = %s"
-        result = run_query(conn, query, (admin_code, email), fetch=True)
-        conn.close()
+    # Connect to DB
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("home"))
 
-        if result:
-            admin = result[0]
-            if check_password_hash(admin["password_hash"], password):
-                session["admin_id"] = admin["admin_id"]
-                session["admin_code"] = admin["admin_code"]
-                flash("Login successful!", "success")
-                return redirect(url_for("admin.admin_home"))
-            else:
-                flash("Invalid password", "danger")
+    # Fetch admin
+    query = "SELECT * FROM admin WHERE admin_code = %s AND email = %s"
+    result = run_query(conn, query, (admin_code, email), fetch="one")
+    conn.close()
+
+    if result:
+        # Check password hash
+        if check_password_hash(result["password_hash"], password):
+            # Login success → set session
+            session["admin_id"] = result["admin_id"]
+            session["admin_code"] = result["admin_code"]
+            session["admin_email"] = result["email"]
+
+            flash("Welcome Back Administrator!", "success")
+            return redirect(url_for("admin.admin_home"))  # admin dashboard
         else:
-            flash("Invalid Admin ID or Email", "danger")
+            flash("Invalid password.", "danger")
+    else:
+        flash("Invalid Admin ID or Email.", "danger")
 
-    return render_template("Admin/admin_login.html")
+    # On any error → go back to landing page with modal
+    return redirect(url_for("home"))
 
 
 # ===== Account & Security =====

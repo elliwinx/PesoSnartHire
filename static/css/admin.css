@@ -416,6 +416,42 @@ input[type="email"] {
   color: #7b1113;
 }
 
+.flash {
+  padding: 10px 15px;
+  margin: 10px;
+  border-radius: 5px;
+  position: fixed; /* fixed so it stays on top */
+  top: 20px; /* distance from top of screen */
+  left: 50%; /* center horizontally */
+  transform: translateX(-50%);
+  font-weight: bold;
+  z-index: 9999; /* make sure it's above everything */
+  min-width: 300px; /* optional, ensures decent width */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* optional, nice shadow */
+  text-align: center;
+}
+
+.flash.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.flash.danger {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.flash .close {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1rem;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-title {
