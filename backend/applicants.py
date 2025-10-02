@@ -186,6 +186,7 @@ def login():
     conn = create_connection()
     if not conn:
         flash("DB connection failed.", "danger")
+        session['login_error'] = True
         return redirect(url_for("home"))
 
     query = """
@@ -196,21 +197,22 @@ def login():
 
     if not result:
         flash("Invalid login credentials. Please check your Applicant ID, email, and phone number.", "danger")
-        conn.close()
+        session['login_error'] = True
         return redirect(url_for("home"))
 
     applicant = result
 
     if applicant["status"] != "Approved":
         flash("Your account is pending approval. Please wait for admin confirmation.", "warning")
-        conn.close()
+        session['login_error'] = True
         return redirect(url_for("home"))
 
     if not check_password_hash(applicant["password_hash"], password):
         flash("Incorrect password. Please try again.", "danger")
-        conn.close()
+        session['login_error'] = True
         return redirect(url_for("home"))
 
+    # Successful login
     session["applicant_id"] = applicant["applicant_id"]
     session["applicant_name"] = applicant["first_name"]
     session["applicant_email"] = applicant["email"]

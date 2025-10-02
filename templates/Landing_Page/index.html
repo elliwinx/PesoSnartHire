@@ -18,6 +18,25 @@
     />
   </head>
   <body>
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div id="flash-container">
+      {% for category, msg in messages %}
+      <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll("#flash-container .flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => flashes.forEach((f) => f.remove()), 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
+
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -264,12 +283,12 @@
       <div class="modal-content">
         <span class="closeBtn" data-modal-close>&times;</span>
         <h1>APPLICANT LOG IN</h1>
+
         <form
-          id="adminLoginForm"
+          id="applicantLoginForm"
           method="POST"
           action="{{ url_for('applicants.login') }}"
         >
-          <!--<label for="applicantID">Applicant ID</label>-->
           <input
             type="text"
             id="applicantID"
@@ -277,7 +296,6 @@
             placeholder="Applicant ID"
           />
 
-          <!--<label for="applicantEmail">Email</label>-->
           <input
             type="email"
             id="applicantEmail"
@@ -285,7 +303,6 @@
             placeholder="Email"
           />
 
-          <!--<label for="applicantPhoneNumber">Phone Number</label>-->
           <input
             type="tel"
             id="applicantPhoneNumber"
@@ -293,7 +310,6 @@
             placeholder="Phone Number"
           />
 
-          <!--<label for="applicantPassword">Password</label>-->
           <input
             type="password"
             id="applicantPassword"
@@ -309,16 +325,6 @@
             class="forgot-password"
             >Forgot Password?</a
           >
-
-          <div class="separator-line"></div>
-
-          <button
-            type="button"
-            data-url="{{url_for('applicants.applicants_terms')}}"
-            class="register-btn"
-          >
-            Register
-          </button>
         </form>
       </div>
     </div>
