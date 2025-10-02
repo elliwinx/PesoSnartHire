@@ -1,12 +1,12 @@
-# db_connection.py
-import mysql.connector
 from mysql.connector import Error
+import mysql.connector
+# db_connection.py
 
 
 def create_connection():
     """
     Create and return a database connection.
-    Update the host, user, password, and database values as needed.
+    Update host, user, password, and database as needed.
     """
     try:
         connection = mysql.connector.connect(
@@ -25,20 +25,29 @@ def create_connection():
         return None
 
 
-def run_query(connection, query, params=None, fetch=False):
+def run_query(connection, query, params=None, fetch=None):
     """
     Execute a SQL query.
-    - fetch=True returns results (for SELECT).
-    - fetch=False commits changes (for INSERT/UPDATE/DELETE).
+    fetch options:
+      - None (default): execute & commit (INSERT/UPDATE/DELETE)
+      - "one": return a single row (dict) or None
+      - "all": return all rows (list of dicts)
     """
     cursor = connection.cursor(dictionary=True)
+    result = None
     try:
         cursor.execute(query, params or ())
-        if fetch:
-            return cursor.fetchall()
+
+        if fetch == "one":
+            result = cursor.fetchone()
+        elif fetch == "all":
+            result = cursor.fetchall()
         else:
             connection.commit()
-            return cursor.rowcount
+            result = cursor.rowcount
+
+        return result
+
     except Error as e:
         print(f"❌ Error executing query: {e}")
         return None

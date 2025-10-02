@@ -17,12 +17,35 @@
   </head>
   <body>
     <div class="back-button">
-      <a href="{{url_for('applicant_t_and_c')}}">
+      <a href="{{url_for('applicants.applicants_terms')}}">
         <i class="fa-solid fa-arrow-left"></i>
       </a>
     </div>
 
     <div class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, msg in messages %}
+      <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+        {{ msg }}
+        <button class="close" onclick="this.parentElement.remove()">×</button>
+      </div>
+      {% endfor %}
+      <script>
+        // auto fade out and redirect after 3 seconds
+        setTimeout(() => {
+          const flashes = document.querySelectorAll(".flash");
+          flashes.forEach((f) => f.classList.add("fade-out"));
+          // remove from DOM after transition
+          setTimeout(() => {
+            flashes.forEach((f) => f.remove());
+            // redirect to home
+            window.location.href = "{{ url_for('home') }}";
+          }, 500);
+        }, 3000);
+      </script>
+
+      {% endif %} {% endwith %}
+
       <div class="form-header">
         <div class="logo">
           <img

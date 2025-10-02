@@ -280,35 +280,26 @@ document.addEventListener("DOMContentLoaded", () => {
   if (provinceSelect) {
     provinceSelect.addEventListener("change", function () {
       if (fromLipaCheckbox && fromLipaCheckbox.checked) return;
-      if (this.value === "Batangas") {
-        if (citySelect) {
-          citySelect.style.display = "block";
-          citySelect.required = true;
-          cityTextInput && (cityTextInput.style.display = "none");
-          cityTextInput && (cityTextInput.required = false);
-        }
-        if (barangaySelect) {
-          barangaySelect.style.display = "block";
-          barangaySelect.required = true;
-          populateBarangayDropdown(lipaBarangays);
-        }
-      } else {
-        if (citySelect) {
-          citySelect.style.display = "none";
-          citySelect.required = false;
-        }
-        if (cityTextInput) {
-          cityTextInput.style.display = "block";
-          cityTextInput.required = true;
-        }
-        if (barangaySelect) {
-          barangaySelect.style.display = "none";
-          barangaySelect.required = false;
-        }
-        if (barangayTextInput) {
-          barangayTextInput.style.display = "block";
-          barangayTextInput.required = true;
-        }
+
+      // Always show text inputs for city/barangay when NOT from Lipa
+      if (citySelect) {
+        citySelect.style.display = "none";
+        citySelect.required = false;
+        citySelect.value = "";
+      }
+      if (cityTextInput) {
+        cityTextInput.style.display = "block";
+        cityTextInput.required = true;
+      }
+
+      if (barangaySelect) {
+        barangaySelect.style.display = "none";
+        barangaySelect.required = false;
+        barangaySelect.value = "";
+      }
+      if (barangayTextInput) {
+        barangayTextInput.style.display = "block";
+        barangayTextInput.required = true;
       }
     });
   }
