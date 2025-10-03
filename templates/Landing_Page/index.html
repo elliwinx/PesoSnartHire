@@ -325,6 +325,16 @@
             class="forgot-password"
             >Forgot Password?</a
           >
+
+          <div class="separator-line"></div>
+
+          <button
+            type="button"
+            data-url="{{url_for('applicants.applicants_terms')}}"
+            class="register-btn"
+          >
+            Register
+          </button>
         </form>
       </div>
     </div>
@@ -334,7 +344,12 @@
       <div class="modal-content">
         <span class="closeBtn" data-modal-close>&times;</span>
         <h1>EMPLOYER LOG IN</h1>
-        <form id="adminLoginForm">
+        <form
+          id="employerLogInForm"
+          method="POST"
+          action="#"
+          enctype="multipart/form-data"
+        >
           <!--<label for="employerID">Employer ID</label>-->
           <input
             type="text"

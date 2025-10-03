@@ -3,8 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ACCOUNT & SECURITY ADMIN</title>
-    <!-- Icons -->
+    <title>Applicant Management</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -20,24 +19,6 @@
     />
   </head>
   <body>
-    <!--Flash of Message-->
-    {% with messages = get_flashed_messages(with_categories=true) %} {% if
-    messages %} {% for category, msg in messages %}
-    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
-      {{ msg }}
-      <button class="close" onclick="this.parentElement.remove()">×</button>
-    </div>
-    {% endfor %}
-    <script>
-      setTimeout(() => {
-        const flashes = document.querySelectorAll(".flash");
-        flashes.forEach((f) => f.classList.add("fade-out"));
-        setTimeout(() => {
-          flashes.forEach((f) => f.remove());
-        }, 500);
-      }, 3000);
-    </script>
-    {% endif %} {% endwith %}
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -48,13 +29,13 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link-active"
+            >Home</a
+          >
           <a href="#" class="nav-link">Applicants Management</a>
           <a href="#" class="nav-link">Employers Management</a>
           <a href="#" class="nav-link">Real-Time Information</a>
-          <a
-            href="{{url_for('admin.account_settings')}}"
-            class="nav-link-active"
+          <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
           >
           <a href="#" class="nav-link">Log Out</a>
@@ -72,77 +53,61 @@
       <div class="hero-content">
         <div class="container">
           <h1 class="hero-title">Welcome, Administrator!</h1>
+          <!-- You can add the applicant's name here using python-->
           <p class="hero-description">Here’s what we have today</p>
         </div>
       </div>
     </section>
 
-    <!-- Account and Security -->
-    <section class="account-and-security">
+    <section class="analytics-dashboard">
       <div class="container">
-        <div class="left">
-          <h2>Account & Security</h2>
-          <p>Manage your account.</p>
-        </div>
-        <div class="right">
-          <i class="fa-solid fa-bars" id="menuToggle"></i>
-          <!--Hidden Menu-->
-          <div class="dropdown-menu" id="dropdownMenu">
-            <a href="{{url_for('forgot_password.forgot_password_email')}}"
-              >Change password</a
-            >
-          </div>
-        </div>
+        <h2>PESO SmartHire - Administrative Dashboard</h2>
+        <p>
+          Welcome to the administrative control center. Monitor system
+          performance, manage user, and oversee operations.
+        </p>
       </div>
     </section>
 
-    <div class="container">
-      <div class="content">
-        <div class="two-columns">
-          <div class="form-group">
-            <label>Admin ID:</label>
-            <input
-              type="text"
-              class="admin_id"
-              value="{{ admin.admin_code }}"
-              readonly
-            />
-          </div>
+    <!-- Tab Navigation -->
+    <div class="tab-group">
+      <button class="active">All</button>
+      <button>Applicant Approval</button>
+      <button>Applicant Reported</button>
+      <button>Employer Approval</button>
+      <button>Employer Reported</button>
+      <button>Applicant Outdated Docu</button>
+      <button>Employer Outdated Docu</button>
+    </div>
 
-          <div class="form-group">
-            <label>Email:</label>
-            <form
-              method="POST"
-              action="{{ url_for('admin.account_settings') }}"
-              id="emailForm"
-            >
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value="{{ admin.email }}"
-                readonly
-              />
-              <div class="buttons">
-                <button type="button" id="editBtn">Edit</button>
-                <button type="submit" id="saveBtn" style="display: none">
-                  Save
-                </button>
-                <button type="button" id="cancelBtn" style="display: none">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-        <p class="note">
-          <strong>NOTE: </strong>Only the email can be edited. Admin ID remains
-          the same for security purposes.
-        </p>
+    <div class="card-list">
+      <div class="card">
+        <h3>Reported Applicant Account <span class="badge">NEW</span></h3>
+        <p>2 subjected for verification</p>
+        <small>10 minutes ago</small>
+      </div>
+
+      <div class="card">
+        <h3>
+          Employer Account Pending Approval <span class="badge">NEW</span>
+        </h3>
+        <p>2 subjected for approval</p>
+        <small>15 minutes ago</small>
+      </div>
+
+      <div class="card">
+        <h3>New Lipeno Applicants Batch</h3>
+        <p>12 new registrations</p>
+        <small>1 hour ago</small>
+      </div>
+
+      <div class="card">
+        <h3>Non Lipeno Account Pending Approval</h3>
+        <p>10 new registrations</p>
+        <small>2 hours ago</small>
       </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -205,8 +170,5 @@
         </div>
       </div>
     </footer>
-
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
   </body>
 </html>

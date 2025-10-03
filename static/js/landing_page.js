@@ -439,17 +439,125 @@ document.addEventListener("DOMContentLoaded", () => {
   const doleGroup = document.querySelector(".dole-group");
   const dmwGroup = document.querySelector(".dmw-group");
 
-  // Toggle DOLE/DMW uploads
+  const doleNoPendingInput = document.getElementById(
+    "employerDOLENoPendingCase"
+  );
+  const doleAuthorityInput = document.getElementById(
+    "employerDOLEAuthorityToRecruit"
+  );
+  const dmwNoPendingInput = document.getElementById("employerDMWNoPendingCase");
+  const licenseInput = document.getElementById("employerLicenseToRecruit");
+
+  // Toggle DOLE/DMW uploads and set required attributes
   recruitmentType.addEventListener("change", function () {
+    console.log("[v0] Recruitment type changed to:", this.value);
+
     if (this.value === "Local") {
       doleGroup.style.display = "block";
       dmwGroup.style.display = "none";
+
+      if (doleNoPendingInput) doleNoPendingInput.required = true;
+      if (doleAuthorityInput) doleAuthorityInput.required = true;
+      if (dmwNoPendingInput) dmwNoPendingInput.required = false;
+      if (licenseInput) licenseInput.required = false;
     } else if (this.value === "International") {
       doleGroup.style.display = "none";
       dmwGroup.style.display = "block";
+
+      if (doleNoPendingInput) doleNoPendingInput.required = false;
+      if (doleAuthorityInput) doleAuthorityInput.required = false;
+      if (dmwNoPendingInput) dmwNoPendingInput.required = true;
+      if (licenseInput) licenseInput.required = true;
     } else {
       doleGroup.style.display = "none";
       dmwGroup.style.display = "none";
+
+      if (doleNoPendingInput) doleNoPendingInput.required = false;
+      if (doleAuthorityInput) doleAuthorityInput.required = false;
+      if (dmwNoPendingInput) dmwNoPendingInput.required = false;
+      if (licenseInput) licenseInput.required = false;
     }
   });
+
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      console.log("[v0] Form submission started");
+
+      const recruitmentTypeValue = recruitmentType.value;
+      console.log("[v0] Recruitment type:", recruitmentTypeValue);
+
+      // Check all required fields
+      const requiredFields = form.querySelectorAll("[required]");
+      for (let i = 0; i < requiredFields.length; i++) {
+        const field = requiredFields[i];
+
+        if (field.type === "file") {
+          if (!field.files || field.files.length === 0) {
+            alert(`Please upload: ${field.previousElementSibling.textContent}`);
+            field.focus();
+            e.preventDefault();
+            console.log("[v0] Missing required file:", field.name);
+            return;
+          }
+        } else if (!field.value || !field.value.trim()) {
+          alert(
+            `Please fill in: ${
+              field.previousElementSibling
+                ? field.previousElementSibling.textContent
+                : field.name
+            }`
+          );
+          field.focus();
+          e.preventDefault();
+          console.log("[v0] Missing required field:", field.name);
+          return;
+        }
+      }
+
+      // Additional validation for recruitment-specific documents
+      if (recruitmentTypeValue === "Local") {
+        if (
+          !doleNoPendingInput.files ||
+          doleNoPendingInput.files.length === 0
+        ) {
+          alert(
+            "Please upload DOLE - No Pending Case Certificate for Local recruitment."
+          );
+          doleNoPendingInput.focus();
+          e.preventDefault();
+          return;
+        }
+        if (
+          !doleAuthorityInput.files ||
+          doleAuthorityInput.files.length === 0
+        ) {
+          alert(
+            "Please upload DOLE - Authority to Recruit for Local recruitment."
+          );
+          doleAuthorityInput.focus();
+          e.preventDefault();
+          return;
+        }
+      } else if (recruitmentTypeValue === "International") {
+        if (!dmwNoPendingInput.files || dmwNoPendingInput.files.length === 0) {
+          alert(
+            "Please upload DMW - No Pending Case Certificate for International recruitment."
+          );
+          dmwNoPendingInput.focus();
+          e.preventDefault();
+          return;
+        }
+        if (!licenseInput.files || licenseInput.files.length === 0) {
+          alert(
+            "Please upload DMW - License to Recruit for International recruitment."
+          );
+          licenseInput.focus();
+          e.preventDefault();
+          return;
+        }
+      }
+
+      console.log("[v0] Form validation passed, submitting...");
+    });
+  }
 });
