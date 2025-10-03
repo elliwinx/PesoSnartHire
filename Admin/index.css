@@ -1,0 +1,584 @@
+html {
+  scroll-behavior: smooth;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: #333;
+}
+
+h2 {
+  color: #7B1113;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 20px;
+}
+
+/* ===== HERO & HEADER ===== */
+.hero {
+  background: url('/Assets/bg.png') center/cover no-repeat;
+  color: white;
+}
+
+header {
+  background: transparent;
+  padding: 0.8rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo img {
+  height: 55px;
+  width: auto;
+  display: block;
+}
+
+header nav a {
+  margin-left: 25px;
+  text-decoration: none;
+  color: black;
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
+}
+
+header nav a.active {
+  color: #a80000;
+  font-weight: bold;
+}
+
+/* ===== WELCOME ===== */
+.welcome {
+  padding: 3rem 2rem;
+  text-align: left;
+}
+
+.welcome h1 {
+  font-size: 2.5rem;
+  color: black;
+}
+
+.welcome p {
+  font-size: 1.2rem;
+  color: black;
+}
+
+/* ===== INTRO ===== */
+.intro {
+  padding: 3rem 2rem;
+  text-align: left;
+}
+
+.intro h2 {
+  font-size: 2rem;
+  color: #7B1113;
+}
+
+.intro p {
+  font-size: 1.1rem;
+  color: black;
+}
+
+/* Account Intro Layout */
+.account-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+    padding: 3rem 2rem;
+}
+
+.account-intro-left h2 {
+  margin: 0;
+  font-size: 2rem;
+  color: #7B1113;
+}
+
+.account-intro-left p {
+  margin: 2px 0 0;
+  font-size: 1.1rem;
+  color: black;
+}
+
+/* Account Menu */
+.account-intro-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.account-intro-menu-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: #444;
+  padding: 8px;
+}
+
+.account-intro-menu-btn:hover {
+  color: #00796b;
+}
+
+/* Dropdown */
+.account-intro-menu-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 35px;
+  background-color: #fff;
+  min-width: 160px;
+  box-shadow: 0px 4px 8px rgba(0,0,0,0.2);
+  border-radius: 6px;
+  z-index: 999;
+  overflow: hidden;
+}
+
+.account-intro-menu-content a {
+  display: block;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: #333;
+  font-size: 14px;
+}
+
+.account-intro-menu-content a:hover {
+  background-color: #f5f5f5;
+}
+
+
+
+/* ===== DASHBOARD CARDS ===== */
+.dashboard-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+.card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #555;
+}
+
+.card .count {
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 0.3rem;
+}
+
+.card small {
+  color: #666;
+}
+
+/* Accent colors for cards */
+.card.green {
+  border-left: 6px solid #2e7d32;
+}
+
+.card.yellow {
+  border-left: 6px solid #f9a825;
+}
+
+.card.red {
+  border-left: 6px solid #c62828;
+}
+
+/* ===== APPLICANT ANALYTICS ===== */
+.analytics {
+  padding: 2rem;
+}
+
+.analytics h2 {
+  margin-bottom: 1.5rem;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.filter {
+  background: #f5f5f5;
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter label {
+  font-size: 0.9rem;
+  color: #7B1113;
+  font-weight: 600;
+}
+
+.filter select,
+.filter input {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.filter .remove {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: #a80000;
+}
+
+.filter .remove:hover {
+  color: #7B1113;
+}
+
+.add-filter {
+  margin-top: 1.5rem;
+  background: #7B1113;
+  color: white;
+  padding: 0.7rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.add-filter:hover {
+  background: #a80000;
+}
+
+/* ===== EXPORT REPORTS ===== */
+.export-buttons {
+  margin: 2rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.export-buttons button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: #fff;
+  border: 1px solid #ccc;
+  transition: all 0.2s ease;
+}
+
+/* First button (Monthly Report → styled like dropdown) */
+.export-buttons button:first-child {
+  background: #f0f0f0;
+  border: 1px solid #aaa;
+  position: relative;
+  padding-right: 2rem;
+}
+
+.export-buttons button:first-child::after {
+  content: "▼";
+  font-size: 0.7rem;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #333;
+  pointer-events: none;
+}
+
+/* XLSX Button */
+.export-buttons button:nth-child(2) {
+  border: 1px solid #2e7d32;
+  color: #2e7d32;
+}
+
+.export-buttons button:nth-child(2):hover {
+  background: #2e7d32;
+  color: #fff;
+}
+
+/* CSV Button */
+.export-buttons button:nth-child(3) {
+  border: 1px solid #1b5e20;
+  color: #1b5e20;
+}
+
+.export-buttons button:nth-child(3):hover {
+  background: #1b5e20;
+  color: #fff;
+}
+
+/* PDF Button */
+.export-buttons button:nth-child(4) {
+  border: 1px solid #7B1113;
+  color: #7B1113;
+}
+
+.export-buttons button:nth-child(4):hover {
+  background: #7B1113;
+  color: #fff;
+}
+
+
+/* ===== APPLICANT MANAGEMENT ===== */
+
+/* Button Group */
+    .btn-group {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-left: 1.5%;
+    }
+
+    .btn {
+      background: #7a1414;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      flex: 1;              /* auto adjust para same width */
+      min-width: 200px;     /* pwede mong baguhin para mas wide */
+      padding: 12px 25px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .btn:hover {
+      background: #5c0f0f;
+    }
+
+/* ===== REAL TIME NOTIFICATIONS ===== */
+.tab-group {
+  display: flex;
+  flex-wrap: wrap;              /* kapag maliit screen lilipat sa next row */
+  gap: 10px;                    /* pagitan ng buttons */
+  margin-left: 1.5%;
+}
+
+.tab-group button {
+  flex: 1;                      /* lahat pantay-pantay width */
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-group button:hover {
+  background: #f4f4f4;
+}
+
+.tab-group button.active {
+  background: #7B1E1E;
+  color: #fff;
+  border: none;
+}
+
+/* 🔹 Card list */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;                      /* lahat pantay-pantay width */
+  padding: 8px 16px;
+  margin-left: 1.5%;
+}
+
+.card {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card p {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #444;
+}
+
+.card small {
+  color: #777;
+}
+
+/* 🔹 Badge */
+.badge {
+  background: #ffc107;
+  color: #000;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* ===== EMPLOYERS MANAGEMENT ===== */
+
+
+
+
+/* ===== ACCOUNT & SECURITY ===== */
+
+.account-box {
+  background: #F4F4F4;
+  padding: 30px;
+  border-radius: 10px;
+  width: 100%;          
+  max-width: none;    
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  box-sizing: border-box; 
+  min-height: 210px; 
+}
+
+    .account-grid {
+      display: flex;
+      justify-content: space-between;
+      gap: 30px;
+      margin-bottom: 20px;
+    }
+    .account-field {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .account-field label {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .account-field input {
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      background: #e9e9e9;
+      font-size: 16px;
+    }
+    .change-btn {
+      background: #7a1414;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      float: right;
+    }
+    .note {
+      margin-top: 15px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+
+    
+/* ===== FOOTER ===== */
+.footer {
+  background: #e9ecef;
+  padding: 50px 0 30px;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 50px;
+}
+
+.footer-left h3,
+.footer-right h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.footer-left p {
+  color: #666;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.footer-note {
+  display: block; /* makes it behave like a <p> */
+  font-size: 0.9rem;
+  margin-top: 20px !important;
+  color: #666; /* match footer text */
+  text-decoration: none; /* remove underline */
+  transition: color 0.3s ease; /* smooth hover effect */
+}
+
+.footer-note:hover {
+  color: #7b1113; /* darker on hover */
+}
+
+.copyright {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.team-member {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0;
+  /*border-bottom: 1px solid #ddd;*/
+}
+
+.team-member:last-child {
+  border-bottom: none;
+}
+
+.team-member span {
+  color: #333;
+  font-weight: 500;
+}
+
+.social-links {
+  display: flex;
+  gap: 10px;
+}
+
+.social-links a {
+  color: #666;
+  font-size: 18px;
+  transition: color 0.3s ease;
+}
+
+.social-links a:hover {
+  color: #7b1113;
+}

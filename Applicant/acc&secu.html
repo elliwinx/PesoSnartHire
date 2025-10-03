@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
- <!-- Styles -->
-  <link rel="stylesheet" href="index.css"/>
+    <title>Account & Security - PESO SmartHire</title>
+    <!-- Styles -->
+    <link rel="stylesheet" href="index.css"/>
 </head>
 <body>
  <!-- Header -->
@@ -16,61 +16,159 @@
         <a href="index.html">Home</a>  
         <a href="notif.html">Real-Time Information</a>
         <a href="application.html">Applications</a>
-        <a href="acc&secu.html">Account & Security</a>
-        <a href="#">Log Out</a>
+        <a href="acc&secu.html" class="active">Account & Security</a>
+        <a href="#" id="logoutLink">Log Out</a>
       </nav>
     </header>
-        <section class="welcome">
+    <section class="welcome">
       <h1>Welcome, Juan!</h1>
       <p>Here’s what we have today</p>
     </section>
   </div>
 
-    <!-- Container Section -->
-     <section class="container">
+  <!-- Container Section -->
+  <main class="container">
     <h2>Account & Security</h2>
     <p>Manage your profile and application history</p>
-    </section>
+  </main>
 
-    <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <div class="footer-left">
-          <h3>PESO SmartHire</h3>
-          <p>Connecting talent with opportunity through innovative recruitment solutions.</p>
-          <a href="#" class="footer-note">Terms and Conditions</a>
-          <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" data-tab="personal">Personal Information</div>
+    <div class="tab" data-tab="documents">Documents</div>
+  </div>
+
+  <!-- Personal Info Tab -->
+  <div id="personal" class="tab-content active">
+    <div class="profile-container">
+      <div class="profile-header">
+        <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="profile"><br>
+        <div class="profile-id">APP001</div>
+      </div>
+
+      <div class="grid">
+        <!-- Personal info fields (unchanged) -->
+        <div class="form-group"><label>First Name</label><div>Juan</div></div>
+        <div class="form-group"><label>Middle Name</label><div>Poncio</div></div>
+        <div class="form-group"><label>Last Name</label><div>Dela Cruz</div></div>
+        <div class="form-group"><label>Age</label><div>23</div></div>
+        <div class="form-group"><label>Sex</label><div>Male</div></div>
+        <div class="form-group"><label>Phone Number</label><div>+63 912 345 6789</div></div>
+        <div class="form-group"><label>Email Address</label><div>juan.delacruz@email.com</div></div>
+        <div class="form-group"><label>Barangay</label><div>Labac</div></div>
+        <div class="form-group"><label>Municipality/City</label><div>Lipa</div></div>
+        <div class="form-group"><label>Province</label><div>Batangas</div></div>
+        <div class="form-group full"><label>Educational Attainment</label><div>College Graduate</div></div>
+        <div class="form-group full"><label>Person with Disability?</label>
+          <div class="options">
+            <input type="radio" checked> Yes
+            <input type="radio"> No
+          </div>
         </div>
-        <div class="footer-right">
-          <h3>Development Team</h3>
-          <div class="team-member">
-            <span>Anoya, Ruffa F.</span>
-            <div class="social-links">
-              <a href="#"><i class="devicon-github-plain"></i></a>
-              <a href="#"><i class="devicon-facebook-plain"></i></a>
-              <a href="#"><i class="fa-solid fa-envelope"></i></a>
+        <div class="form-group full"><label>Work Experience?</label>
+          <div class="options">
+            <input type="radio" checked> Yes
+            <input type="radio"> No
+            <span>If yes, specify: <b>Less than a year</b></span>
+          </div>
+        </div>
+        <div class="form-group full"><label>Reason for Registering</label><div>Find a Full-Time Job</div></div>
+      </div>
+
+      <button class="edit-btn">Edit Profile</button>
+    </div>
+    <div class="footer-note">Account Created at March 15, 2024</div>
+  </div>
+
+  <!-- Documents Tab -->
+  <div id="documents" class="tab-content">
+    <div class="doc-box">
+      <div class="doc-row">
+        <span>Resume</span>
+        <div class="doc-buttons">
+          <button>View</button>
+          <button id="reuploadBtn">Reupload</button>
+
+          <!-- Resume Modal -->
+          <div id="resumeModal" class="modal">
+            <div class="modal-content">
+              <span class="close">&times;</span>
+              <h2>Your Resume has been reuploaded.</h2>
+              <p>Please ensure the details are updated.</p>
+              <div class="modal-actions">
+                <button class="confirm-btn">Confirm</button>
+                <button class="cancel-btn">Cancel</button>
+              </div>
             </div>
           </div>
-          <div class="team-member">
-            <span>Lavita, Reymark A.</span>
-            <div class="social-links">
-              <a href="#"><i class="devicon-github-plain"></i></a>
-              <a href="#"><i class="devicon-facebook-plain"></i></a>
-              <a href="#"><i class="fa-solid fa-envelope"></i></a>
-            </div>
-          </div>
-          <div class="team-member">
-            <span>Samonte, Ralph Matthew A.</span>
-            <div class="social-links">
-              <a href="https://github.com/RalphWreckeri2" target="_blank"><i class="devicon-github-plain"></i></a>
-              <a href="https://www.facebook.com/ralphmatthew.13" target="_blank"><i class="devicon-facebook-plain"></i></a>
-              <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"><i class="fa-solid fa-envelope"></i></a>
+
+          <!-- Success Modal -->
+          <div id="modal-success" class="modal modal-success">
+            <div class="modal-content modal-success-content">
+              <span class="close">&times;</span>
+              <div class="modal-icon success">✔</div>
+              <h2>Your profile has been updated successfully.</h2>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </footer>
+    <div class="footer-note">Account Created at March 15, 2024</div>
+  </div>
+
+  <!-- Logout Modal -->
+  <div class="modal-overlay" id="logoutModal">
+    <div class="logout-modal">
+      <span class="logout-close" id="closeLogout">&times;</span>
+      <h2>Logging Out</h2>
+      <p>Are you sure you want to log out?</p>
+      <button id="confirmLogout">Confirm</button>
+      <button class="cancel" id="cancelLogout">Cancel</button>
+    </div>
+  </div>
+
+<script>
+  // TAB FUNCTIONALITY
+  const tabs = document.querySelectorAll('.tab');
+  const contents = document.querySelectorAll('.tab-content');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      contents.forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.tab).classList.add('active');
+    });
+  });
+
+  // MODALS
+  const reuploadBtn = document.getElementById("reuploadBtn");
+  const resumeModal = document.getElementById("resumeModal");
+  const successModal = document.getElementById("modal-success");
+  const closeButtons = document.querySelectorAll(".modal .close");
+
+  reuploadBtn.addEventListener("click", () => resumeModal.style.display = "flex");
+  document.querySelector(".confirm-btn").addEventListener("click", () => {
+    resumeModal.style.display = "none";
+    successModal.style.display = "flex";
+  });
+  document.querySelector(".cancel-btn").addEventListener("click", () => resumeModal.style.display = "none");
+  closeButtons.forEach(btn => btn.addEventListener("click", () => btn.closest(".modal").style.display = "none"));
+  window.addEventListener("click", e => { if (e.target.classList.contains("modal")) e.target.style.display = "none"; });
+
+  // LOGOUT MODAL FUNCTIONALITY
+  const logoutLink = document.getElementById("logoutLink");
+  const logoutModal = document.getElementById("logoutModal");
+  const closeLogout = document.getElementById("closeLogout");
+  const cancelLogout = document.getElementById("cancelLogout");
+  const confirmLogout = document.getElementById("confirmLogout");
+
+  logoutLink.addEventListener("click", e => {
+    e.preventDefault();
+    logoutModal.style.display = "flex";
+  });
+  closeLogout.addEventListener("click", () => logoutModal.style.display = "none");
+  cancelLogout.addEventListener("click", () => logoutModal.style.display = "none");
+  confirmLogout.addEventListener("click", () => window.location.href = "/Landing_Page/index.html");
+</script>
 </body>
 </html>

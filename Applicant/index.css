@@ -14,332 +14,692 @@ body {
   color: #333;
 }
 
+h2{
+  color: #7B1113;
+}
+
+/* Container */
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 2rem 20px;
 }
 
+/* ===== HERO & HEADER ===== */
 .hero {
-    background: url('/Assets/bg.png') center/cover no-repeat;
-    color: white;
-    }
-
-    header {
-    background: transparent;
-    padding: 0.8rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    }
-
-    .logo img {
-    height: 55px;
-    width: auto;
-    display: block;
-    }
-
-    header nav a {
-    margin-left: 25px;
-    text-decoration: none;
-    color: black;
-    font-size: 0.95rem;
-    transition: color 0.2s ease;
-    }
-
-    header nav a:hover {
-    color: #a80000; 
-    }
-
-    .welcome {
-    padding: 3rem 2rem;
-    text-align: left;
-    }
-
-    .welcome h1 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    color: black;
-    }
-
-    .welcome p {
-    font-size: 1.2rem;
-    color: black;
-    }
-
-    .container {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: auto;
-    }
-
-    .search-filter {
-    display: flex;
-    flex-direction: column; 
-    margin-bottom: 1.5rem;
-    position: relative;
-    }
-
-    .search-filter input {
-    width: 100%; 
-    padding: 0.7rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    margin-bottom: 1rem;
-    background: url('https://cdn-icons-png.flaticon.com/512/622/622669.png') no-repeat right 10px center;
-    background-size: 18px;
-    }
-
-    .search-filter select {
-    width: 50%;           
-    align-self: flex-end;  
-    padding: 0.7rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    }
-
-    .job-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-    }
-
-    .job-card {
-      background: #EBEBEB;
-      border-radius: 10px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      transition: 0.2s ease;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .job-card:hover {
-      transform: translateY(-4px);
-    }
-
-    .job-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .job-header img {
-      height: 40px;
-      object-fit: contain;
-    }
-
-    .badge {
-      background: #006341;
-      color: white;
-      font-size: 0.8rem;
-      padding: 0.3rem 0.6rem;
-      border-radius: 12px;
-    }
-
-    .job-card h3 {
-      font-size: 1.1rem;
-      margin-bottom: 0.3rem;
-    }
-
-    .job-card p {
-      font-size: 0.9rem;
-      color: #666;
-      margin: 0.2rem 0;
-    }
-
-    .job-actions {
-    margin-top: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    }
-
-    .left-buttons {
-    display: flex;
-    gap: 10px;
-    }
-
-    .btn {
-      padding: 0.5rem 1rem;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-
-    .btn-report {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1.3rem;
-    color: black;
-    transition: 0.2s ease;
-    }
-
-    .btn-details {
-      background: #006341;
-      color: white;
-    }
-
-    .btn-apply {
-      background: #006341;
-      color: white;
-    }
-
-
-/*notif*/
-
-    .container h2 {
-      font-size: 2rem;
-      color: #8B0000;
-      margin-bottom: 0.5rem;
-    }
-
-    .container p {
-      margin-bottom: 2rem;
-      color: #555;
-    }
-
-    .notification-card {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      background: #f2f2f2;
-      border-radius: 8px;
-      padding: 1.2rem;
-      margin-bottom: 1rem;
-    }
-
-    .notification-card .left {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .notification-card .icon {
-      font-size: 1.5rem;
-      padding: 0.7rem;
-      border-radius: 6px;
-      background: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .notification-card.success .icon {
-      color: #fff;
-      background: #2e7d32;
-    }
-
-    .notification-card.info .icon {
-      color: #000;
-      background: #ddd;
-    }
-
-    .notification-card .details h3 {
-      margin: 0;
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-
-    .notification-card .details p {
-      margin: 0.3rem 0 0;
-      font-size: 0.9rem;
-      color: #333;
-    }
-
-    .badge-new {
-      display: inline-block;
-      background: #fbc02d;
-      color: #000;
-      font-size: 0.75rem;
-      font-weight: bold;
-      padding: 0.2rem 0.5rem;
-      border-radius: 4px;
-      margin-left: 0.5rem;
-    }
-
-    .time {
-      font-size: 0.8rem;
-      color: #777;
-    }
-
-    
-    
-    /* Footer */
-.footer {
-  background: #e9ecef;
-  padding: 50px 0 30px;
+  background: url('/Assets/bg.png') center/cover no-repeat;
+  color: white;
 }
 
-.footer-content {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 50px;
-}
-
-.footer-left h3,
-.footer-right h3 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin-bottom: 15px;
-  color: #333;
-}
-
-.footer-left p {
-  color: #666;
-  margin-bottom: 10px;
-  line-height: 1.6;
-}
-
-.footer-note {
-  display: block; /* makes it behave like a <p> */
-  font-size: 0.9rem;
-  margin-top: 20px !important;
-  color: #666; /* match footer text */
-  text-decoration: none; /* remove underline */
-  transition: color 0.3s ease; /* smooth hover effect */
-}
-
-.footer-note:hover {
-  color: #7b1113; /* darker on hover */
-}
-
-.copyright {
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
-.team-member {
+header {
+  background: transparent;
+  padding: 0.8rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0;
-  /*border-bottom: 1px solid #ddd;*/
 }
 
-.team-member:last-child {
-  border-bottom: none;
+.logo img {
+  height: 55px;
+  width: auto;
+  display: block;
 }
 
-.team-member span {
-  color: #333;
-  font-weight: 500;
+header nav a {
+  margin-left: 25px;
+  text-decoration: none;
+  color: black;
+  font-size: 0.95rem;
+  transition: color 0.2s ease;
 }
 
-.social-links {
+header nav a.active {
+  color: #a80000;
+  font-weight: bold;
+}
+
+/* ===== WELCOME ===== */
+.welcome {
+  padding: 3rem 2rem;
+  text-align: left;
+}
+
+.welcome h1 {
+  font-size: 2.5rem;
+  color: black;
+}
+
+.welcome p {
+  font-size: 1.2rem;
+  color: black;
+}
+
+/* ===== SEARCH FILTER ===== */
+.search-filter {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.search-filter input {
+  width: 100%;
+  padding: 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  background: url('https://cdn-icons-png.flaticon.com/512/622/622669.png') no-repeat right 10px center;
+  background-size: 18px;
+}
+
+.search-filter select {
+  width: 50%;
+  align-self: flex-end;
+  padding: 0.7rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+/* ===== JOB CARDS ===== */
+.job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.job-card {
+  background: #EBEBEB;
+  border-radius: 10px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.job-card:hover {
+  transform: translateY(-4px);
+}
+
+.job-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.job-header img {
+  height: 40px;
+  object-fit: contain;
+}
+
+.badge {
+  background: #006341;
+  color: white;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+}
+
+.job-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.3rem;
+}
+
+.job-card p {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0.2rem 0;
+}
+
+.job-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.left-buttons {
   display: flex;
   gap: 10px;
 }
 
-.social-links a {
-  color: #666;
-  font-size: 18px;
-  transition: color 0.3s ease;
+/* Buttons */
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: 0.2s ease;
 }
 
-.social-links a:hover {
-  color: #7b1113;
+.btn-details,
+.btn-apply {
+  background: #006341;
+  color: white;
+  min-width: 100px;
+}
+
+.btn-report {
+  background: transparent;
+  border: none;
+  font-size: 1.3rem;
+  color: black;
+  margin-left: 23%;
+}
+
+.report-select {
+  appearance: none;           
+  -webkit-appearance: none; 
+  -moz-appearance: none;     
+  
+  background-color: #f0f0f0; 
+  border: 1px solid #ccc;    
+  border-radius: 6px;        
+  padding: 10px 40px 10px 15px; 
+  font-size: 16px;
+  color: #333;
+  cursor: pointer;
+  width: 80%;                
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  
+  background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center; /* arrow sa kanan */
+  background-size: 20px;
+}
+
+.report-select:focus {
+  outline: none;
+  border-color: #888; /* darker border pag naka-focus */
+}
+
+
+/* ====== MODALS ====== */
+    /* Modal Styling */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      justify-content: center; /* center horizontally */
+      align-items: center;     /* center vertically */
+    }
+
+    .modal-content {
+      background: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      width: 450px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .close {
+      position: absolute;
+      top: 10px; right: 15px;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .status {
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .status.interview { 
+      background: #fbbf24; color: #fff; 
+      margin-left: 35px;
+    }
+    .status.pending { 
+      background: #9ca3af; 
+      color: #fff; 
+      margin-left: 57px;
+    }
+    .status.shortlisted { 
+      background: #2563eb; 
+      color: #fff; 
+      margin-left: 47px;
+    }
+    .status.hired { 
+      background: #16a34a; 
+      color: #fff; 
+      margin-left: 75px;
+    }
+    .status.rejected { 
+      background: #dc2626; 
+      color: #fff; 
+      margin-left: 57px;
+    }
+
+    .track-btn, .cancel-btn {
+      margin: 8px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .track-btn { 
+      background: #7B1113;
+      margin-right: 35%;
+      margin-left: 0%; 
+      min-width: 100px;
+    }
+    .cancel-btn { 
+      background: #7B1113; 
+      margin-left: 28px;
+      min-width: 100px;
+    }
+
+    .app-details {
+      text-align: left;
+      margin: 15px 15px 15px 15px;
+    }
+
+.modal-content h2 {
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.modal-content p {
+  margin: 10px 0 10px;
+  font-size: 14px;
+  color: #333;
+}
+
+.modal .close {
+  position: absolute;
+  top: 12px;
+  right: 15px;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-icon {
+  width: 70px;
+  height: 70px;
+  border: 3px solid black;   /* circle border */
+  border-radius: 50%;        /* gawin siyang bilog */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;           /* size ng ❗ */
+  color: black;              /* kulay ng icon */
+  margin: 0 auto 15px auto;  /* center + spacing sa baba */
+  font-weight: bold;
+}
+
+/* Apply Modals (Green) */
+.modal-apply h2,
+.modal-apply-sent h2 {
+  color: #006341;
+}
+
+.btn-confirm-apply,
+.btn-confirm-apply-sent {
+  background: #006341;
+  color: #fff;
+  min-width: 100px;
+}
+
+.btn-cancel-apply {
+  background: #006341;
+  color: #fff;
+  min-width: 100px;
+}
+
+/* Report Modals (Red) */
+.modal-report h2,
+.modal-report-sent h2 {
+  color: #800000;
+  margin-bottom: initial;
+}
+
+.btn-confirm-report, .btn-cancel-report {
+  background: #800000;
+  color: #fff;
+  min-width: 100px;
+}
+
+/* ===== NOTIFICATIONS ===== */
+.notification-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: #f2f2f2;
+  border-radius: 8px;
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.notification-card .left {
+  display: flex;
+  gap: 1rem;
+}
+
+.notification-card .icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  border-radius: 50%;
+}
+
+.notification-card.success .icon {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.notification-card.info .icon {
+  background: #ddd;
+  color: #000;
+}
+
+.notification-card .details h3 {
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.notification-card .details p {
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.badge-new {
+  background: #fbc02d;
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+}
+
+.time {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* ===== MY APPLICATION ===== */
+.filter-tabs {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center; 
+    max-width: 1200px;     
+    margin: 0 auto;    
+    padding: 0 20px;      
+}
+
+.filter-tabs button {
+  padding: 8px 16px;
+  border: 1px solid #999;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  min-width: 100px;
+}
+
+.filter-tabs button.active {
+  background: #7b1113;
+  color: #fff;
+  min-width: 100px;
+}
+
+.applications {
+  background: #f4f4f4;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: auto;
+  border-radius: 10px;
+}
+
+.app-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-info h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.app-info p {
+  font-size: 14px;
+  color: #555;
+}
+
+.status {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.pending { background: #7B7B7B; }
+.shortlisted { background: #422AE0; }
+.interview { background: #FFC20E; color: #fff; }
+.hired { background: #006341; }
+.rejected { background: #7B1113; }
+.cancelled { background: #444; }
+
+    /* Logout Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    .logout-modal {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      width: 300px;
+      position: relative;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    }
+    .logout-modal h2 {
+      color: maroon;
+      margin-bottom: 10px;
+    }
+    .logout-modal p {
+      margin-bottom: 20px;
+    }
+    .logout-modal button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      margin: 5px;
+      cursor: pointer;
+      background: maroon;
+      color: white;
+      font-weight: bold;
+    }
+    .logout-modal button.cancel {
+      background: gray;
+    }
+    .logout-close {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+/* ===== ACCOUNT & SECURITY ===== */
+.tabs {
+  display: flex;
+  background: #f2f2f2;
+  border-radius: 6px;
+  overflow: hidden;
+      max-width: 1200px;
+    margin: auto;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  color: #555;
+}
+
+.tab.active {
+  background: #EBEBEB;
+  color: #7a1c1c;
+}
+
+.tab-content {
+  display: none;
+  background: #fff;
+  border-radius: 6px;
+  padding: 20px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.profile-container {
+  background: #f8f8f8;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.profile-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.profile-header img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+}
+
+.profile-id {
+  margin-top: 10px;
+  background: #eee;
+  padding: 5px 15px;
+  display: inline-block;
+  border-radius: 6px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 13px;
+  margin-bottom: 5px;
+  color: #555;
+}
+
+.form-group input,
+.form-group div,
+.form-group select {
+  background: #f2f2f2;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.full {
+  grid-column: span 3;
+}
+
+.options {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.edit-btn {
+  background: #7a1c1c;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 20px;
+  float: right;
+}
+
+.doc-box {
+  background: #f8f8f8;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.doc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fff;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.doc-buttons button {
+  background: #7a1c1c;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  margin-left: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+.footer-note {
+  text-align: center;
+  font-size: 12px;
+  color: #777;
+  margin-top: 30px;
+  margin-bottom: 20px;
 }
