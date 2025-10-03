@@ -340,6 +340,82 @@ input[type="email"] {
   color: #777;
 }
 
+/* ===== REAL TIME NOTIFICATIONS ===== */
+.tab-group {
+  display: flex;
+  flex-wrap: wrap;              
+  gap: 10px;                   
+  margin-left: 1.5%;
+}
+
+.tab-group button {
+  flex: 1;                     
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-group button:hover {
+  background: #f4f4f4;
+}
+
+.tab-group button.active {
+  background: #7B1E1E;
+  color: #fff;
+  border: none;
+}
+
+/* 🔹 Card list */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;                    
+  padding: 8px 16px;
+  margin-left: 1.5%;
+}
+
+.card {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card p {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #444;
+}
+
+.card small {
+  color: #777;
+}
+
+/* 🔹 Badge */
+.badge {
+  background: #ffc107;
+  color: #000;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
 /* Footer */
 .footer {
   background: #e9ecef;
