@@ -343,18 +343,21 @@ input[type="email"] {
 /* ===== REAL TIME NOTIFICATIONS ===== */
 .tab-group {
   display: flex;
-  flex-wrap: wrap;              
-  gap: 10px;                   
-  margin-left: 1.5%;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 20px;
+  max-width: 1200px;
+  justify-content: center;
+  margin: 0 auto; /* centers the .tab-group container itself */
 }
 
 .tab-group button {
-  flex: 1;                     
-  padding: 8px 16px;
-  border-radius: 8px;
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
   border: 1px solid #ccc;
   background: #fff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -365,39 +368,55 @@ input[type="email"] {
 }
 
 .tab-group button.active {
-  background: #7B1E1E;
+  background: #7b1e1e;
   color: #fff;
   border: none;
 }
 
-/* 🔹 Card list */
+/* 🔹 Card List */
 .card-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  flex: 1;                    
+  flex: 1;
   padding: 8px 16px;
-  margin-left: 1.5%;
+  margin: 0 auto;
+  max-width: 1200px;
 }
 
+/* 🔹 Individual Notification Card */
 .card {
+  display: flex;
+  justify-content: space-between; /* left details + right button */
+  align-items: center;
   background: #f5f5f5;
   border-radius: 8px;
   padding: 16px 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s;
 }
 
+/* Left details stacked vertically */
+.card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Unread highlight (optional left border) */
+.card.unread {
+  border-left: 4px solid #ffc107; /* yellow for new/unread */
+}
+
+/* Text styles */
 .card h3 {
   font-size: 16px;
   font-weight: 600;
-  margin: 0 0 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin: 0;
 }
 
 .card p {
-  margin: 0 0 4px;
+  margin: 0;
   font-size: 14px;
   color: #444;
 }
@@ -406,14 +425,40 @@ input[type="email"] {
   color: #777;
 }
 
-/* 🔹 Badge */
-.badge {
-  background: #ffc107;
+/* 🔹 Right side button and badge */
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.card-actions .badge {
+  background: #ffc107; /* yellow badge */
   color: #000;
   font-size: 12px;
   font-weight: bold;
   padding: 2px 8px;
   border-radius: 12px;
+}
+
+.card-actions .view-btn {
+  background: #7b1113;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.card-actions .view-btn:hover {
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+}
+
+.card:hover {
+  transform: translateY(-2px);
 }
 
 /* Footer */

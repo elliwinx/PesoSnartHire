@@ -176,10 +176,12 @@ def login():
 
 @admin_bp.route("/notifications")
 def notifications_page():
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
-
-    # You can fetch initial notifications here
+    user_id = session.get("user_id")
     notifications = get_notifications()
+
+    # Optional: mark all fetched notifications as read
+    for n in notifications:
+        if n['is_read'] == 0:
+            mark_notification_read(n['notification_id'])
 
     return render_template("Admin/admin_notif.html", notifications=notifications)
