@@ -35,7 +35,7 @@
           <a href="#" class="nav-link">Application Management</a>
           <a href="#" class="nav-link">Real-Time Notification</a>
           <a href="#" class="nav-link">Account & Security</a>
-          <a href="#" class="nav-link">Log Out</a>
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
         </nav>
       </div>
     </header>
@@ -255,6 +255,8 @@
       </div>
     </div>
 
+        <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
   </body>
 </html>

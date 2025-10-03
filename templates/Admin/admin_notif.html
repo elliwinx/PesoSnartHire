@@ -38,7 +38,7 @@
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
           >
-          <a href="#" class="nav-link">Log Out</a>
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
         </nav>
       </div>
     </header>
@@ -145,6 +145,8 @@
       </div>
     </footer>
 
+        <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
   </body>
 </html>
