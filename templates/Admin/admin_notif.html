@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Applicant Management</title>
+    <title>Notifications - Admin Dashboard</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -12,14 +12,12 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Styles -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
   </head>
   <body>
-    <!-- Header -->
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -29,12 +27,14 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{url_for('admin.admin_home')}}" class="nav-link-active"
-            >Home</a
-          >
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
           <a href="#" class="nav-link">Applicants Management</a>
           <a href="#" class="nav-link">Employers Management</a>
-          <a href="#" class="nav-link">Real-Time Information</a>
+          <a
+            href="{{url_for('admin.notifications_page')}}"
+            class="nav-link-active"
+            >Notifications</a
+          >
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
           >
@@ -47,14 +47,13 @@
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
+          alt="New City Hall of Lipa City"
         />
       </div>
       <div class="hero-content">
         <div class="container">
           <h1 class="hero-title">Welcome, Administrator!</h1>
-          <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here’s what we have today</p>
+          <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
@@ -69,43 +68,18 @@
       </div>
     </section>
 
-    <!-- Tab Navigation -->
     <div class="tab-group">
-      <button class="active">All</button>
-      <button>Applicant Approval</button>
-      <button>Applicant Reported</button>
-      <button>Employer Approval</button>
-      <button>Employer Reported</button>
-      <button>Applicant Outdated Docu</button>
-      <button>Employer Outdated Docu</button>
+      <button class="active" data-filter="all">All</button>
+      <button data-filter="applicant_approval">Applicant Approval</button>
+      <button data-filter="applicant_reported">Applicant Reported</button>
+      <button data-filter="employer_approval">Employer Approval</button>
+      <button data-filter="employer_reported">Employer Reported</button>
+      <button data-filter="applicant_outdated">Applicant Outdated Docu</button>
+      <button data-filter="employer_outdated">Employer Outdated Docu</button>
     </div>
 
-    <div class="card-list">
-      <div class="card">
-        <h3>Reported Applicant Account <span class="badge">NEW</span></h3>
-        <p>2 subjected for verification</p>
-        <small>10 minutes ago</small>
-      </div>
-
-      <div class="card">
-        <h3>
-          Employer Account Pending Approval <span class="badge">NEW</span>
-        </h3>
-        <p>2 subjected for approval</p>
-        <small>15 minutes ago</small>
-      </div>
-
-      <div class="card">
-        <h3>New Lipeno Applicants Batch</h3>
-        <p>12 new registrations</p>
-        <small>1 hour ago</small>
-      </div>
-
-      <div class="card">
-        <h3>Non Lipeno Account Pending Approval</h3>
-        <p>10 new registrations</p>
-        <small>2 hours ago</small>
-      </div>
+    <div class="card-list" id="notificationList">
+      Notifications will be dynamically loaded here
     </div>
 
     <footer class="footer">
@@ -170,5 +144,7 @@
         </div>
       </div>
     </footer>
+
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
   </body>
 </html>

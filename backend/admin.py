@@ -1,16 +1,99 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import check_password_hash
 from db_connection import create_connection, run_query
+from .notifications import get_notifications, mark_notification_read, get_unread_count
 
 admin_bp = Blueprint("admin", __name__)
 
 
-# ===== Admin Home (Dashboard placeholder) =====
+# ===== Admin Home (Dashboard with notifications) =====
 @admin_bp.route("/home")
 def admin_home():
     if "admin_id" not in session:  # Protect route
         return redirect(url_for("admin.login"))
     return render_template("Admin/admin_home.html")
+
+
+# ===== API: Get Notifications =====
+# Single endpoint that handles:
+#  - ?filter=all|read|unread
+#  - ?filter=<notification_type>  (e.g. ?filter=applicant_approval)
+#  - optional explicit ?type=... (still supported)
+@admin_bp.route("/api/notifications", methods=["GET"])
+def api_get_notifications():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    filter_param = request.args.get("filter", "all")
+    # Allow explicit ?type=... to override, but if not provided and filter isn't one of the
+    # special filter values, treat filter as the notification_type.
+    notification_type = request.args.get("type")
+
+    # Convert filter to is_read parameter if it's one of the known filters
+    is_read = None
+    if filter_param == "read":
+        is_read = True
+    elif filter_param == "unread":
+        is_read = False
+    elif filter_param == "all":
+        is_read = None
+    else:
+        # If filter is not read/unread/all and no explicit type was provided,
+        # treat the filter value as notification_type
+        if not notification_type:
+            notification_type = filter_param
+
+    # Debug log
+    print(
+        f"[v0] Fetching notifications - filter: {filter_param}, type: {notification_type}, is_read: {is_read}")
+
+    notifications = get_notifications(
+        notification_type=notification_type, is_read=is_read)
+
+    print(f"[v0] Found {len(notifications)} notifications")
+
+    # Convert datetime objects to strings for JSON serialization
+    for notif in notifications:
+        if notif.get("created_at"):
+            try:
+                notif["created_at"] = notif["created_at"].isoformat()
+            except Exception:
+                notif["created_at"] = str(notif["created_at"])
+        if notif.get("updated_at"):
+            try:
+                notif["updated_at"] = notif["updated_at"].isoformat()
+            except Exception:
+                notif["updated_at"] = str(notif["updated_at"])
+
+    return jsonify({
+        "success": True,
+        "notifications": notifications,
+        "count": len(notifications)
+    })
+
+
+# ===== API: Mark Notification as Read =====
+@admin_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
+def api_mark_notification_read(notification_id):
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    result = mark_notification_read(notification_id)
+
+    if result:
+        return jsonify({"success": True, "message": "Notification marked as read"})
+    else:
+        return jsonify({"success": False, "message": "Failed to mark notification as read"}), 500
+
+
+# ===== API: Get Unread Count =====
+@admin_bp.route("/api/notifications/unread-count", methods=["GET"])
+def api_unread_count():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    count = get_unread_count()
+    return jsonify({"success": True, "unread_count": count})
 
 
 # ===== Admin Account & Security =====
@@ -89,3 +172,14 @@ def login():
 
     # On any error → go back to landing page with modal
     return redirect(url_for("home"))
+
+
+@admin_bp.route("/notifications")
+def notifications_page():
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    # You can fetch initial notifications here
+    notifications = get_notifications()
+
+    return render_template("Admin/admin_notif.html", notifications=notifications)

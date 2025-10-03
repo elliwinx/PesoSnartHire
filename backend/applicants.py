@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 from db_connection import create_connection, run_query
 from extensions import mail
 from flask_mail import Message
+from .notifications import create_notification
 
 applicants_bp = Blueprint("applicants", __name__)
 
@@ -122,6 +123,25 @@ def register_applicant(form, files):
 
         run_query(conn, query, data)
         conn.commit()  # Commit the transaction to save data to database
+
+        if not is_from_lipa:
+            # Get the last inserted applicant_id
+            applicant_id_row = run_query(
+                conn,
+                "SELECT LAST_INSERT_ID() as id",
+                fetch="one"
+            )
+            applicant_id = applicant_id_row["id"] if applicant_id_row else None
+
+            create_notification(
+                notification_type="applicant_approval",
+                title="Non-Lipeno Applicant Account Pending Approval",
+                message="1 non-Lipeno applicant registration needs approval",
+                count=1,
+                related_ids=[applicant_id] if applicant_id else None,
+                residency_type="Non-Lipeno"
+            )
+            print(f"[v0] Notification created for Non-Lipeno applicant registration")
 
         # Fetch the generated applicant_code
         applicant_code_row = run_query(
