@@ -28,8 +28,10 @@ def save_file(file, subfolder):
 
 
 def register_applicant(form, files):
+    print("[v0] Starting applicant registration...")
     conn = create_connection()
     if not conn:
+        print("[v0] Database connection failed")
         return False, "DB connection failed"
 
     try:
@@ -44,6 +46,7 @@ def register_applicant(form, files):
             fetch="all"
         )
         if existing:
+            print(f"[v0] Applicant already exists: {email}")
             return False, "You are already registered. Please log in or contact admin."
 
         # ==== Determine applicant type ====
@@ -52,6 +55,8 @@ def register_applicant(form, files):
         has_work_exp = int(form.get("workExperience") == "on")
         accepted_terms = int(session.get("accepted_terms", 0))
         accepted_terms_at = session.get("accepted_terms_at", None)
+
+        print(f"[v0] Applicant is from Lipa: {is_from_lipa}")
 
         # ==== Save uploaded files ====
         profile_path = save_file(
@@ -117,22 +122,36 @@ def register_applicant(form, files):
             "accepted_terms_at": accepted_terms_at,
             "status": status,
             "password_hash": password_hash,
-            # Store plain text temp password for auditing
             "temp_password": temp_password_plain
         }
 
+        print("[v0] Inserting applicant into database...")
         run_query(conn, query, data)
-        conn.commit()  # Commit the transaction to save data to database
+        conn.commit()
+        print("[v0] Applicant inserted and committed successfully")
 
-        if not is_from_lipa:
-            # Get the last inserted applicant_id
-            applicant_id_row = run_query(
-                conn,
-                "SELECT LAST_INSERT_ID() as id",
-                fetch="one"
+        applicant_id_row = run_query(
+            conn,
+            "SELECT LAST_INSERT_ID() as id",
+            fetch="one"
+        )
+        applicant_id = applicant_id_row["id"] if applicant_id_row else None
+        print(f"[v0] Applicant ID: {applicant_id}")
+
+        if is_from_lipa:
+            print("[v0] Creating notification for Lipeno applicant (auto-approved)...")
+            create_notification(
+                notification_type="applicant_approval",
+                title="New Lipeno Applicant Registered",
+                message="1 Lipeno applicant has been auto-approved",
+                count=1,
+                related_ids=[applicant_id] if applicant_id else None,
+                residency_type="Lipeno"
             )
-            applicant_id = applicant_id_row["id"] if applicant_id_row else None
-
+            print("[v0] Notification created for Lipeno applicant")
+        else:
+            print(
+                "[v0] Creating notification for Non-Lipeno applicant (pending approval)...")
             create_notification(
                 notification_type="applicant_approval",
                 title="Non-Lipeno Applicant Account Pending Approval",
@@ -141,7 +160,7 @@ def register_applicant(form, files):
                 related_ids=[applicant_id] if applicant_id else None,
                 residency_type="Non-Lipeno"
             )
-            print(f"[v0] Notification created for Non-Lipeno applicant registration")
+            print("[v0] Notification created for Non-Lipeno applicant")
 
         # Fetch the generated applicant_code
         applicant_code_row = run_query(
@@ -181,16 +200,22 @@ def register_applicant(form, files):
                 """
             msg = Message(subject=subject, recipients=[email], html=body)
             mail.send(msg)
+            print(f"[v0] Email sent successfully to {email}")
         except Exception as e:
-            print(f"❌ Failed to send email: {e}")
+            print(f"[v0] Failed to send email: {e}")
 
         success_message = (
             "Registration successful! Login credentials have been sent to your email."
             if is_from_lipa else
             "Registration submitted! Please wait for admin approval."
         )
+        print(f"[v0] Registration completed successfully for {email}")
         return True, success_message
 
+    except Exception as e:
+        print(f"[v0] Error during registration: {e}")
+        conn.rollback()
+        return False, f"Registration failed: {str(e)}"
     finally:
         conn.close()
 
