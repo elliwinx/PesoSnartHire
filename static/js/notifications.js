@@ -44,9 +44,20 @@ function displayNotifications(notifications) {
       <div class="card ${isNew ? "unread" : ""}" data-notification-id="${
         notif.notification_id
       }" data-redirect="${notif.redirect_url || "#"}">
-        <h3>${notif.title} ${badge}</h3>
-        <p>${notif.message}</p>
-        <small>${timeAgo}</small>
+        <!-- Left: details stacked -->
+        <div class="card-details">
+          <h3>${notif.title}</h3>
+          <p>${notif.message}</p>
+          <small>Type: ${notif.notification_type} | Recruitment: ${
+        notif.recruitment_type || "N/A"
+      } | ${timeAgo}</small>
+        </div>
+
+        <!-- Right: badge + button -->
+        <div class="card-actions">
+          ${badge}
+          <a href="${notif.redirect_url || "#"}" class="view-btn">View</a>
+        </div>
       </div>
     `;
     })

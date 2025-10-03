@@ -78,28 +78,8 @@
       <button data-filter="employer_outdated">Employer Outdated Docu</button>
     </div>
 
-    <div class="card-list">
-      {% for n in notifications %}
-      <div class="card {% if n.is_read == 0 %}unread{% endif %}">
-        <!-- Left: details stacked -->
-        <div class="card-details">
-          <h3>{{ n.title }}</h3>
-          <p>{{ n.message }}</p>
-          <small>
-            Type: {{ n.notification_type }} | Recruitment: {{ n.recruitment_type
-            or 'N/A' }} | Created: {{ n.created_at }}
-          </small>
-        </div>
-
-        <!-- Right: badge + button -->
-        <div class="card-actions">
-          {% if n.is_read == 0 %}
-          <span class="badge">New</span>
-          {% endif %}
-          <a href="{{ n.redirect_url or '#' }}" class="view-btn">View</a>
-        </div>
-      </div>
-      {% endfor %}
+    <div class="card-list" id="notificationList">
+      <!--Notifs will appear here-->
     </div>
 
     <footer class="footer">

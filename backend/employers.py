@@ -41,15 +41,15 @@ def register_employer(form_data, files):
     """Helper function to process employer registration"""
     print("[v0] Starting employer registration process")
     print(f"[v0] Form data received for: {form_data.get('employerName')}")
-    print(f"[v0] Recruitment type: {form_data.get('employerRecruitmentType')}")
+    print(f"[v0] Recruitment type: {form_data.get('employerRecruitment')}")
 
     # Get form data
     employer_data = {
         "employer_name": form_data.get("employerName"),
         "industry": form_data.get("employerIndustry"),
-        "recruitment_type": form_data.get("employerRecruitmentType"),
+        "recruitment_type": form_data.get("employerRecruitment"),
         "contact_person": form_data.get("employerContactPerson"),
-        "phone": form_data.get("employerPhone"),
+        "phone": form_data.get("employerPhoneNumber"),
         "email": form_data.get("employerEmail"),
         "street": form_data.get("employerStreet"),
         "barangay": form_data.get("employerBarangay"),
@@ -66,9 +66,9 @@ def register_employer(form_data, files):
     business_permit_path = save_file(
         files.get("employerBusinessPermit"), "employer_permit")
     philiobnet_path = save_file(
-        files.get("employerPhilJobNetRegistration"), "employer_philjobnet")
+        files.get("employerPhiliobnetRegistration"), "employer_philiobnet")
     job_orders_path = save_file(
-        files.get("employerJobOrders"), "employer_joborders")
+        files.get("employerJobOrdersOfClient"), "employer_joborders")
 
     print(
         f"[v0] Base files saved - Logo: {bool(company_logo_path)}, Permit: {bool(business_permit_path)}")
@@ -110,9 +110,10 @@ def register_employer(form_data, files):
     if not all([company_logo_path, business_permit_path, philiobnet_path, job_orders_path]):
         return False, "Please upload all required base documents."
 
-    # Hash password
-    password_hash = generate_password_hash(employer_data["password"])
-    print("[v0] Password hashed successfully")
+    # Hash password if provided, otherwise keep None
+    password_hash = generate_password_hash(
+        employer_data["password"]) if employer_data["password"] else None
+    print("[v0] Password hashed successfully" if password_hash else "[v0] No password provided yet")
 
     # Insert into database
     conn = create_connection()
