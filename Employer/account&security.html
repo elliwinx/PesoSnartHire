@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PESO SmartHire - Create New Job Post</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="employer.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <img src="/PesoSnartHire/Assets/PESO_logo.png" alt="PESO SmartHire Logo">
+            </div>
+            <nav class="nav">
+                <a href="#" class="nav-link-active">Home</a>
+                <a href="#" class="nav-link">Application Management</a>
+                <a href="#" class="nav-link">Real-Time Notification</a>
+                <a href="#" class="nav-link">Account & Security</a>
+                <a href="#" class="nav-link">Log Out</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Welcome Banner -->
+    <section class="welcome-banner">
+        <div class="container">
+            <div class="banner-content">
+                <h1 class="welcome-title">Welcome</h1>
+                <p class="welcome-subtitle">Here's what we have today</p>
+            </div>
+        </div>
+    </section>
+    Main Content 
+    <main class="main-content">
+        <div class="account-section">
+            <div class="section-header">
+                <div>
+                    <h2 class="section-title">Account & Security</h2>
+                    <p class="section-subtitle">Manage your profile and application history</p>
+                </div>
+                <div class="menu-container">
+                    <button class="menu-btn" id="menuBtn">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </button>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <button class="dropdown-item" id="changePasswordBtn">Change Password</button>
+                        <button class="dropdown-item" id="deactivateAccountBtn">Deactivate Account</button>
+                    </div>
+                </div>
+            </div>
+
+             Tabs 
+            <div class="tabs">
+                <button class="tab active" data-tab="employer">Employer Information</button>
+                <button class="tab" data-tab="documents">Documents</button>
+            </div>
+
+             Employer Information Tab 
+            <div class="tab-content active" id="employerTab">
+                <div class="employer-card">
+                    <div class="employer-logo">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/3/36/McDonald%27s_Golden_Arches.svg" alt="McDonald's Logo">
+                    </div>
+                    <div class="employer-id">EMP001</div>
+
+                    <form id="employerForm" class="employer-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Company Name</label>
+                                <input type="text" id="companyName" value="McDonald's Philippines" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Industry</label>
+                                <input type="text" id="industry" value="Fast-food" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Recruitment</label>
+                                <input type="text" id="recruitment" value="Local" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Contact Person</label>
+                                <input type="text" id="contactPerson" value="Maria Catalina" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="tel" id="phoneNumber" value="+63 912 235 3489" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Email Address</label>
+                                <input type="email" id="emailAddress" value="mcdoliparcr@gmail.com" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Street</label>
+                                <input type="text" id="street" value="Ayala Highway" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Barangay</label>
+                                <input type="text" id="barangay" value="Balintawak" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Municipality/City</label>
+                                <input type="text" id="municipality" value="Lipa" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Province</label>
+                                <input type="text" id="province" value="Batangas" required>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Edit Profile</button>
+                        </div>
+                    </form>
+
+                    <div class="account-dates">
+                        <p>Account Created at March 15, 2024</p>
+                        <p>Approved at March 20, 2024</p>
+                    </div>
+                </div>
+            </div>
+
+             Documents Tab 
+            <div class="tab-content" id="documentsTab">
+                <div class="documents-list">
+                    <div class="document-item">
+                        <span class="document-name">Business Permit</span>
+                        <div class="document-actions">
+                            <button class="btn-view">View</button>
+                            <button class="btn-reupload" data-doc="Business Permit">Reupload</button>
+                        </div>
+                    </div>
+                    <div class="document-item">
+                        <span class="document-name">Philobnet Registration</span>
+                        <div class="document-actions">
+                            <button class="btn-view">View</button>
+                            <button class="btn-reupload" data-doc="Philobnet Registration">Reupload</button>
+                        </div>
+                    </div>
+                    <div class="document-item">
+                        <span class="document-name">DOLE No Pending Case Certificate</span>
+                        <div class="document-actions">
+                            <button class="btn-view">View</button>
+                            <button class="btn-reupload" data-doc="DOLE No Pending Case Certificate">Reupload</button>
+                        </div>
+                    </div>
+                    <div class="document-item">
+                        <span class="document-name">DOLE Authority to Recruit</span>
+                        <div class="document-actions">
+                            <button class="btn-view">View</button>
+                            <button class="btn-reupload" data-doc="DOLE Authority to Recruit">Reupload</button>
+                        </div>
+                    </div>
+                    <div class="document-item">
+                        <span class="document-name">Job Orders of Client/s</span>
+                        <div class="document-actions">
+                            <button class="btn-view">View</button>
+                            <button class="btn-reupload" data-doc="Job Orders of Client/s">Reupload</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="important-reminder">
+                    <p class="reminder-title">IMPORTANT REMINDER</p>
+                    <p class="reminder-text">You are required to reupload documents every three months.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-left">
+                    <h3>PESO SmartHire</h3>
+                    <p>Connecting talent with opportunity through innovative recruitment solutions.</p>
+                    <a href="" class="footer-note">Terms and Conditions</a>
+                    <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
+                </div>
+                <div class="footer-right">
+                    <h3>Development Team</h3>
+                    <div class="team-member">
+                        <span>Anoya, Ruffa F.</span>
+                        <div class="social-links">
+                            <a href="#"><i class="devicon-github-plain"></i></a>
+                            <a href="#"><i class="devicon-facebook-plain"></i></a>
+                            <a href="#"><i class="fa-solid fa-envelope"></i></a>
+                        </div>
+                    </div>
+                    <div class="team-member">
+                        <span>Lavita, Reynmark A.</span>
+                        <div class="social-links">
+                            <a href="#"><i class="devicon-github-plain"></i></a>
+                            <a href="#"><i class="devicon-facebook-plain"></i></a>
+                            <a href="#"><i class="fa-solid fa-envelope"></i></a>
+                        </div>
+                    </div>
+                    <div class="team-member">
+                        <span>Samonte, Ralph Matthew A.</span>
+                        <div class="social-links">
+                            <a href="https://github.com/RalphWreckeri2" target="_blank"><i class="devicon-github-plain"></i></a>
+                            <a href="https://www.facebook.com/ralphmatthew.13" target="_blank"><i class="devicon-facebook-plain"></i></a>
+                            <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"><i class="fa-solid fa-envelope"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    Change Password Modal 
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Change Password</h2>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label>Current Password</label>
+                    <input type="password" id="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPassword" required minlength="5">
+                    <small>Minimum 5 characters</small>
+                </div>
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="confirmPassword" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelPasswordBtn">Cancel</button>
+                    <button type="submit" class="btn-primary">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+     Deactivate Account Modal 
+    <div class="modal" id="deactivateAccountModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Deactivate Account</h2>
+            <p class="modal-text">Are you sure you want to deactivate your account?</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-secondary" id="cancelDeactivateBtn">No</button>
+                <button type="button" class="btn-danger" id="confirmDeactivateBtn">Yes</button>
+            </div>
+        </div>
+    </div>
+
+     Document Upload Modal 
+    <div class="modal" id="documentUploadModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Reupload Document</h2>
+            <p class="modal-text" id="documentName"></p>
+            <form id="documentUploadForm">
+                <div class="form-group">
+                    <label>Select File (PDF or JPG only)</label>
+                    <input type="file" id="documentFile" accept=".pdf,.jpg,.jpeg" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancelUploadBtn">Cancel</button>
+                    <button type="submit" class="btn-primary">Upload</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+     Success Popup 
+    <div class="popup" id="successPopup">
+        <div class="popup-content">
+            <p id="successMessage"></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

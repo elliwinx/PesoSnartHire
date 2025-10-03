@@ -562,3 +562,419 @@ function showToast(message) {
         toast.classList.remove('show');
     }, 3000);
 }
+
+// REAL-TIME NOTIFICATION
+
+// Notification Data Store
+const notifications = [
+  {
+    id: 1,
+    type: "application",
+    icon: "✓",
+    iconType: "success",
+    title: "New Application Received",
+    message: "Juan Poncio Dela Cruz applied for Service Crew Position. Review application to proceed.",
+    time: "2 hours ago",
+    timestamp: Date.now() - 2 * 60 * 60 * 1000,
+    isNew: true,
+    unread: true,
+    details: {
+      jobPosition: "Service Crew Position",
+      workSchedule: "Full-time",
+      vacancies: 1,
+      minSalary: "15000",
+      maxSalary: "18000",
+      description: "We are looking for enthusiastic Service Crew members to join our team.",
+      qualifications: "High school graduate, good communication skills, customer service oriented",
+      applicantCount: 28,
+      applicants: [
+        { name: "Juan Poncio Dela Cruz", date: "March 15, 2024", status: "For Interview" },
+        { name: "Juan Poncio Dela Cruz", date: "March 15, 2024", status: "For Interview" },
+        { name: "Juan Poncio Dela Cruz", date: "March 15, 2024", status: "For Interview" },
+        { name: "Juan Poncio Dela Cruz", date: "March 15, 2024", status: "For Interview" },
+        { name: "Juan Poncio Dela Cruz", date: "March 15, 2024", status: "For Interview" },
+      ],
+    },
+  },
+  {
+    id: 2,
+    type: "application",
+    icon: "✓",
+    iconType: "success",
+    title: "New Application Received",
+    message: "Andrea Amazona Levita applied for Service Crew Position. Review application to proceed.",
+    time: "1 day ago",
+    timestamp: Date.now() - 24 * 60 * 60 * 1000,
+    isNew: true,
+    unread: false,
+    details: {
+      jobPosition: "Service Crew Position",
+      workSchedule: "Part-time",
+      vacancies: 2,
+      minSalary: "12000",
+      maxSalary: "15000",
+      description: "Join our dynamic team as a part-time Service Crew member.",
+      qualifications: "High school graduate, flexible schedule, team player",
+      applicantCount: 15,
+      applicants: [{ name: "Andrea Amazona Levita", date: "March 14, 2024", status: "For Interview" }],
+    },
+  },
+  {
+    id: 3,
+    type: "verification",
+    icon: "!",
+    iconType: "warning",
+    title: "Account Verification Required",
+    message: "Your company profile needs verification. Please upload required business documents.",
+    time: "3 days ago",
+    timestamp: Date.now() - 3 * 24 * 60 * 60 * 1000,
+    isNew: false,
+    unread: false,
+    details: null,
+  },
+  {
+    id: 4,
+    type: "performance",
+    icon: "i",
+    iconType: "info",
+    title: "Job Post Performance",
+    message: "Your Service Crew posting has received 24 application in the past week.",
+    time: "1 week ago",
+    timestamp: Date.now() - 7 * 24 * 60 * 60 * 1000,
+    isNew: false,
+    unread: false,
+    details: null,
+  },
+]
+
+// DOM Elements
+const notificationsList = document.getElementById("notificationsList")
+const modalOverlay = document.getElementById("modalOverlay")
+const modal = document.getElementById("modal")
+const modalClose = document.getElementById("modalClose")
+const modalContent = document.getElementById("modalContent")
+const toast = document.getElementById("toast")
+const toastMessage = document.getElementById("toastMessage")
+
+// Initialize
+document.addEventListener("DOMContentLoaded", () => {
+  renderNotifications()
+  startRealTimeSimulation()
+  setupEventListeners()
+})
+
+// Render Notifications
+function renderNotifications() {
+  notificationsList.innerHTML = ""
+
+  // Sort by timestamp (newest first)
+  const sortedNotifications = [...notifications].sort((a, b) => b.timestamp - a.timestamp)
+
+  sortedNotifications.forEach((notification) => {
+    const card = createNotificationCard(notification)
+    notificationsList.appendChild(card)
+  })
+}
+
+// Create Notification Card
+function createNotificationCard(notification) {
+  const card = document.createElement("div")
+  card.className = `notification-card ${notification.unread ? "unread" : ""}`
+  card.dataset.id = notification.id
+
+  card.innerHTML = `
+        <div class="notification-icon ${notification.iconType}">
+            ${notification.icon}
+        </div>
+        <div class="notification-body">
+            <div class="notification-title-row">
+                <h3 class="notification-title">${notification.title}</h3>
+                ${notification.isNew ? '<span class="badge">NEW</span>' : ""}
+            </div>
+            <p class="notification-message">${notification.message}</p>
+        </div>
+        <div class="notification-time">${notification.time}</div>
+    `
+
+  card.addEventListener("click", () => openNotificationModal(notification))
+
+  return card
+}
+
+// Open Notification Modal
+function openNotificationModal(notification) {
+  // Mark as read
+  notification.unread = false
+  renderNotifications()
+
+  if (notification.details) {
+    // Show job details modal
+    modalContent.innerHTML = createJobDetailsModal(notification.details)
+    setupModalEventListeners()
+  } else {
+    // Show simple notification modal
+    modalContent.innerHTML = `
+            <div style="padding: 2rem; text-align: center;">
+                <div class="notification-icon ${notification.iconType}" style="width: 80px; height: 80px; margin: 0 auto 1rem; font-size: 2.5rem;">
+                    ${notification.icon}
+                </div>
+                <h2 style="color: #7c2d12; margin-bottom: 1rem;">${notification.title}</h2>
+                <p style="color: #6b7280; font-size: 1.125rem;">${notification.message}</p>
+                <p style="color: #9ca3af; margin-top: 1rem;">${notification.time}</p>
+            </div>
+        `
+  }
+
+  modalOverlay.classList.add("active")
+  document.body.style.overflow = "hidden"
+}
+
+// Create Job Details Modal
+function createJobDetailsModal(details) {
+  return `
+        <div class="job-details-section">
+            <h2 class="job-details-title">Job Vacancy Details</h2>
+            <form class="job-form" id="jobForm">
+                <div class="job-form-grid">
+                    <div class="job-form-group">
+                        <label class="job-form-label">Job Position</label>
+                        <input type="text" class="job-form-input" value="${details.jobPosition}" readonly>
+                    </div>
+                    <div class="job-form-group">
+                        <label class="job-form-label">Work Schedule</label>
+                        <select class="job-form-select" disabled>
+                            <option>${details.workSchedule}</option>
+                        </select>
+                    </div>
+                    <div class="job-form-group">
+                        <label class="job-form-label">Number of Vacancy</label>
+                        <input type="number" class="job-form-input" value="${details.vacancies}" readonly>
+                    </div>
+                    <div class="job-form-group">
+                        <label class="job-form-label">Minimum Salary (₱)</label>
+                        <input type="text" class="job-form-input" value="${details.minSalary}" readonly>
+                    </div>
+                    <div class="job-form-group">
+                        <label class="job-form-label">Maximum Salary (₱)</label>
+                        <input type="text" class="job-form-input" value="${details.maxSalary}" readonly>
+                    </div>
+                    <div class="job-form-group full-width">
+                        <label class="job-form-label">Job Description</label>
+                        <textarea class="job-form-textarea" readonly>${details.description}</textarea>
+                    </div>
+                    <div class="job-form-group full-width">
+                        <label class="job-form-label">Qualifications</label>
+                        <textarea class="job-form-textarea" readonly>${details.qualifications}</textarea>
+                    </div>
+                </div>
+                <button type="button" class="edit-button" id="editJobButton">Edit Job Post</button>
+            </form>
+        </div>
+        
+        <div class="applicants-section">
+            <h2 class="applicants-title">List of Applicants</h2>
+            <div class="applicants-controls">
+                <input type="text" class="search-input" placeholder="Search an Applicant" id="searchApplicant">
+                <select class="filter-select" id="filterStatus">
+                    <option value="">Filter by Status</option>
+                    <option value="For Interview">For Interview</option>
+                    <option value="Hired">Hired</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+            </div>
+            <div class="applicant-count">Applicant Count: ${details.applicantCount}</div>
+            <div class="applicants-list" id="applicantsList">
+                ${details.applicants
+                  .map(
+                    (applicant, index) => `
+                    <div class="applicant-card" data-index="${index}">
+                        <div class="applicant-info">
+                            <h4>${applicant.name}</h4>
+                            <p class="applicant-date">Applied on ${applicant.date}</p>
+                            <p class="applicant-status">${applicant.status}</p>
+                        </div>
+                        <div class="applicant-actions">
+                            <button class="view-button" onclick="viewApplicant(${index})">View</button>
+                            <button class="edit-status-button" onclick="editApplicantStatus(${index})">Edit Status</button>
+                        </div>
+                    </div>
+                `,
+                  )
+                  .join("")}
+            </div>
+        </div>
+    `
+}
+
+// Setup Modal Event Listeners
+function setupModalEventListeners() {
+  const editJobButton = document.getElementById("editJobButton")
+  const searchInput = document.getElementById("searchApplicant")
+  const filterSelect = document.getElementById("filterStatus")
+
+  if (editJobButton) {
+    editJobButton.addEventListener("click", () => {
+      showToast("Edit functionality will be implemented")
+    })
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      filterApplicants(e.target.value, filterSelect.value)
+    })
+  }
+
+  if (filterSelect) {
+    filterSelect.addEventListener("change", (e) => {
+      filterApplicants(searchInput.value, e.target.value)
+    })
+  }
+}
+
+// Filter Applicants
+function filterApplicants(searchTerm, statusFilter) {
+  const applicantCards = document.querySelectorAll(".applicant-card")
+
+  applicantCards.forEach((card) => {
+    const name = card.querySelector("h4").textContent.toLowerCase()
+    const status = card.querySelector(".applicant-status").textContent
+
+    const matchesSearch = name.includes(searchTerm.toLowerCase())
+    const matchesStatus = !statusFilter || status === statusFilter
+
+    if (matchesSearch && matchesStatus) {
+      card.style.display = "flex"
+    } else {
+      card.style.display = "none"
+    }
+  })
+}
+
+// View Applicant
+function viewApplicant(index) {
+  showToast(`Viewing applicant details for applicant #${index + 1}`)
+}
+
+// Edit Applicant Status
+function editApplicantStatus(index) {
+  const statuses = ["For Interview", "Hired", "Rejected"]
+  const currentStatus = document.querySelectorAll(".applicant-status")[index].textContent
+  const currentIndex = statuses.indexOf(currentStatus)
+  const nextStatus = statuses[(currentIndex + 1) % statuses.length]
+
+  // Validation: Confirm status change
+  if (confirm(`Change status to "${nextStatus}"?`)) {
+    document.querySelectorAll(".applicant-status")[index].textContent = nextStatus
+    showToast(`Status updated to "${nextStatus}"`)
+  }
+}
+
+// Close Modal
+function closeModal() {
+  modalOverlay.classList.remove("active")
+  document.body.style.overflow = "auto"
+}
+
+// Setup Event Listeners
+function setupEventListeners() {
+  modalClose.addEventListener("click", closeModal)
+
+  modalOverlay.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) {
+      closeModal()
+    }
+  })
+
+  // Keyboard navigation
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modalOverlay.classList.contains("active")) {
+      closeModal()
+    }
+  })
+}
+
+// Show Toast Notification
+function showToast(message) {
+  toastMessage.textContent = message
+  toast.classList.add("active")
+
+  setTimeout(() => {
+    toast.classList.remove("active")
+  }, 3000)
+}
+
+// Real-Time Simulation
+function startRealTimeSimulation() {
+  setInterval(() => {
+    addNewNotification()
+  }, 15000) // Add new notification every 15 seconds
+}
+
+// Add New Notification
+function addNewNotification() {
+  const newApplicants = ["Maria Santos", "Jose Reyes", "Ana Garcia", "Pedro Martinez", "Sofia Rodriguez"]
+
+  const randomName = newApplicants[Math.floor(Math.random() * newApplicants.length)]
+
+  const newNotification = {
+    id: Date.now(),
+    type: "application",
+    icon: "✓",
+    iconType: "success",
+    title: "New Application Received",
+    message: `${randomName} applied for Service Crew Position. Review application to proceed.`,
+    time: "Just now",
+    timestamp: Date.now(),
+    isNew: true,
+    unread: true,
+    details: {
+      jobPosition: "Service Crew Position",
+      workSchedule: "Full-time",
+      vacancies: 1,
+      minSalary: "15000",
+      maxSalary: "18000",
+      description: "We are looking for enthusiastic Service Crew members to join our team.",
+      qualifications: "High school graduate, good communication skills, customer service oriented",
+      applicantCount: 1,
+      applicants: [
+        {
+          name: randomName,
+          date: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+          status: "For Interview",
+        },
+      ],
+    },
+  }
+
+  notifications.unshift(newNotification)
+  renderNotifications()
+  showToast(`New application from ${randomName}!`)
+}
+
+// Update Time Display (optional enhancement)
+function updateTimeDisplay() {
+  notifications.forEach((notification) => {
+    const elapsed = Date.now() - notification.timestamp
+    const minutes = Math.floor(elapsed / 60000)
+    const hours = Math.floor(minutes / 60)
+    const days = Math.floor(hours / 24)
+
+    if (minutes < 1) {
+      notification.time = "Just now"
+    } else if (minutes < 60) {
+      notification.time = `${minutes} minute${minutes > 1 ? "s" : ""} ago`
+    } else if (hours < 24) {
+      notification.time = `${hours} hour${hours > 1 ? "s" : ""} ago`
+    } else if (days < 7) {
+      notification.time = `${days} day${days > 1 ? "s" : ""} ago`
+    } else {
+      notification.time = `${Math.floor(days / 7)} week${Math.floor(days / 7) > 1 ? "s" : ""} ago`
+    }
+  })
+}
+
+// Update time display every minute
+setInterval(() => {
+  updateTimeDisplay()
+  renderNotifications()
+}, 60000)
