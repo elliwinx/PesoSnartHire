@@ -134,7 +134,27 @@ function startNotificationPolling() {
   setInterval(() => {
     console.log("[v0] Polling for new notifications");
     fetchNotifications(currentFilter);
+    updateNotifBadge(); // <--- ALSO check the badge when polling
   }, 30000); // 30 seconds
+}
+
+// --- BADGE FUNCTION ---
+async function updateNotifBadge() {
+  try {
+    const res = await fetch("/admin/api/notifications/unread-count");
+    const data = await res.json();
+
+    const badge = document.getElementById("notifBadge"); // <--- your badge span in navbar
+
+    if (data.success && data.unread_count > 0) {
+      badge.style.display = "inline-block";
+      badge.textContent = "●"; // or data.unread_count if you prefer number
+    } else {
+      badge.style.display = "none";
+    }
+  } catch (err) {
+    console.error("Error fetching unread count:", err);
+  }
 }
 
 // Initialize on page load
@@ -143,4 +163,5 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFilterButtons();
   fetchNotifications("all");
   startNotificationPolling();
+  updateNotifBadge(); // <--- also run immediately when page loads
 });

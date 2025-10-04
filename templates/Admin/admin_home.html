@@ -54,12 +54,19 @@
           <a href="#" class="nav-link">Applicants Management</a>
           <a href="#" class="nav-link">Employers Management</a>
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
-            >Notifications</a
+            >Notifications<span
+              id="notifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
           >
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
           >
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
@@ -157,6 +164,7 @@
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/Notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>
 </html>

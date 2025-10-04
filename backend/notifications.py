@@ -8,9 +8,20 @@ import traceback
 from db_connection import create_connection, run_query
 
 
-def create_notification(notification_type, title, message, count=1, related_ids=None, recruitment_type=None, residency_type=None):
+def create_notification(
+    notification_type,
+    title,
+    message,
+    count=1,
+    related_ids=None,
+    recruitment_type=None,
+    residency_type=None,
+    applicant_id=None,
+    employer_id=None
+):
     """
-    Safer create_notification that commits the insert and returns (True, inserted_id) or (False, error_message)
+    Safer create_notification that commits the insert and returns (True, inserted_id) or (False, error_message).
+    Supports linking to applicant_id or employer_id for direct "View" actions.
     """
     conn = create_connection()
     if not conn:
@@ -20,16 +31,23 @@ def create_notification(notification_type, title, message, count=1, related_ids=
 
     query = """
         INSERT INTO notifications 
-        (notification_type, title, message, count, related_ids, recruitment_type, residency_type)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        (notification_type, title, message, count, related_ids, recruitment_type, residency_type, applicant_id, employer_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
-    params = (notification_type, title, message, count,
-              related_ids_json, recruitment_type, residency_type)
+    params = (
+        notification_type,
+        title,
+        message,
+        count,
+        related_ids_json,
+        recruitment_type,
+        residency_type,
+        applicant_id,
+        employer_id,
+    )
 
     try:
-        # Try using run_query if it returns truthy on success
         result = run_query(conn, query, params)
-        # If run_query handled commit and returns truthy, attempt to read last id
         if result:
             try:
                 last = run_query(
@@ -40,23 +58,22 @@ def create_notification(notification_type, title, message, count=1, related_ids=
             conn.close()
             return True, inserted_id
     except Exception as e:
-        # log and fallthrough to raw cursor method
-        print("[v0][notifications] run_query failed (will fallback):", str(e))
+        print("[notifications] run_query failed (will fallback):", str(e))
         traceback.print_exc()
 
     # Fallback: raw cursor + explicit commit
     try:
         cur = conn.cursor()
         cur.execute(query, params)
-        conn.commit()                       # <--- EXPLICIT COMMIT
+        conn.commit()
         inserted_id = getattr(cur, "lastrowid", None)
         cur.close()
         conn.close()
-        print(f"[v0][notifications] Inserted notification id={inserted_id}")
+        print(f"[notifications] Inserted notification id={inserted_id}")
         return True, inserted_id
     except Exception as exc:
         err = str(exc)
-        print("[v0][notifications] Exception during insert:", err)
+        print("[notifications] Exception during insert:", err)
         traceback.print_exc()
         try:
             conn.rollback()
@@ -64,6 +81,30 @@ def create_notification(notification_type, title, message, count=1, related_ids=
             pass
         conn.close()
         return False, err
+
+
+def build_redirect_url(notif):
+    """Generate a redirect URL based on notification type and IDs."""
+    ntype = notif.get("notification_type")
+    applicant_id = notif.get("applicant_id")
+    employer_id = notif.get("employer_id")
+
+    if ntype == "applicant_approval" and applicant_id:
+        return f"/applicants/{applicant_id}"
+    elif ntype == "employer_approval" and employer_id:
+        return f"/employers/{employer_id}"
+    elif ntype == "applicant_reported" and applicant_id:
+        return f"/applicants/{applicant_id}/reports"
+    elif ntype == "employer_reported" and employer_id:
+        return f"/employers/{employer_id}/reports"
+    elif ntype == "applicant_outdated_docu" and applicant_id:
+        return f"/applicants/{applicant_id}/documents"
+    elif ntype == "employer_outdated_docu" and employer_id:
+        return f"/employers/{employer_id}/documents"
+    elif ntype == "applicant_batch":
+        return "/applicants/batch"
+    # default fallback
+    return "#"
 
 
 def get_notifications(notification_type=None, is_read=None, limit=50):
@@ -75,7 +116,6 @@ def get_notifications(notification_type=None, is_read=None, limit=50):
     if not conn:
         return []
 
-    # Build query with filters
     query = "SELECT * FROM notifications WHERE 1=1"
     params = []
 
@@ -98,20 +138,18 @@ def get_notifications(notification_type=None, is_read=None, limit=50):
 
     normalized = []
     for r in rows:
-        # normalize id field: support both `notification_id` or `id`
+        # normalize id
         nid = r.get("notification_id") or r.get("id") or r.get("notif_id")
 
-        # normalize is_read to integer 0/1
+        # normalize is_read
         is_read_val = r.get("is_read")
         try:
-            # cover booleans, integers and strings
             is_read_norm = 1 if (
                 is_read_val is True or int(is_read_val) == 1) else 0
         except Exception:
-            # fallback: treat falsy as unread
             is_read_norm = 0 if not is_read_val else 1
 
-        # normalize created_at to ISO string
+        # normalize created_at
         created_at_val = r.get("created_at")
         if created_at_val is None:
             created_at_iso = None
@@ -121,7 +159,7 @@ def get_notifications(notification_type=None, is_read=None, limit=50):
             except Exception:
                 created_at_iso = str(created_at_val)
 
-        # parse related_ids JSON safely
+        # parse related_ids
         related = []
         if r.get("related_ids"):
             try:
@@ -129,7 +167,7 @@ def get_notifications(notification_type=None, is_read=None, limit=50):
             except Exception:
                 related = []
 
-        normalized.append({
+        notif_obj = {
             "notification_id": nid,
             "notification_type": r.get("notification_type"),
             "title": r.get("title"),
@@ -138,13 +176,19 @@ def get_notifications(notification_type=None, is_read=None, limit=50):
             "related_ids": related,
             "recruitment_type": r.get("recruitment_type"),
             "residency_type": r.get("residency_type"),
-            "is_read": is_read_norm,          # 0 = unread, 1 = read
+            "applicant_id": r.get("applicant_id"),
+            "employer_id": r.get("employer_id"),
+            "is_read": is_read_norm,
             "created_at": created_at_iso,
             "updated_at": (r.get("updated_at").isoformat()
                            if r.get("updated_at") and hasattr(r.get("updated_at"), "isoformat")
-                           else (str(r.get("updated_at")) if r.get("updated_at") else None)),
-            "redirect_url": r.get("redirect_url") or "#"
-        })
+                           else (str(r.get("updated_at")) if r.get("updated_at") else None))
+        }
+
+        # 🔑 Inject redirect_url dynamically
+        notif_obj["redirect_url"] = build_redirect_url(notif_obj)
+
+        normalized.append(notif_obj)
 
     return normalized
 

@@ -165,8 +165,9 @@ body {
 }
 
 .btn-primary:hover {
-  background: #7b1113;
-  transform: translateY(-2px);
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
 }
 
 .btn-secondary {
@@ -175,8 +176,9 @@ body {
 }
 
 .btn-secondary:hover {
-  background: #ffc20e;
-  transform: translateY(-2px);
+  background: #ffffff;
+  border: 1px solid #7b1113;
+  color: #7b1113 !important;
 }
 
 /* Services Section */

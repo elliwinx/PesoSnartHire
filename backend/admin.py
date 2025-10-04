@@ -52,19 +52,6 @@ def api_get_notifications():
 
     print(f"[v0] Found {len(notifications)} notifications")
 
-    # Convert datetime objects to strings for JSON serialization
-    for notif in notifications:
-        if notif.get("created_at"):
-            try:
-                notif["created_at"] = notif["created_at"].isoformat()
-            except Exception:
-                notif["created_at"] = str(notif["created_at"])
-        if notif.get("updated_at"):
-            try:
-                notif["updated_at"] = notif["updated_at"].isoformat()
-            except Exception:
-                notif["updated_at"] = str(notif["updated_at"])
-
     return jsonify({
         "success": True,
         "notifications": notifications,
@@ -176,12 +163,7 @@ def login():
 
 @admin_bp.route("/notifications")
 def notifications_page():
-    user_id = session.get("user_id")
+    admin_id = session.get("admin_id")
     notifications = get_notifications()
-
-    # Optional: mark all fetched notifications as read
-    for n in notifications:
-        if n['is_read'] == 0:
-            mark_notification_read(n['notification_id'])
 
     return render_template("Admin/admin_notif.html", notifications=notifications)

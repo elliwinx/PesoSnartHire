@@ -266,6 +266,18 @@ input[type="email"] {
   border-radius: 10px;
 }
 
+.notif-badge {
+  background: #ffc107; /* yellow, or red if you prefer */
+  color: transparent; /* hides text if you just want a dot */
+  font-size: 10px;
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
 .container h2 {
   font-size: 2rem;
   color: #8b0000;
