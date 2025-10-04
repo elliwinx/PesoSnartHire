@@ -167,3 +167,13 @@ def notifications_page():
     notifications = get_notifications()
 
     return render_template("Admin/admin_notif.html", notifications=notifications)
+
+# ===== Admin: Applicants Management ===== 
+@admin_bp.route("/applicants")
+def applicants_management():
+    return render_template("Admin/admin_applicant.html")
+
+# ===== Admin: Employers Management ===== 
+@admin_bp.route("/employers")
+def employers_management():
+    return render_template("Admin/admin_employer.html")

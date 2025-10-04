@@ -49,8 +49,8 @@
         </div>
         <nav class="nav">
           <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
-          <a href="#" class="nav-link">Applicants Management</a>
-          <a href="#" class="nav-link">Employers Management</a>
+          <a href="{{ url_for('admin.applicants_management') }}" class="nav-link">Applicants Management</a>
+          <a href="{{ url_for('admin.employers_management') }}" class="nav-link">Employers Management</a>
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications</a
           >
@@ -172,7 +172,7 @@
               </div>
             </div>
             <div class="team-member">
-              <span>Lavita, Reynmark A.</span>
+              <span>Lavita, Reymark A.</span>
               <div class="social-links">
                 <a href="https://github.com/elliwinx" target="_blank"
                   ><i class="devicon-github-plain"></i

@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Notifications - Admin Dashboard</title>
+    <title>Employers - Admin Dashboard</title>
+    <!-- Icons -->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -12,12 +13,32 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
+    <!-- Styles -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
   </head>
   <body>
+    <!--Flash of Welcome Back Message-->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
+    <!-- Header -->
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -27,12 +48,12 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link"
+            >Home</a
+          >
           <a href="{{ url_for('admin.applicants_management') }}" class="nav-link">Applicants Management</a>
-          <a href="{{ url_for('admin.employers_management') }}" class="nav-link">Employers Management</a>
-          <a
-            href="{{url_for('admin.notifications_page')}}"
-            class="nav-link-active"
+          <a href="{{ url_for('admin.employers_management') }}" class="nav-link-active">Employers Management</a>
+          <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications</a
           >
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
@@ -47,40 +68,35 @@
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa City"
+          alt="New City Hall of Lipa CIty"
         />
       </div>
       <div class="hero-content">
         <div class="container">
           <h1 class="hero-title">Welcome, Administrator!</h1>
-          <p class="hero-description">Here's what we have today</p>
+          <!-- You can add the applicant's name here using python-->
+          <p class="hero-description">Here’s what we have today</p>
         </div>
       </div>
     </section>
 
+    <!-- Job Vacancies -->
     <section class="analytics-dashboard">
       <div class="container">
-        <h2>Administrative Notifications</h2>
+        <h2>Employers Management</h2>
         <p>
-          Monitor system activities, user approvals, and administrative alerts 
+          Manage employer accounts, verify credentials, and oversee application activities
         </p>
       </div>
     </section>
 
     <div class="tab-group">
-      <button class="active" data-filter="all">All</button>
-      <button data-filter="applicant_approval">Applicant Approval</button>
-      <button data-filter="applicant_reported">Applicant Reported</button>
-      <button data-filter="employer_approval">Employer Approval</button>
-      <button data-filter="employer_reported">Employer Reported</button>
-      <button data-filter="applicant_outdated">Applicant Outdated Docu</button>
-      <button data-filter="employer_outdated">Employer Outdated Docu</button>
+      <button class="active" data-filter="all">Accounts for Approval</button>
+      <button class="active" data-filter="all">View All Employers</button>
+      <button class="active" data-filter="all">Reported Accounts</button>
     </div>
 
-    <div class="card-list" id="notificationList">
-      <!--Notifs will appear here-->
-    </div>
-
+    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -144,8 +160,8 @@
       </div>
     </footer>
 
-        <!-- Scripts -->
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
   </body>
 </html>
