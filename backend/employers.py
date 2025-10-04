@@ -167,8 +167,6 @@ def register_employer(form_data, files):
             related_ids=[employer_id] if employer_id else None,
             recruitment_type=employer_data["recruitment_type"]
         )
-        print(
-            f"[v0] Notification created for {recruitment_label} employer registration")
 
         conn.close()
         return True, "Registration successful! Your account is pending admin approval."

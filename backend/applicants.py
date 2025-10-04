@@ -146,7 +146,8 @@ def register_applicant(form, files):
                 message="1 Lipeno applicant has been auto-approved",
                 count=1,
                 related_ids=[applicant_id] if applicant_id else None,
-                residency_type="Lipeno"
+                residency_type="Lipeno",
+                applicant_id=applicant_id   # <-- NEW explicit FK
             )
             print("[v0] Notification created for Lipeno applicant")
         else:
@@ -158,7 +159,8 @@ def register_applicant(form, files):
                 message="1 non-Lipeno applicant registration needs approval",
                 count=1,
                 related_ids=[applicant_id] if applicant_id else None,
-                residency_type="Non-Lipeno"
+                residency_type="Non-Lipeno",
+                applicant_id=applicant_id   # <-- NEW explicit FK
             )
             print("[v0] Notification created for Non-Lipeno applicant")
 

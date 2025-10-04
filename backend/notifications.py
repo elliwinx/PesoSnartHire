@@ -20,18 +20,63 @@ def create_notification(
     employer_id=None
 ):
     """
-    Safer create_notification that commits the insert and returns (True, inserted_id) or (False, error_message).
-    Supports linking to applicant_id or employer_id for direct "View" actions.
+    Insert a notification.
+    If related_ids is a single-element list and applicant_id/employer_id
+    are not provided, auto-fill the FK based on notification_type.
+    Returns (True, inserted_id) or (False, error_message).
     """
     conn = create_connection()
     if not conn:
         return False, "DB connection failed"
 
-    related_ids_json = json.dumps(related_ids) if related_ids else None
+    # Normalize related_ids into a Python list
+    parsed_related = None
+    if related_ids is None:
+        parsed_related = None
+    else:
+        if isinstance(related_ids, str):
+            try:
+                parsed_related = json.loads(related_ids)
+            except Exception:
+                parsed_related = [related_ids]
+        elif isinstance(related_ids, (list, tuple)):
+            parsed_related = list(related_ids)
+        else:
+            parsed_related = [related_ids]
+
+    # Auto-fill applicant_id or employer_id if only one related_id was provided
+    try:
+        if (applicant_id is None and employer_id is None
+                and parsed_related and len(parsed_related) == 1):
+            single = parsed_related[0]
+            try:
+                single_int = int(single)
+            except Exception:
+                single_int = None
+
+            if single_int is not None:
+                if notification_type in (
+                    "applicant_approval",
+                    "applicant_reported",
+                    "applicant_outdated_docu"
+                ):
+                    applicant_id = single_int
+                elif notification_type in (
+                    "employer_approval",
+                    "employer_reported",
+                    "employer_outdated_docu"
+                ):
+                    employer_id = single_int
+                # applicant_batch stays as related_ids only
+    except Exception:
+        pass  # don't break insert if autofill fails
+
+    related_ids_json = json.dumps(parsed_related) if parsed_related else None
 
     query = """
         INSERT INTO notifications 
-        (notification_type, title, message, count, related_ids, recruitment_type, residency_type, applicant_id, employer_id)
+        (notification_type, title, message, count, related_ids, 
+         recruitment_type, residency_type, applicant_id, employer_id)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
     params = (
@@ -58,10 +103,10 @@ def create_notification(
             conn.close()
             return True, inserted_id
     except Exception as e:
-        print("[notifications] run_query failed (will fallback):", str(e))
+        print("[notifications] run_query failed:", str(e))
         traceback.print_exc()
 
-    # Fallback: raw cursor + explicit commit
+    # fallback: raw cursor
     try:
         cur = conn.cursor()
         cur.execute(query, params)
@@ -83,27 +128,51 @@ def create_notification(
         return False, err
 
 
-def build_redirect_url(notif):
-    """Generate a redirect URL based on notification type and IDs."""
+def build_redirect_url(notif, admin_prefix="/admin"):
+    """
+    Generate a redirect URL for the admin UI.
+    Uses applicant_id/employer_id if present, otherwise falls back to related_ids[0].
+    """
     ntype = notif.get("notification_type")
     applicant_id = notif.get("applicant_id")
     employer_id = notif.get("employer_id")
+    related = notif.get("related_ids") or []
 
+    # Ensure related is a list
+    if isinstance(related, str):
+        try:
+            related = json.loads(related)
+        except Exception:
+            related = [related]
+
+    # fallback: use first related id if explicit FK missing
+    if not applicant_id and related:
+        try:
+            applicant_id = int(related[0])
+        except Exception:
+            pass
+    if not employer_id and related:
+        try:
+            employer_id = int(related[0])
+        except Exception:
+            pass
+
+    # Map to admin routes
     if ntype == "applicant_approval" and applicant_id:
-        return f"/applicants/{applicant_id}"
-    elif ntype == "employer_approval" and employer_id:
-        return f"/employers/{employer_id}"
-    elif ntype == "applicant_reported" and applicant_id:
-        return f"/applicants/{applicant_id}/reports"
-    elif ntype == "employer_reported" and employer_id:
-        return f"/employers/{employer_id}/reports"
-    elif ntype == "applicant_outdated_docu" and applicant_id:
-        return f"/applicants/{applicant_id}/documents"
-    elif ntype == "employer_outdated_docu" and employer_id:
-        return f"/employers/{employer_id}/documents"
-    elif ntype == "applicant_batch":
-        return "/applicants/batch"
-    # default fallback
+        return f"{admin_prefix}/applicants/{applicant_id}"
+    if ntype == "employer_approval" and employer_id:
+        return f"{admin_prefix}/employers/{employer_id}"
+    if ntype == "applicant_reported" and applicant_id:
+        return f"{admin_prefix}/applicants/{applicant_id}/reports"
+    if ntype == "employer_reported" and employer_id:
+        return f"{admin_prefix}/employers/{employer_id}/reports"
+    if ntype == "applicant_outdated_docu" and applicant_id:
+        return f"{admin_prefix}/applicants/{applicant_id}/documents"
+    if ntype == "employer_outdated_docu" and employer_id:
+        return f"{admin_prefix}/employers/{employer_id}/documents"
+    if ntype == "applicant_batch":
+        return f"{admin_prefix}/applicants/batch"
+
     return "#"
 
 

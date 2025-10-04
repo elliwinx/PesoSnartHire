@@ -460,7 +460,7 @@ input[type="email"] {
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
   text-decoration: none;
-  font-size: 0.75rem;
+  font-size: 12px;
 }
 
 .card-actions .view-btn:hover {
