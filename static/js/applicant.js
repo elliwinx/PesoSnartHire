@@ -6,7 +6,7 @@
       location: "Lipa City, Batangas",
       salary: "₱15,000 - ₱18,000",
       vacancies: "30 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/McDo.png",
       status: "Active"
     },
     {
@@ -16,7 +16,7 @@
       location: "Laguna",
       salary: "₱16,000 - ₱20,000",
       vacancies: "40 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/Nestle.png",
       status: "Active"
     },
     {
@@ -26,7 +26,7 @@
       location: "Lipa City, Batangas",
       salary: "₱₱14,000 - ₱17,000",
       vacancies: "5 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/Jollibee.png",
       status: "Active"
     },
     {
@@ -36,7 +36,7 @@
       location: "Lipa City, Batangas",
       salary: "₱15,000 - ₱18,000",
       vacancies: "50 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/SM.png",
       status: "Active"
     },
     {
@@ -46,7 +46,7 @@
       location: "SM Lipa City, Batangas",
       salary: "₱18,000 - ₱22,000",
       vacancies: "50 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/Alorica.png",
       status: "Active"
     },
     {
@@ -56,7 +56,7 @@
       location: "Lipa City, Batangas",
       salary: "₱14,000 - ₱17,000",
       vacancies: "20 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/Robinsons.png",
       status: "Active"
     },
     {
@@ -66,7 +66,7 @@
       location: "Cavite",
       salary: "₱17,000 - ₱21,000",
       vacancies: "20 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/Uniliver.png",
       status: "Active"
     },
     {
@@ -76,7 +76,7 @@
       location: "Lipa City, Batangas",
       salary: "₱20,000 - ₱25,000",
       vacancies: "1 Vacancies | Full-Time",
-      logo: "",
+      logo: "/static/Assets/Deer Claus.png",
       status: "Active"
     },
     {
@@ -86,7 +86,7 @@
       location: "Lipa City, Batangas",
       salary: "₱15,000 - ₱19,000",
       vacancies: "3 Vacancies | Full-Time",
-      logo: " ",
+      logo: "/static/Assets/Result.png",
       status: "Active"
     }
   ];
