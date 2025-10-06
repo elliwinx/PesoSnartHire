@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HOME ADMIN</title>
+    <title>Applicants - Admin Dashboard</title>
     <!-- Icons -->
     <link
       rel="stylesheet"
@@ -93,17 +93,123 @@
       </div>
     </section>
 
-    <!-- Job Vacancies -->
-    <section class="analytics-dashboard">
-      <div class="container">
-        <h2>PESO SmartHire - Administrative Dashboard</h2>
+    <div class="back-button">
+      {% if from_notifications %}
+      <a href="{{ url_for('admin.notifications_page') }}">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      {% else %}
+      <a href="javascript:history.back()">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="profile-container">
+      <!-- Header: Picture + Basic Info -->
+      <div class="profile-header">
+        <div class="profile-pic">
+          {% if applicant.profile_pic_path %}
+          <img
+            src="{{ url_for('static', filename=applicant.profile_pic_path) }}"
+            alt="Profile Picture"
+          />
+          {% else %}
+          <img
+            src="{{ url_for('static', filename='Assets/default-avatar.png') }}"
+            alt="Default Profile"
+          />
+          {% endif %}
+        </div>
+        <div class="profile-details">
+          <h2>
+            {{ applicant.first_name }} {{ applicant.middle_name }} {{
+            applicant.last_name }}
+          </h2>
+          <p><strong>Applicant Code:</strong> {{ applicant.applicant_code }}</p>
+          <p><strong>Status:</strong> {{ applicant.status }}</p>
+        </div>
+      </div>
+
+      <!-- Personal Info -->
+      <div class="section">
+        <h3>Personal Information</h3>
+        <p><strong>Age:</strong> {{ applicant.age }}</p>
+        <p><strong>Sex:</strong> {{ applicant.sex }}</p>
+        <p><strong>Phone:</strong> {{ applicant.phone }}</p>
+        <p><strong>Email:</strong> {{ applicant.email }}</p>
+      </div>
+
+      <!-- Address -->
+      <div class="section">
+        <h3>Address</h3>
+        <p><strong>Province:</strong> {{ applicant.province }}</p>
+        <p><strong>City:</strong> {{ applicant.city }}</p>
+        <p><strong>Barangay:</strong> {{ applicant.barangay }}</p>
+      </div>
+
+      <!-- Education -->
+      <div class="section">
+        <h3>Education</h3>
+        <p>{{ applicant.education }}</p>
+      </div>
+
+      <!-- PWD -->
+      {% if applicant.is_pwd %}
+      <div class="section">
+        <h3>Person with Disability</h3>
+        <p><strong>Type:</strong> {{ applicant.pwd_type }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Work Experience -->
+      {% if applicant.has_work_exp %}
+      <div class="section">
+        <h3>Work Experience</h3>
         <p>
-          Welcome to the administrative control center. Monitor system
-          performance, manage user, and oversee operations.
+          <strong>Years of Experience:</strong> {{ applicant.years_experience }}
         </p>
       </div>
-    </section>
+      {% endif %}
 
+      <!-- Reason -->
+      <div class="section">
+        <h3>Reason for Registering</h3>
+        <p>{{ applicant.registration_reason }}</p>
+      </div>
+
+      <!--Documents-->
+      <div class="section documents">
+        <h3>Documents</h3>
+        <ul>
+          {% if applicant.resume_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=applicant.resume_path) }}"
+              target="_blank"
+              >📄 Resume</a
+            >
+          </li>
+          {% endif %} {% if not applicant.is_from_lipa and
+          applicant.recommendation_letter_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}"
+              target="_blank"
+              >📄 Recommendation Letter</a
+            >
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <!-- System Info -->
+      <div class="section">
+        <h3>System Info</h3>
+        <p><strong>Registered At:</strong> {{ applicant.created_at }}</p>
+        <p><strong>Updated At:</strong> {{ applicant.updated_at }}</p>
+      </div>
+    </div>
     <!-- Footer -->
     <footer class="footer">
       <div class="container">
@@ -132,7 +238,7 @@
               </div>
             </div>
             <div class="team-member">
-              <span>Levita, Reymark A.</span>
+              <span>Lavita, Reymark A.</span>
               <div class="social-links">
                 <a href="https://github.com/elliwinx" target="_blank"
                   ><i class="devicon-github-plain"></i
@@ -167,10 +273,8 @@
         </div>
       </div>
     </footer>
-
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/Notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>
 </html>

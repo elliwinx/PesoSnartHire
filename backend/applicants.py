@@ -24,7 +24,8 @@ def save_file(file, subfolder):
     filename = secure_filename(file.filename)
     file_path = os.path.join(folder_path, filename)
     file.save(file_path)
-    return file_path
+    # Return relative path for URL
+    return os.path.join("uploads", subfolder, filename).replace("\\", "/")
 
 
 def register_applicant(form, files):
@@ -73,7 +74,7 @@ def register_applicant(form, files):
         pwd_type = form.get("applicantIsPWD") if is_pwd else None
         years_exp = form.get("applicantHasWorkExp") if has_work_exp else None
 
-        # ==== Set status ====
+        # ==== Set status (Active - Lipeno) (Pending - NOnlipeno)====
         status = "Approved" if is_from_lipa else "Pending"
 
         temp_password_plain = secrets.token_urlsafe(8)

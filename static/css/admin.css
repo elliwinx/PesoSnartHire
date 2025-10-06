@@ -585,6 +585,90 @@ input[type="email"] {
   font-size: 1rem;
 }
 
+/* Back Button */
+.back-button {
+  top: 20px;
+  left: 20px;
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
+  text-decoration: none;
+  z-index: 1001;
+  border: 2px solid #333;
+  border-radius: 50%;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: white;
+  transition: all 0.3s ease;
+  margin-top: 2%;
+  margin-left: 5%;
+}
+
+.back-button a {
+  color: #333;
+  font-size: 18px;
+  transition: color 0.3s ease;
+  text-decoration: none;
+}
+
+.back-button:hover {
+  background-color: #006341;
+  border-color: #006341;
+}
+
+.back-button:hover a {
+  color: white;
+}
+
+.profile-container {
+  max-width: 900px;
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: #fff;
+}
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.profile-header img {
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+}
+.profile-details h2 {
+  margin: 0;
+}
+.section {
+  margin-top: 20px;
+}
+.section h3 {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 5px;
+}
+.documents ul {
+  list-style: none;
+  padding: 0;
+}
+.documents li {
+  margin: 5px 0;
+}
+.documents a {
+  color: #007bff;
+  text-decoration: none;
+}
+.documents a:hover {
+  text-decoration: underline;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .hero-title {

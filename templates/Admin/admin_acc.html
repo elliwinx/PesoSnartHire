@@ -49,8 +49,14 @@
         </div>
         <nav class="nav">
           <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
-          <a href="{{ url_for('admin.applicants_management') }}" class="nav-link">Applicants Management</a>
-          <a href="{{ url_for('admin.employers_management') }}" class="nav-link">Employers Management</a>
+          <a
+            href="{{ url_for('admin.applicants_management') }}"
+            class="nav-link"
+            >Applicants Management</a
+          >
+          <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
+            >Employers Management</a
+          >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications</a
           >
@@ -59,7 +65,9 @@
             class="nav-link-active"
             >Account & Security</a
           >
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
@@ -172,7 +180,7 @@
               </div>
             </div>
             <div class="team-member">
-              <span>Lavita, Reymark A.</span>
+              <span>Levita, Reymark A.</span>
               <div class="social-links">
                 <a href="https://github.com/elliwinx" target="_blank"
                   ><i class="devicon-github-plain"></i
@@ -210,6 +218,6 @@
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
-     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>
 </html>

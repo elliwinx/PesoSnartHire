@@ -165,7 +165,8 @@ def register_employer(form_data, files):
             message=notification_message,
             count=1,
             related_ids=[employer_id] if employer_id else None,
-            recruitment_type=employer_data["recruitment_type"]
+            recruitment_type=employer_data["recruitment_type"],
+            employer_id=employer_id
         )
 
         conn.close()

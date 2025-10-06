@@ -168,12 +168,60 @@ def notifications_page():
 
     return render_template("Admin/admin_notif.html", notifications=notifications)
 
-# ===== Admin: Applicants Management ===== 
+
+# ===== Admin: Applicants Management =====
 @admin_bp.route("/applicants")
 def applicants_management():
     return render_template("Admin/admin_applicant.html")
 
-# ===== Admin: Employers Management ===== 
+
+@admin_bp.route("/applicants/<int:applicant_id>")
+def view_applicant(applicant_id):
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,))
+    applicant = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not applicant:
+        flash("Applicant not found", "danger")
+        return redirect(url_for("admin.applicants_management"))
+
+    # ✅ Check where the user came from
+    referrer = request.referrer
+    from_notifications = False
+    if referrer and "/admin/notifications" in referrer:
+        from_notifications = True
+
+    return render_template(
+        "Admin/applicant_profile.html",
+        applicant=applicant,
+        from_notifications=from_notifications
+    )
+
+# ===== Admin: Employers Management =====
+
+
 @admin_bp.route("/employers")
 def employers_management():
     return render_template("Admin/admin_employer.html")
+
+
+@admin_bp.route("/employers/<int:employer_id>")
+def view_employer(employer_id):
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(
+        "SELECT * FROM employers WHERE employer_id = %s", (employer_id,)
+    )
+    employer = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not employer:
+        flash("Employer not found", "danger")
+        return redirect(url_for("admin.employers_management"))
+
+    return render_template("Admin/employer_profile.html", employer=employer)

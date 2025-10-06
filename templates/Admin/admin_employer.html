@@ -48,18 +48,26 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{url_for('admin.admin_home')}}" class="nav-link"
-            >Home</a
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
+          <a
+            href="{{ url_for('admin.applicants_management') }}"
+            class="nav-link"
+            >Applicants Management</a
           >
-          <a href="{{ url_for('admin.applicants_management') }}" class="nav-link">Applicants Management</a>
-          <a href="{{ url_for('admin.employers_management') }}" class="nav-link-active">Employers Management</a>
+          <a
+            href="{{ url_for('admin.employers_management') }}"
+            class="nav-link-active"
+            >Employers Management</a
+          >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications</a
           >
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
           >
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
@@ -85,7 +93,8 @@
       <div class="container">
         <h2>Employers Management</h2>
         <p>
-          Manage employer accounts, verify credentials, and oversee application activities
+          Manage employer accounts, verify credentials, and oversee application
+          activities
         </p>
       </div>
     </section>
@@ -124,7 +133,7 @@
               </div>
             </div>
             <div class="team-member">
-              <span>Lavita, Reymark A.</span>
+              <span>Levita, Reymark A.</span>
               <div class="social-links">
                 <a href="https://github.com/elliwinx" target="_blank"
                   ><i class="devicon-github-plain"></i
