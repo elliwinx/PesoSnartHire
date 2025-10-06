@@ -155,6 +155,30 @@ def register_employer(form_data, files):
         )
         employer_id = employer_id_row["id"] if employer_id_row else None
 
+        # === Send confirmation email ===
+        try:
+            msg = Message(
+                subject="PESO SmartHire - Employer Registration Received",
+                sender="your_email@example.com",
+                recipients=[employer_data["email"]],
+            )
+            msg.body = f"""
+            Hello {employer_data["employer_name"]},
+
+            Thank you for registering with PESO SmartHire.
+            Your account is currently pending admin approval.
+
+            We will notify you once it has been reviewed.
+
+            Regards,  
+            PESO SmartHire Team
+            """
+            mail.send(msg)
+            print("[v0] Confirmation email sent successfully")
+        except Exception as e:
+            print(f"[v0] Failed to send confirmation email: {e}")
+
+        # === Notification for admin ===
         recruitment_label = "Local" if employer_data["recruitment_type"] == "Local" else "International"
         notification_title = f"Employer Account Pending Approval"
         notification_message = f"1 {recruitment_label} employer registration needs approval"
@@ -171,10 +195,6 @@ def register_employer(form_data, files):
 
         conn.close()
         return True, "Registration successful! Your account is pending admin approval."
-    else:
-        print("[v0] Failed to register employer in database")
-        conn.close()
-        return False, "Registration failed. Please try again."
 
 
 # ===== Routes =====
