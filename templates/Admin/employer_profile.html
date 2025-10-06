@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Employer Profile - Admin Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/admin.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/profile.css') }}"
+    />
+  </head>
+  <body>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %} Header
+    <header class="header">
+      <div class="container">
+        <div class="logo">
+          <img
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+            alt="PESO SmartHire Logo"
+          />
+        </div>
+        <nav class="nav">
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
+          <a
+            href="{{ url_for('admin.applicants_management') }}"
+            class="nav-link"
+            >Applicants Management</a
+          >
+          <a
+            href="{{ url_for('admin.employers_management') }}"
+            class="nav-link-active"
+            >Employers Management</a
+          >
+          <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
+            >Notifications<span
+              id="notifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
+          >
+          <a href="{{url_for('admin.account_settings')}}" class="nav-link"
+            >Account & Security</a
+          >
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-background">
+        <img
+          src="{{ url_for('static', filename='Assets/background.png') }}"
+          alt="New City Hall of Lipa City"
+        />
+      </div>
+      <div class="hero-content">
+        <div class="container">
+          <h1 class="hero-title">Employer Profile</h1>
+          <p class="hero-description">View employer details and documents</p>
+        </div>
+      </div>
+    </section>
+
+    <div class="back-button">
+      {% if from_notifications %}
+      <a href="{{ url_for('admin.notifications_page') }}">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      {% else %}
+      <a href="javascript:history.back()">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="profile-container">
+      <div class="profile-header">
+        <div class="profile-pic">
+          {% if employer.company_logo_path %}
+          <img
+            src="{{ url_for('static', filename=employer.company_logo_path) }}"
+            alt="Company Logo"
+          />
+          {% else %}
+          <img
+            src="{{ url_for('static', filename='Assets/default-company-logo.png') }}"
+            alt="Default Company Logo"
+          />
+          {% endif %}
+        </div>
+        <div class="profile-details">
+          <h2>{{ employer.employer_name }}</h2>
+          <p><strong>Industry:</strong> {{ employer.industry }}</p>
+          <p>
+            <strong>Recruitment Type:</strong> {{ employer.recruitment_type }}
+          </p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Contact Information</h3>
+        <p><strong>Contact Person:</strong> {{ employer.contact_person }}</p>
+        <p><strong>Phone:</strong> {{ employer.phone }}</p>
+        <p><strong>Email:</strong> {{ employer.email }}</p>
+      </div>
+
+      <div class="section">
+        <h3>Address</h3>
+        <p><strong>Street:</strong> {{ employer.street }}</p>
+        <p><strong>Barangay:</strong> {{ employer.barangay }}</p>
+        <p><strong>City:</strong> {{ employer.city }}</p>
+        <p><strong>Province:</strong> {{ employer.province }}</p>
+      </div>
+
+      <div class="section documents">
+        <h3>Documents</h3>
+        <ul>
+          {% if employer.company_logo_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.company_logo_path) }}"
+              target="_blank"
+              >Company Logo</a
+            >
+          </li>
+          {% endif %} {% if employer.business_permit_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.business_permit_path) }}"
+              target="_blank"
+              >Business Permit</a
+            >
+          </li>
+          {% endif %} {% if employer.philiobnet_registration_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.philiobnet_registration_path) }}"
+              target="_blank"
+              >PhilJobNet Registration</a
+            >
+          </li>
+          {% endif %} {% if employer.job_orders_of_client_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.job_orders_of_client_path) }}"
+              target="_blank"
+              >Job Orders of Client</a
+            >
+          </li>
+          {% endif %} {% if employer.recruitment_type == 'Local' %} {% if
+          employer.dole_no_pending_case_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.dole_no_pending_case_path) }}"
+              target="_blank"
+              >DOLE No Pending Case</a
+            >
+          </li>
+          {% endif %} {% if employer.dole_authority_to_recruit_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.dole_authority_to_recruit_path) }}"
+              target="_blank"
+              >DOLE Authority to Recruit</a
+            >
+          </li>
+          {% endif %} {% endif %} {% if employer.recruitment_type ==
+          'International' %} {% if employer.dmw_no_pending_case_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.dmw_no_pending_case_path) }}"
+              target="_blank"
+              >DMW No Pending Case</a
+            >
+          </li>
+          {% endif %} {% if employer.license_to_recruit_path %}
+          <li>
+            <a
+              href="{{ url_for('static', filename=employer.license_to_recruit_path) }}"
+              target="_blank"
+              >License to Recruit</a
+            >
+          </li>
+          {% endif %} {% endif %}
+        </ul>
+      </div>
+
+      <div class="section">
+        <h3>System Info</h3>
+        <p><strong>Registered At:</strong> {{ employer.created_at }}</p>
+        <p><strong>Updated At:</strong> {{ employer.updated_at }}</p>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-left">
+            <h3>PESO SmartHire</h3>
+            <p>
+              Connecting talent with opportunity through innovative recruitment
+              solutions.
+            </p>
+            <a href="" class="footer-note">Terms and Conditions</a>
+            <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
+          </div>
+          <div class="footer-right">
+            <h3>Development Team</h3>
+            <div class="team-member">
+              <span>Anoya, Ruffa F.</span>
+              <div class="social-links">
+                <a href="https://github.com/anoyaruffa" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a href="#"><i class="devicon-facebook-plain"></i></a>
+                <a href="mailto: ruffaanoya2005@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Lavita, Reymark A.</span>
+              <div class="social-links">
+                <a href="https://github.com/elliwinx" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/reymark.levita.3"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Samonte, Ralph Matthew A.</span>
+              <div class="social-links">
+                <a href="https://github.com/RalphWreckeri2" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/ralphmatthew.13"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!--Scripts-->
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+  </body>
+</html>

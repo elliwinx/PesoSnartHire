@@ -224,4 +224,9 @@ def view_employer(employer_id):
         flash("Employer not found", "danger")
         return redirect(url_for("admin.employers_management"))
 
-    return render_template("Admin/employer_profile.html", employer=employer)
+    referrer = request.referrer
+    from_notifications = False
+    if referrer and "/admin/notifications" in referrer:
+        from_notifications = True
+
+    return render_template("Admin/employer_profile.html", employer=employer, from_notifications=from_notifications)

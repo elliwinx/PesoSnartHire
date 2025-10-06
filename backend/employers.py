@@ -23,10 +23,9 @@ def save_file(file, subfolder):
     folder_path = os.path.join(UPLOAD_FOLDER, subfolder)
     os.makedirs(folder_path, exist_ok=True)
 
-    # Ensure filename is safe
     filename = secure_filename(file.filename)
 
-    # Add timestamp for uniqueness (avoid overwriting)
+    # Add timestamp for uniqueness
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
     name, ext = os.path.splitext(filename)
     unique_filename = f"{name}_{timestamp}{ext}"
@@ -34,7 +33,8 @@ def save_file(file, subfolder):
     file_path = os.path.join(folder_path, unique_filename)
     file.save(file_path)
 
-    return file_path
+    # ✅ return the unique filename so template matches the saved file
+    return os.path.join("uploads", subfolder, unique_filename).replace("\\", "/")
 
 
 def register_employer(form_data, files):
