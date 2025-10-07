@@ -627,9 +627,9 @@ input[type="email"] {
   margin: 40px auto;
   padding: 0;
   border: none;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.578), 0 1px 2px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
@@ -638,16 +638,16 @@ input[type="email"] {
   align-items: center;
   gap: 32px;
   padding: 48px 40px;
-  background: linear-gradient(135deg, #7b1113 0%, #d83737 100%);
-  color: #fff;
+  background: #f8f9fa;
   border-bottom: none;
+  border-bottom: 1px solid #333;
 }
 
 .profile-header img {
   width: 120px;
   height: 120px;
   object-fit: cover;
-  border-radius: 50%;
+  border-radius: 10%;
   border: 4px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
@@ -658,24 +658,24 @@ input[type="email"] {
   font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.5px;
-  color: #fff;
+  color: black;
 }
 
 .profile-details p {
   margin: 4px 0;
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.9);
+  color: #333;
   font-weight: 400;
 }
 
 .profile-details strong {
   font-weight: 600;
-  color: #fff;
+  color: black;
 }
 
 .section {
   padding: 32px 40px;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid #a8a8a8;
 }
 
 .section:last-child {
@@ -694,7 +694,7 @@ input[type="email"] {
 }
 
 .section p {
-  margin: 12px 0;
+  margin: 5px 0;
   font-size: 15px;
   color: #4a5568;
   line-height: 1.7;
@@ -764,7 +764,7 @@ input[type="email"] {
 
 .documents li {
   margin: 0;
-  border: 1.5px solid #7b1113;
+  border: 1.5px solid #a8a8a8;
   border-radius: 10px;
 }
 
@@ -776,7 +776,7 @@ input[type="email"] {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  color: #7b1113;
+  color: black;
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -793,7 +793,6 @@ input[type="email"] {
   background: #7b1113;
   color: #fff;
   border-color: #7b1113;
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(123, 17, 19, 0.2);
 }
 
