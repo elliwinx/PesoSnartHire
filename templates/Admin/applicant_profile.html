@@ -93,17 +93,31 @@
       </div>
     </section>
 
-    <div class="back-button">
-      {% if from_notifications %}
-      <a href="{{ url_for('admin.notifications_page') }}">
-        <i class="fa-solid fa-arrow-left"></i>
-      </a>
-      {% else %}
-      <a href="javascript:history.back()">
-        <i class="fa-solid fa-arrow-left"></i>
-      </a>
-      {% endif %}
-    </div>
+    <section class="account-and-security">
+      <div class="container">
+        <div class="left">
+          <div class="back-button">
+            {% if from_notifications %}
+            <a href="{{ url_for('admin.notifications_page') }}">
+              <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            {% else %}
+            <a href="javascript:history.back()">
+              <i class="fa-solid fa-arrow-left"></i>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="right">
+          <i class="fa-solid fa-bars" id="menuToggle"></i>
+          <!--Hidden Menu-->
+          <div class="dropdown-menu" id="dropdownMenu">
+            <a href="#">Suspend Account</a>
+            <a href="#">Request to Update Documents</a>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div class="profile-container">
       <!-- Header: Picture + Basic Info -->

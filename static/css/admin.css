@@ -221,7 +221,7 @@ input[type="email"] {
 }
 
 .account-and-security .left {
-  flex: 1; /* stays on the left */
+  flex: 1;
 }
 
 .account-and-security .right {
@@ -457,7 +457,7 @@ input[type="email"] {
 .card-actions .view-btn {
   background: #7b1113;
   color: #fff;
-  padding: 0.2rem 0.5rem;
+  padding: 0.5rem 0.6rem;
   border-radius: 6px;
   text-decoration: none;
   font-size: 12px;
@@ -602,8 +602,7 @@ input[type="email"] {
   justify-content: center;
   background-color: white;
   transition: all 0.3s ease;
-  margin-top: 2%;
-  margin-left: 5%;
+  margin: 0;
 }
 
 .back-button a {
@@ -623,8 +622,8 @@ input[type="email"] {
 }
 
 .profile-container {
-  max-width: 900px;
-  margin: 40px auto;
+  max-width: 1100px;
+  margin: 10px auto 50px auto;
   padding: 0;
   border: none;
   border-radius: 10px;
