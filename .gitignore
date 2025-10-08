@@ -2,3 +2,4 @@
 *.pyc
 run_flask.bat
 static/uploads/
+.vscode/
