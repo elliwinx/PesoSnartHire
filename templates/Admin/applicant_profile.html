@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Applicants - Admin Dashboard</title>
-    <!-- Icons -->
+    <title>Applicant Profile - Admin Dashboard</title>
+    <!--Icons-->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -13,14 +13,14 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Styles -->
+    <!--Styles-->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
   </head>
   <body>
-    <!--Flash of Welcome Back Message-->
+    <!--Flash Messages-->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
@@ -38,7 +38,7 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
-    <!-- Header -->
+    <!--Header-->
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -81,14 +81,13 @@
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
+          alt="New City Hall of Lipa City"
         />
       </div>
       <div class="hero-content">
         <div class="container">
           <h1 class="hero-title">Welcome, Administrator!</h1>
-          <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here’s what we have today</p>
+          <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
@@ -120,7 +119,7 @@
     </section>
 
     <div class="profile-container">
-      <!-- Header: Picture + Basic Info -->
+      <!--Header: Picture + Basic Info-->
       <div class="profile-header">
         <div class="profile-pic">
           {% if applicant.profile_pic_path %}
@@ -145,7 +144,7 @@
         </div>
       </div>
 
-      <!-- Personal Info -->
+      <!--Personal Info-->
       <div class="section">
         <h3>Personal Information</h3>
         <p><strong>Age:</strong> {{ applicant.age }}</p>
@@ -154,7 +153,7 @@
         <p><strong>Email:</strong> {{ applicant.email }}</p>
       </div>
 
-      <!-- Address -->
+      <!--Address-->
       <div class="section">
         <h3>Address</h3>
         <p><strong>Province:</strong> {{ applicant.province }}</p>
@@ -162,21 +161,20 @@
         <p><strong>Barangay:</strong> {{ applicant.barangay }}</p>
       </div>
 
-      <!-- Education -->
+      <!--Education-->
       <div class="section">
         <h3>Education</h3>
         <p>{{ applicant.education }}</p>
       </div>
 
-      <!-- PWD -->
+      <!--PWD-->
       {% if applicant.is_pwd %}
       <div class="section">
         <h3>Person with Disability</h3>
         <p><strong>Type:</strong> {{ applicant.pwd_type }}</p>
       </div>
       {% endif %}
-
-      <!-- Work Experience -->
+      <!--Work Experience-->
       {% if applicant.has_work_exp %}
       <div class="section">
         <h3>Work Experience</h3>
@@ -185,8 +183,7 @@
         </p>
       </div>
       {% endif %}
-
-      <!-- Reason -->
+      <!--Reason-->
       <div class="section">
         <h3>Reason for Registering</h3>
         <p>{{ applicant.registration_reason }}</p>
@@ -217,48 +214,78 @@
         </ul>
       </div>
 
-<!-- NON-LIPEÑO APPLICANT VIEW -->
-<div class="applicant-details" data-applicant-id="{{ applicant.id }}">
-  <h3>{{ applicant.first_name }} {{ applicant.last_name }}</h3>
-  <p><strong>Email:</strong> {{ applicant.email }}</p>
-  <p><strong>Status:</strong> <span id="applicant-status">{{ applicant.status }}</span></p>
+      <!--Only show action buttons for NON-LIPEÑO applicants with Pending status {%
+      if not applicant.is_from_lipa and applicant.status == "Pending" %}-->
+      <div
+        class="applicant-details"
+        data-applicant-id="{{ applicant.applicant_id }}"
+      >
+        <h3>Non-Lipeño Applicant Actions</h3>
+        <p>
+          <strong>Status:</strong>
+          <span id="applicant-status">{{ applicant.status }}</span>
+        </p>
 
-  <div class="action-buttons" style="margin-top: 15px;">
-    {% if applicant.status == "Pending" %}
-      <!-- Single Edit Status Button -->
-      <button class="btn btn-primary btn-sm" id="editStatusBtn">EDIT STATUS</button>
-    {% else %}
-      <p>No further actions available for this applicant.</p>
-    {% endif %}
-  </div>
-</div>
+        <div class="action-buttons" style="margin-top: 15px">
+          <button class="btn btn-primary btn-sm" id="editStatusBtn">
+            EDIT STATUS
+          </button>
+        </div>
+      </div>
+      {% endif %}
+      <!--Modal-->
+      <div
+        id="statusModal"
+        class="modal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        "
+      >
+        <div
+          style="
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            min-width: 250px;
+            text-align: center;
+          "
+        >
+          <h5>Update Applicant Status</h5>
+          <button
+            class="btn btn-success btn-sm status-btn"
+            data-action="approved"
+          >
+            Approve
+          </button>
+          <button
+            class="btn btn-danger btn-sm status-btn"
+            data-action="rejected"
+          >
+            Reject
+          </button>
+          <button
+            class="btn btn-warning btn-sm status-btn"
+            data-action="reupload"
+          >
+            Request Reupload
+          </button>
+          <br /><br />
+          <button id="closeModal" class="btn btn-secondary btn-sm">
+            Cancel
+          </button>
+        </div>
+      </div>
 
-<!-- Modal -->
-<div id="statusModal" class="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; 
-     background:rgba(0,0,0,0.5); justify-content:center; align-items:center;">
-  <div style="background:white; padding:20px; border-radius:10px; min-width:250px; text-align:center;">
-    <h5>Update Applicant Status</h5>
-    <button class="btn btn-success btn-sm status-btn" data-action="approved">Approve</button>
-    <button class="btn btn-danger btn-sm status-btn" data-action="rejected">Reject</button>
-    <button class="btn btn-warning btn-sm status-btn" data-action="reupload">Request Reupload</button>
-    <br><br>
-    <button id="closeModal" class="btn btn-secondary btn-sm">Cancel</button>
-  </div>
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-      <!-- System Info -->
+      <!--System Info-->
       <div class="section">
         <h3>System Info</h3>
         <p><strong>Registered At:</strong> {{ applicant.created_at }}</p>
@@ -266,7 +293,7 @@
       </div>
     </div>
 
-    <!-- Footer -->
+    <!--Footer-->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -329,8 +356,10 @@
         </div>
       </div>
     </footer>
+
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
   </body>
 </html>
