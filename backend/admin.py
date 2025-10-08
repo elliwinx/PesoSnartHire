@@ -83,6 +83,135 @@ def api_unread_count():
     return jsonify({"success": True, "unread_count": count})
 
 
+# ==========================
+# VIEW NON-LIPEÑO APPLICANT PROFILE
+# ==========================
+@admin_bp.route("/view_nonlipeño/<int:applicant_id>")
+def view_non_lipeño(applicant_id):
+    try:
+        conn = create_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM non_lipeno_applicants WHERE id = %s", (applicant_id,))
+        applicant = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not applicant:
+            print(f"❌ Applicant {applicant_id} not found")
+            return "Applicant not found", 404
+
+        print(f"✅ Loaded applicant: {applicant}")
+        return render_template("Admin/applicant_profile.html", applicant=applicant)
+
+    except Exception as e:
+        print(f"❌ Error loading applicant: {e}")
+        return "Error loading applicant profile", 500
+
+
+# ==========================
+# UPDATE NON-LIPEÑO STATUS + SEND EMAIL
+# ==========================
+@admin_bp.route("/update_nonlipeno_status/<int:applicant_id>", methods=["POST"])
+def update_nonlipeno_status(applicant_id):
+    try:
+        data = request.get_json()
+        print(f"🔹 Received data for applicant {applicant_id}: {data}")
+
+        if not data or "action" not in data:
+            print("❌ No action provided in request")
+            return jsonify({"success": False, "message": "No action provided."}), 400
+
+        action = data["action"]
+        actions = {
+            "approved": {
+                "status": "Approved",
+                "subject": "Application Approved – PESO SmartHire",
+                "message": """Dear {first_name},
+
+Congratulations! Your application for PESO SmartHire has been reviewed and approved.
+
+Please check your PESO SmartHire portal for further updates or next steps.
+
+Thank you and welcome aboard!
+
+— PESO SmartHire Admin""",
+                "alert": "Non-Lipeño applicant approved successfully!"
+            },
+            "rejected": {
+                "status": "Rejected",
+                "subject": "Application Status – PESO SmartHire",
+                "message": """Dear {first_name},
+
+We regret to inform you that your application for PESO SmartHire has been reviewed but did not meet the current requirements.
+
+You may reapply in the future once you meet the qualifications.
+
+Thank you for your interest.
+
+— PESO SmartHire Admin""",
+                "alert": "Non-Lipeño applicant has been rejected."
+            },
+            "reupload": {
+                "status": "Reupload",
+                "subject": "Endorsement Letter Required – Application Review Update",
+                "message": """Dear {first_name},
+
+We have reviewed your application for PESO SmartHire and noticed that your endorsement letter is missing or needs revision.
+
+Please re-upload your updated endorsement letter through your PESO SmartHire applicant portal as soon as possible.
+
+Thank you for your cooperation!
+
+— PESO SmartHire Admin""",
+                "alert": "Re-upload request sent and email notification sent to applicant."
+            }
+        }
+
+        if action not in actions:
+            print(f"❌ Invalid action: {action}")
+            return jsonify({"success": False, "message": "Invalid action."}), 400
+
+        # Extract details
+        new_status = actions[action]["status"]
+        email_subject = actions[action]["subject"]
+        email_message_template = actions[action]["message"]
+        success_message = actions[action]["alert"]
+
+        conn = create_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get applicant info
+        cursor.execute("SELECT first_name, email FROM non_lipeno_applicants WHERE id = %s", (applicant_id,))
+        applicant = cursor.fetchone()
+        if not applicant:
+            print(f"❌ Applicant {applicant_id} not found in DB")
+            return jsonify({"success": False, "message": "Applicant not found"}), 404
+
+        print(f"🔹 Updating applicant {applicant_id} to status {new_status}")
+        cursor.execute("UPDATE non_lipeno_applicants SET status = %s WHERE id = %s", (new_status, applicant_id))
+        conn.commit()
+
+        # Send email
+        print(f"📧 Sending email to {applicant['email']}")
+        msg = Message(
+            subject=email_subject,
+            recipients=[applicant["email"]],
+            body=email_message_template.format(first_name=applicant["first_name"])
+        )
+        mail.send(msg)
+
+        cursor.close()
+        conn.close()
+
+        print(f"✅ Status updated and email sent for applicant {applicant_id}")
+        return jsonify({"success": True, "message": success_message})
+
+    except Exception as e:
+        print(f"❌ Error updating status or sending email: {e}")
+        return jsonify({"success": False, "message": "An error occurred while updating status"}), 500
+
+
+
 # ===== Admin Account & Security =====
 @admin_bp.route("/account", methods=["GET", "POST"])
 def account_settings():
