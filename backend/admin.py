@@ -110,7 +110,6 @@ def update_nonlipeno_status(applicant_id):
             return jsonify({"success": False, "message": "Non-Lipeño applicant not found"}), 404
 
         if action == "approved":
-            # Generate credentials if not already set
             if not applicant.get("temp_password"):
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
@@ -154,17 +153,36 @@ def update_nonlipeno_status(applicant_id):
             success_message = "Non-Lipeño applicant has been rejected. Notification email sent."
 
         elif action == "reupload":
+            if not applicant.get("temp_password"):
+                temp_password_plain = secrets.token_urlsafe(8)
+                password_hash = generate_password_hash(temp_password_plain)
+
+                cursor.execute(
+                    "UPDATE applicants SET password_hash = %s, temp_password = %s WHERE applicant_id = %s",
+                    (password_hash, temp_password_plain, applicant_id)
+                )
+            else:
+                temp_password_plain = applicant["temp_password"]
+
             new_status = "Reupload"
             subject = "PESO SmartHire - Endorsement Letter Required"
             body = f"""
             <p>Hi {applicant['first_name']},</p>
             <p>This is PESO SmartHire Team.</p>
             <p>We have reviewed your application for PESO SmartHire and noticed that your endorsement letter needs to be updated or is missing required information.</p>
-            <p>Please re-upload your updated endorsement letter through your PESO SmartHire applicant portal as soon as possible.</p>
+            <p>Please log in to your account and re-upload your updated endorsement letter through the Account and Security page in your PESO SmartHire applicant portal as soon as possible.</p>
+            <p>Here are your login credentials:</p>
+            <ul>
+                <li>Applicant ID: {applicant['applicant_code']}</li>
+                <li>Email: {applicant['email']}</li>
+                <li>Phone Number: {applicant['phone']}</li>
+                <li>Password: {temp_password_plain}</li>
+            </ul>
+            <p><strong>Please change your password after logging in for security purposes.</strong></p>
             <p>Thank you for your cooperation!</p>
             <p>— PESO SmartHire Admin</p>
             """
-            success_message = "Re-upload request sent. Email notification sent to applicant."
+            success_message = "Re-upload request sent. Email notification with login credentials sent to applicant."
 
         else:
             print(f"[v0] Invalid action: {action}")
@@ -172,16 +190,12 @@ def update_nonlipeno_status(applicant_id):
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
-        # Update status in database
-        print(f"[v0] Updating applicant {applicant_id} to status {new_status}")
         cursor.execute(
             "UPDATE applicants SET status = %s WHERE applicant_id = %s",
             (new_status, applicant_id)
         )
         conn.commit()
 
-        # Send email
-        print(f"[v0] Sending email to {applicant['email']}")
         msg = Message(
             subject=subject,
             recipients=[applicant["email"]],
