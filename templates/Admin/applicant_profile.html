@@ -108,12 +108,13 @@
           </div>
         </div>
         <div class="right">
+          {% if applicant.status == 'Approved' %}
           <i class="fa-solid fa-bars" id="menuToggle"></i>
-          <!--Hidden Menu-->
           <div class="dropdown-menu" id="dropdownMenu">
             <a href="#">Suspend Account</a>
             <a href="#">Request to Update Documents</a>
           </div>
+          {% endif %}
         </div>
       </div>
     </section>
