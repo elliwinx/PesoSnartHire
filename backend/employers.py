@@ -218,7 +218,13 @@ def employers_terms():
 def register():
     if request.method == "POST":
         print(f"[v0] Employer registration form submitted")
-        success, message = register_employer(request.form, request.files)
+        
+        result = register_employer(request.form, request.files)
+        if result is None:
+            success, message = False, "Registration failed unexpectedly."
+        else:
+            success, message = result
+
         flash(message, "success" if success else "danger")
 
         if success:

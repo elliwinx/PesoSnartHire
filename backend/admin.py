@@ -354,3 +354,209 @@ def view_employer(employer_id):
         from_notifications = True
 
     return render_template("Admin/employer_profile.html", employer=employer, from_notifications=from_notifications)
+
+# ==========================
+# UPDATE LOCAL RECRUITMENT EMPLOYER STATUS
+# ==========================
+@admin_bp.route("/update_local_employer_status/<int:employer_id>", methods=["POST"])
+def update_local_employer_status(employer_id):
+    try:
+        data = request.get_json()
+        if not data or "action" not in data:
+            return jsonify({"success": False, "message": "No action provided."}), 400
+
+        action = data["action"]
+
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM employers WHERE employer_id = %s AND recruitment_type = 'Local'",
+            (employer_id,)
+        )
+        employer = cursor.fetchone()
+
+        if not employer:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Local employer not found"}), 404
+
+        # Determine new status, subject, body, and success message
+        if action == "approved":
+            new_status = "Approved"
+            subject = "PESO SmartHire - Employer Account Approved"
+            body = f"""
+            <p>Hi {employer['employer_name']},</p>
+            <p>Your account has been approved! You may now post job orders and access your dashboard.</p>
+            """
+            success_message = "Local employer approved successfully! Notification email sent."
+
+        elif action == "rejected":
+            new_status = "Rejected"
+            subject = "PESO SmartHire - Employer Account Status Update"
+            body = f"""
+            <p>Hi {employer['employer_name']},</p>
+            <p>We regret to inform you that your account has been rejected. You may reapply once you meet the requirements.</p>
+            """
+            success_message = "Local employer rejected. Notification email sent."
+
+        elif action == "reupload":
+            new_status = "Reupload"
+            subject = "PESO SmartHire - Documents Update Required"
+            body = f"""
+            <p>Hi {employer['employer_name']},</p>
+            <p>Some documents are missing or need to be updated. Please log in and re-upload the required files.</p>
+            """
+            success_message = "Re-upload request sent. Notification email sent to employer."
+
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Invalid action."}), 400
+
+        # Update employer status
+        cursor.execute(
+            "UPDATE employers SET status = %s WHERE employer_id = %s",
+            (new_status, employer_id)
+        )
+        conn.commit()
+
+        # Send admin notification
+        admin_id = session.get("admin_id")
+        if admin_id:
+            cursor.execute(
+            """
+            INSERT INTO notifications 
+                (employer_id, notification_type, title, message, recruitment_type, is_read, created_at)
+            VALUES (%s, %s, %s, %s, %s, 0, NOW())
+            """,
+            (
+                employer_id,
+                "employer_approval",  # use enum value
+                f"Employer {new_status}",  # title
+                f"Employer {employer['employer_name']} has been {new_status.lower()} by admin.",  # message
+                "Local"  # recruitment_type
+            )
+        )
+        conn.commit()
+
+        # Send email
+        msg = Message(subject=subject, recipients=[employer["email"]], html=body)
+        mail.send(msg)
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": success_message})
+
+    except Exception as e:
+        print(f"[v1] Error updating status or sending email: {e}")
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
+        return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
+
+# ==========================
+# UPDATE INTERNATIONAL RECRUITMENT EMPLOYER STATUS
+# ==========================
+@admin_bp.route("/update_international_employer_status/<int:employer_id>", methods=["POST"])
+def update_international_employer_status(employer_id):
+    try:
+        data = request.get_json()
+        if not data or "action" not in data:
+            return jsonify({"success": False, "message": "No action provided."}), 400
+
+        action = data["action"]
+
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM employers WHERE employer_id = %s AND recruitment_type = 'International'",
+            (employer_id,)
+        )
+        employer = cursor.fetchone()
+
+        if not employer:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "International employer not found"}), 404
+
+        # Determine new status, subject, body, and success message
+        if action == "approved":
+            new_status = "Approved"
+            subject = "PESO SmartHire - International Employer Account Approved"
+            body = f"""
+            <p>Hi {employer['employer_name']},</p>
+            <p>Your international recruitment account has been approved! You may now post overseas job orders and access your dashboard.</p>
+            """
+            success_message = "International employer approved successfully! Notification email sent."
+
+        elif action == "rejected":
+            new_status = "Rejected"
+            subject = "PESO SmartHire - International Employer Account Status Update"
+            body = f"""
+            <p>Hi {employer['employer_name']},</p>
+            <p>We regret to inform you that your international recruitment account has been rejected. You may reapply once you meet the necessary requirements.</p>
+            """
+            success_message = "International employer rejected. Notification email sent."
+
+        elif action == "reupload":
+            new_status = "Reupload"
+            subject = "PESO SmartHire - Documents Update Required (International)"
+            body = f"""
+            <p>Hi {employer['employer_name']},</p>
+            <p>Some of your international recruitment documents are missing or need to be updated. Please log in and re-upload the required files.</p>
+            """
+            success_message = "Re-upload request sent. Notification email sent to international employer."
+
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Invalid action."}), 400
+
+        # Update employer status
+        cursor.execute(
+            "UPDATE employers SET status = %s WHERE employer_id = %s",
+            (new_status, employer_id)
+        )
+        conn.commit()
+
+        # Send admin notification
+        admin_id = session.get("admin_id")
+        if admin_id:
+            cursor.execute(
+                """
+                INSERT INTO notifications 
+                    (employer_id, notification_type, title, message, recruitment_type, is_read, created_at)
+                VALUES (%s, %s, %s, %s, %s, 0, NOW())
+                """,
+                (
+                    employer_id,
+                    "employer_approval",  # enum type
+                    f"Employer {new_status}",  # title
+                    f"International employer {employer['employer_name']} has been {new_status.lower()} by admin.",  # message
+                    "International"  # recruitment_type
+                )
+            )
+            conn.commit()
+
+        # Send email
+        msg = Message(subject=subject, recipients=[employer["email"]], html=body)
+        mail.send(msg)
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": success_message})
+
+    except Exception as e:
+        print(f"[v1] Error updating status or sending email: {e}")
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
+        return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
