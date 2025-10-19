@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Employer Profile - Admin Dashboard</title>
+    <!--Icons-->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -12,12 +13,18 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
+    <!--Styles-->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/profile.css') }}"
+    />
   </head>
   <body>
+    <!-- Added inline Jinja flash messages with auto-fade -->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
@@ -35,6 +42,13 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
+
+    <!-- AJAX flash container for dynamic messages -->
+    <div id="ajaxFlashContainer"></div>
+
+    <!-- Server-side flash messages (inline) -->
+
+    <!--Header-->
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -73,6 +87,7 @@
       </div>
     </header>
 
+    <!--Hero Section-->
     <section class="hero">
       <div class="hero-background">
         <img
@@ -88,6 +103,7 @@
       </div>
     </section>
 
+    <!--Back Button and Menu-->
     <section class="account-and-security">
       <div class="container">
         <div class="left">
@@ -115,7 +131,9 @@
       </div>
     </section>
 
+    <!--Profile Container-->
     <div class="profile-container">
+      <!--Header: Logo + Basic Info-->
       <div class="profile-header">
         <div class="profile-pic">
           {% if employer.company_logo_path %}
@@ -139,6 +157,7 @@
         </div>
       </div>
 
+      <!--Contact Information-->
       <div class="section">
         <h3>Contact Information</h3>
         <p><strong>Contact Person:</strong> {{ employer.contact_person }}</p>
@@ -146,6 +165,7 @@
         <p><strong>Email:</strong> {{ employer.email }}</p>
       </div>
 
+      <!--Address-->
       <div class="section">
         <h3>Address</h3>
         <p><strong>Street:</strong> {{ employer.street }}</p>
@@ -154,6 +174,7 @@
         <p><strong>Province:</strong> {{ employer.province }}</p>
       </div>
 
+      <!--Documents-->
       <div class="section documents">
         <h3>Documents</h3>
         <ul>
@@ -226,97 +247,165 @@
           {% endif %} {% endif %}
         </ul>
       </div>
-   {% if employer.status not in ['Approved', 'Rejected'] %}
-  {% if employer.recruitment_type == 'Local' %}
-    <div class="employer-details" data-employer-id="{{ employer.employer_id }}">
-      <h3>Local Recruitment Employer Actions</h3>
-      <p>
-        <strong>Contact Person:</strong>
-        <span id="employer-contact-person">{{ employer.contact_person }}</span>
-      </p>
-      <p>
-        <strong>Status:</strong>
-        <span id="employer-status">{{ employer.status }}</span>
-      </p>
 
-      <div class="employer-container" data-employer-id="{{ employer.employer_id }}"></div>
-      <div class="action-buttons" style="margin-top: 15px">
-        <button class="edit-status-btn" data-employer-id="{{ employer.employer_id }}" data-recruitment-type="{{ employer.recruitment_type }}">
-          EDIT STATUS
-        </button>
+      <!--System Info-->
+      <div class="section">
+        <h3>System Info</h3>
+        <p><strong>Registered At:</strong> {{ employer.created_at }}</p>
+        <p><strong>Updated At:</strong> {{ employer.updated_at }}</p>
+      </div>
+
+      <!-- Added employer actions section with EDIT STATUS button -->
+      {% if employer.status not in ['Approved', 'Rejected'] %} {% if
+      employer.recruitment_type == 'Local' %}
+      <div
+        class="section"
+        data-employer-id="{{ employer.employer_id }}"
+        data-recruitment-type="{{ employer.recruitment_type }}"
+      >
+        <h3>Local Recruitment Employer Actions</h3>
+        <p>
+          <strong>Contact Person:</strong>
+          <span id="employer-contact-person"
+            >{{ employer.contact_person }}</span
+          >
+        </p>
+        <p>
+          <strong>Status:</strong>
+          <span id="employer-status">{{ employer.status }}</span>
+        </p>
+
+        <div class="action-buttons">
+          <button
+            class="edit-status-btn"
+            data-employer-id="{{ employer.employer_id }}"
+            data-recruitment-type="{{ employer.recruitment_type }}"
+          >
+            EDIT STATUS
+          </button>
+        </div>
+      </div>
+      {% elif employer.recruitment_type == 'International' %}
+      <div
+        class="section"
+        data-employer-id="{{ employer.employer_id }}"
+        data-recruitment-type="{{ employer.recruitment_type }}"
+      >
+        <h3>International Recruitment Employer Actions</h3>
+        <p>
+          <strong>Contact Person:</strong>
+          <span id="employer-contact-person"
+            >{{ employer.contact_person }}</span
+          >
+        </p>
+        <p>
+          <strong>Status:</strong>
+          <span id="employer-status">{{ employer.status }}</span>
+        </p>
+
+        <div class="action-buttons">
+          <button
+            class="edit-status-btn"
+            data-employer-id="{{ employer.employer_id }}"
+            data-recruitment-type="{{ employer.recruitment_type }}"
+          >
+            EDIT STATUS
+          </button>
+        </div>
+      </div>
+      {% endif %} {% endif %}
+    </div>
+
+    <!-- Removed inline styles - using CSS classes instead -->
+    <!-- Document selection modal used when requesting employer reupload -->
+    <div id="documentSelectionModal" class="modal">
+      <div class="modal-content">
+        <h5>Select Document(s) to Request Re-upload</h5>
+        <div style="margin-top: 8px">
+          <label
+            for="documentCheckboxList"
+            style="display: block; margin-bottom: 8px"
+            >Choose document(s)</label
+          >
+          <div id="documentCheckboxList">
+            <!-- Checkboxes populated by admin.js -->
+          </div>
+          <small style="display: block; margin-top: 6px; color: #666"
+            >Select one or more documents by checking the boxes.</small
+          >
+        </div>
+        <div style="margin-top: 16px; display: flex; gap: 8px">
+          <button id="confirmDocumentBtn" class="status-btn btn-primary">
+            Confirm
+          </button>
+          <button id="cancelDocumentBtn" class="status-btn btn-secondary">
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
-  {% elif employer.recruitment_type == 'International' %}
-    <div class="employer-details" data-employer-id="{{ employer.employer_id }}">
-      <h3>International Recruitment Employer Actions</h3>
-      <p>
-        <strong>Contact Person:</strong>
-        <span id="employer-contact-person">{{ employer.contact_person }}</span>
-      </p>
-      <p>
-        <strong>Status:</strong>
-        <span id="employer-status">{{ employer.status }}</span>
-      </p>
 
-      <div class="employer-container" data-employer-id="{{ employer.employer_id }}"></div>
-      <div class="action-buttons" style="margin-top: 15px">
-        <button class="edit-status-btn" data-employer-id="{{ employer.employer_id }}" data-recruitment-type="{{ employer.recruitment_type }}">
-          EDIT STATUS
-        </button>
+    <!-- Loader modal for async operations -->
+    <div id="ajaxLoader" class="modal">
+      <div class="modal-content">
+        <div style="margin-bottom: 8px">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px"></i>
+        </div>
+        <div id="ajaxLoaderText">Processing — sending email...</div>
       </div>
     </div>
-  {% endif %}
-{% endif %}
 
-<!--Modal-->
-<div
-  id="statusModal"
-  class="modal"
-  style="
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  "
->
-  <div
-    style="
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      min-width: 350px;
-      text-align: center;
-    "
-  >
-    <h5>UPDATE EMPLOYER STATUS</h5>
-    <button class="btn btn-success btn-sm status-btn" data-action="approved">
-      Approve
-    </button>
-    <button class="btn btn-danger btn-sm status-btn" data-action="rejected">
-      Reject
-    </button>
-    <button class="btn btn-warning btn-sm status-btn" data-action="reupload">
-      Request Reupload
-    </button>
-    <button id="closeModal" class="btn btn-secondary btn-sm">
-      Cancel
-    </button>
-  </div>
-</div>
-
-<div class="section">
-  <h3>System Info</h3>
-  <p><strong>Registered At:</strong> {{ employer.created_at }}</p>
-  <p><strong>Updated At:</strong> {{ employer.updated_at }}</p>
-</div>
+    <!-- Status update modal -->
+    <div id="statusModal" class="modal">
+      <div class="modal-content">
+        <h5>UPDATE EMPLOYER STATUS</h5>
+        <button class="status-btn btn-success" data-action="approved">
+          Approve
+        </button>
+        <button class="status-btn btn-danger" data-action="rejected">
+          Reject
+        </button>
+        <button class="status-btn btn-warning" data-action="reupload">
+          Request Reupload
+        </button>
+        <button id="closeModal" class="status-btn btn-secondary">Cancel</button>
+      </div>
     </div>
 
+    <!-- Rejection reason modal -->
+    <div id="rejectionModal" class="modal">
+      <div class="modal-content">
+        <h5>Provide Rejection Reason</h5>
+        <div style="text-align: left; margin-bottom: 12px">
+          <label for="rejectionReasonSelect">Reason</label>
+          <select id="rejectionReasonSelect">
+            <option value="">-- Select a reason --</option>
+            <option value="Insufficient documents">
+              Insufficient documents
+            </option>
+            <option value="Invalid details">Invalid details</option>
+            <option value="Did not meet requirements">
+              Did not meet requirements
+            </option>
+            <option value="Other">Other (specify)</option>
+          </select>
+        </div>
+        <div style="text-align: left; display: none" id="rejectionOtherWrap">
+          <label for="rejectionReasonOther">Other reason</label>
+          <textarea id="rejectionReasonOther" rows="3"></textarea>
+        </div>
+        <div style="margin-top: 16px; display: flex; gap: 8px">
+          <button id="confirmRejectionBtn" class="status-btn btn-danger">
+            Confirm Reject
+          </button>
+          <button id="cancelRejectionBtn" class="status-btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!--Footer-->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">

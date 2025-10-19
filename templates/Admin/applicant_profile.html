@@ -20,7 +20,7 @@
     />
   </head>
   <body>
-    <!--Flash Messages-->
+    <!-- Added inline Jinja flash messages with auto-fade -->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
@@ -38,6 +38,12 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
+
+    <!-- AJAX flash container for dynamic messages -->
+    <div id="ajaxFlashContainer"></div>
+
+    <!-- Server-side flash messages (inline) -->
+
     <!--Header-->
     <header class="header">
       <div class="container">
@@ -48,12 +54,10 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{url_for('admin.admin_home')}}" class="nav-link-active"
-            >Home</a
-          >
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
           <a
             href="{{ url_for('admin.applicants_management') }}"
-            class="nav-link"
+            class="nav-link-active"
             >Applicants Management</a
           >
           <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
@@ -215,8 +219,15 @@
         </ul>
       </div>
 
-      <!--Only show action buttons for NON-LIPEÑO applicants with Pending status {%
-      if not applicant.is_from_lipa and applicant.status == "Pending" %}-->
+      <!--System Info-->
+      <div class="section">
+        <h3>System Info</h3>
+        <p><strong>Registered At:</strong> {{ applicant.created_at }}</p>
+        <p><strong>Updated At:</strong> {{ applicant.updated_at }}</p>
+      </div>
+
+      <!--Only show action buttons for NON-LIPEÑO applicants with Pending status-->
+      {% if not applicant.is_from_lipa and applicant.status == "Pending" %}
       <div
         class="applicant-details"
         data-applicant-id="{{ applicant.applicant_id }}"
@@ -227,70 +238,76 @@
           <span id="applicant-status">{{ applicant.status }}</span>
         </p>
 
-        <div class="action-buttons" style="margin-top: 15px">
-          <button class="btn btn-primary btn-sm" id="editStatusBtn">
+        <div class="action-buttons">
+          <button class="edit-status-btn" id="editStatusBtn">
             EDIT STATUS
           </button>
         </div>
       </div>
       {% endif %}
+
+      <!-- Removed inline styles - using CSS classes instead -->
+      <!-- Loader modal for async operations -->
+      <div id="ajaxLoader" class="modal">
+        <div class="modal-content">
+          <div style="margin-bottom: 8px">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px"></i>
+          </div>
+          <div id="ajaxLoaderText">Processing — please wait...</div>
+        </div>
+      </div>
+
       <!--Modal-->
-      <div
-        id="statusModal"
-        class="modal"
-        style="
-          display: none;
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.5);
-          justify-content: center;
-          align-items: center;
-          z-index: 1000;
-        "
-      >
-        <div
-          style="
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            min-width: 250px;
-            text-align: center;
-          "
-        >
+      <div id="statusModal" class="modal">
+        <div class="modal-content">
           <h5>Update Applicant Status</h5>
-          <button
-            class="btn btn-success btn-sm status-btn"
-            data-action="approved"
-          >
+          <button class="status-btn btn-success" data-action="approved">
             Approve
           </button>
-          <button
-            class="btn btn-danger btn-sm status-btn"
-            data-action="rejected"
-          >
+          <button class="status-btn btn-danger" data-action="rejected">
             Reject
           </button>
-          <button
-            class="btn btn-warning btn-sm status-btn"
-            data-action="reupload"
-          >
+          <button class="status-btn btn-warning" data-action="reupload">
             Request Reupload
           </button>
           <br /><br />
-          <button id="closeModal" class="btn btn-secondary btn-sm">
+          <button id="closeModal" class="status-btn btn-secondary">
             Cancel
           </button>
         </div>
       </div>
 
-      <!--System Info-->
-      <div class="section">
-        <h3>System Info</h3>
-        <p><strong>Registered At:</strong> {{ applicant.created_at }}</p>
-        <p><strong>Updated At:</strong> {{ applicant.updated_at }}</p>
+      <!-- Rejection reason modal -->
+      <div id="rejectionModal" class="modal">
+        <div class="modal-content">
+          <h5>Provide Rejection Reason</h5>
+          <div style="text-align: left; margin-bottom: 12px">
+            <label for="rejectionReasonSelect">Reason</label>
+            <select id="rejectionReasonSelect">
+              <option value="">-- Select a reason --</option>
+              <option value="Insufficient documents">
+                Insufficient documents
+              </option>
+              <option value="Invalid details">Invalid details</option>
+              <option value="Did not meet requirements">
+                Did not meet requirements
+              </option>
+              <option value="Other">Other (specify)</option>
+            </select>
+          </div>
+          <div style="text-align: left; display: none" id="rejectionOtherWrap">
+            <label for="rejectionReasonOther">Other reason</label>
+            <textarea id="rejectionReasonOther" rows="3"></textarea>
+          </div>
+          <div style="margin-top: 16px; display: flex; gap: 8px">
+            <button id="confirmRejectionBtn" class="status-btn btn-danger">
+              Confirm Reject
+            </button>
+            <button id="cancelRejectionBtn" class="status-btn btn-secondary">
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

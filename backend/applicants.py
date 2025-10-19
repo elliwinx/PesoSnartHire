@@ -1,7 +1,6 @@
-# backend/applicants.py
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
@@ -246,24 +245,28 @@ def login():
     if not result:
         flash("Invalid login credentials. Please check your Applicant ID, email, and phone number.", "danger")
         session['login_error'] = True
+        conn.close()
         return redirect(url_for("home"))
 
     applicant = result
 
-    if applicant["status"] != "Approved":
+    if applicant["status"] not in ["Approved", "Reupload"]:
         flash("Your account is pending approval. Please wait for admin confirmation.", "warning")
         session['login_error'] = True
+        conn.close()
         return redirect(url_for("home"))
 
     if not check_password_hash(applicant["password_hash"], password):
         flash("Incorrect password. Please try again.", "danger")
         session['login_error'] = True
+        conn.close()
         return redirect(url_for("home"))
 
     # Successful login
     session["applicant_id"] = applicant["applicant_id"]
     session["applicant_name"] = applicant["first_name"]
     session["applicant_email"] = applicant["email"]
+    session["applicant_status"] = applicant["status"]
 
     conn.close()
     flash(f"Welcome back, {applicant['first_name']}!", "success")
@@ -283,6 +286,11 @@ def applicant_home():
     if "applicant_id" not in session:
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
+
+    if session.get("applicant_status") == "Reupload":
+        flash("Please complete your document reupload first.", "info")
+        return redirect(url_for("applicants.account_security"))
+
     return render_template("Applicant/applicant_home.html")
 
 
@@ -291,6 +299,11 @@ def notifications():
     if "applicant_id" not in session:
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
+
+    if session.get("applicant_status") == "Reupload":
+        flash("Please complete your document reupload first.", "info")
+        return redirect(url_for("applicants.account_security"))
+
     return render_template("Applicant/notif.html")
 
 
@@ -299,6 +312,11 @@ def applications():
     if "applicant_id" not in session:
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
+
+    if session.get("applicant_status") == "Reupload":
+        flash("Please complete your document reupload first.", "info")
+        return redirect(url_for("applicants.account_security"))
+
     return render_template("Applicant/application.html")
 
 
@@ -308,6 +326,48 @@ def account_security():
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
     return render_template("Applicant/acc&secu.html")
+
+
+@applicants_bp.route("/submit-reupload", methods=["POST"])
+def submit_reupload():
+    if "applicant_id" not in session:
+        return jsonify({"success": False, "message": "Not authenticated"}), 401
+
+    applicant_id = session["applicant_id"]
+    file = request.files.get("document")
+
+    if not file:
+        return jsonify({"success": False, "message": "No file provided"}), 400
+
+    try:
+        # Save the reuploaded file
+        recommendation_path = save_file(file, "recommendations")
+
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "DB connection failed"}), 500
+
+        # Update applicant document
+        query = "UPDATE applicants SET recommendation_letter_path = %s WHERE applicant_id = %s"
+        run_query(conn, query, (recommendation_path, applicant_id))
+        conn.commit()
+
+        create_notification(
+            notification_type="applicant_reupload",
+            title="Applicant Document Reuploaded",
+            message="An applicant has reuploaded their required document",
+            count=1,
+            related_ids=[applicant_id],
+            applicant_id=applicant_id
+        )
+
+        conn.close()
+
+        return jsonify({"success": True, "message": "Document reuploaded successfully"}), 200
+
+    except Exception as e:
+        print(f"[v0] Error submitting reupload: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 @applicants_bp.route("/terms", methods=["GET", "POST"])

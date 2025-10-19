@@ -558,10 +558,54 @@ input[type="email"] {
   left: 50%; /* center horizontally */
   transform: translateX(-50%);
   font-weight: bold;
-  z-index: 9999; /* make sure it's above everything */
+  z-index: 130000; /* ensure flash appears above loader overlays */
   min-width: 300px; /* optional, ensures decent width */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* optional, nice shadow */
   text-align: center;
+}
+
+/* Loader overlay inserted near modals */
+.modal-loader-overlay {
+  position: fixed;
+  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 120000; /* above most elements, but modal-content z-index is 100000 */
+}
+.modal-loader-content {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 18px 22px;
+  border-radius: 10px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+.modal-loader-text {
+  font-weight: 600;
+  color: #333;
+}
+.spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 4px solid rgba(0, 0, 0, 0.08);
+  border-top-color: #7b1113;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* fade-out helper for flashes */
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  transform: translateY(-6px);
 }
 
 .flash.success {
@@ -821,62 +865,281 @@ input[type="email"] {
   color: #721c24;
 }
 
-.applicant-details, .employer-details {
+.applicant-details,
+.employer-details {
   padding: 40px;
   border-bottom: 1px solid black;
 }
 
- /* Modal container */
-  .modal {
-    display: none;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0,0,0,0.5);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: center;
+  /* put modals above all other UI layers */
+  z-index: 99999;
+  /* ensure clicks reach the modal overlay */
+  pointer-events: auto;
+}
 
-  /* Modal content */
-  .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 12px;
-    min-width: 280px;
-    text-align: center;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
-  }
+.modal-content {
+  background: white;
+  padding: 32px;
+  border-radius: 12px;
+  min-width: 300px;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  /* ensure dialog itself sits above the overlay */
+  position: relative;
+  z-index: 100000;
+  pointer-events: auto;
+}
 
-  /* Status buttons style */
-  .status-btn {
-    display: block;
+.modal-content h5 {
+  margin: 0 0 24px 0;
+  font-size: 18px;
+  font-weight: 700; /* make header explicitly bold */
+  color: #2d3748;
+  letter-spacing: -0.3px;
+}
+
+/* Rejection modal specific styling */
+#rejectionModal .modal-content {
+  max-width: 560px; /* slightly wider for comfortable form fields */
+  width: 90%;
+  padding: 22px 24px;
+  text-align: left;
+}
+
+#rejectionModal label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+#rejectionModal select,
+#rejectionModal textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #2d3748;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+#rejectionModal textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* Actions layout (Confirm / Cancel) */
+.rejection-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+#rejectionModal .rejection-actions .status-btn {
+  min-width: 120px;
+  padding: 10px 14px;
+}
+
+/* Make modal content feel lighter on mobile: stack buttons */
+@media (max-width: 480px) {
+  #rejectionModal .rejection-actions {
+    flex-direction: column-reverse; /* confirm on bottom for mobile thumb reach */
+    align-items: stretch;
+  }
+  #rejectionModal .rejection-actions .status-btn {
     width: 100%;
-    padding: 10px 0;
-    margin: 15px 0;
-    border: none;
-    border-radius: 6px;
-    font-size: 16px;
-    font-weight: 500;
-    color: white;
-    cursor: pointer;
-    transition: 0.3s ease;
-    background-color: #7b1113;
   }
+}
 
-  .status-btn.approve { background-color: #8B0000; } /* dark red */
-  .status-btn.reupload { background-color: #A52A2A; } /* brownish red */
-  .status-btn.reject { background-color: #B22222; } /* firebrick red */
+.modal select#documentSelect {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #d0d0d0;
+  font-size: 14px;
+}
 
-  .status-btn:hover {
-    opacity: 0.85;
-    transform: translateY(-1px);
-  }
+.action-buttons {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-  #closeModal {
-    padding: 0.25rem 0.5rem; /* smaller button */
-  }
+/* Updated button styling - removed tacky colors, use #7b1113 accent, improved spacing */
+.edit-status-btn {
+  padding: 8px 16px;
+  background: #7b1113;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(123, 17, 19, 0.15);
+}
 
+.edit-status-btn:hover {
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+}
+
+.edit-status-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(123, 17, 19, 0.15);
+}
+
+/* Updated status button styling with #7b1113 color scheme */
+.status-btn {
+  padding: 10px 16px;
+  margin: 6px 0;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 400; /* changed to normal weight */
+  letter-spacing: 0.2px; /* reduce letter spacing to soften uppercase */
+  text-transform: none; /* use normal case to match applicant style */
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.status-btn:hover {
+  box-shadow: 0 2px 8px rgba(123, 17, 19, 0.2);
+  border: #7b1113 1px solid;
+}
+
+.btn-success {
+  background: #7b1113;
+  color: white;
+  font-weight: 400;
+  text-transform: none;
+}
+
+.btn-success:hover {
+  background: #5d0d0f;
+  box-shadow: 0 2px 8px rgba(123, 17, 19, 0.2);
+}
+
+.btn-danger {
+  background: #e8e8e8;
+  color: #7b1113;
+  border: 1px solid #d0d0d0;
+  font-weight: 400;
+  text-transform: none;
+}
+
+.btn-danger:hover {
+  background: #f5f5f5;
+  border-color: #7b1113;
+}
+
+.btn-warning {
+  background: #f0f0f0;
+  color: #7b1113;
+  border: 1px solid #d0d0d0;
+  font-weight: 400;
+  text-transform: none;
+}
+
+.btn-warning:hover {
+  background: #f8f8f8;
+  border-color: #7b1113;
+}
+
+.btn-secondary {
+  background: #f0f0f0;
+  color: #666;
+  border: 1px solid #d0d0d0;
+  font-weight: 400;
+  text-transform: none;
+}
+
+.btn-secondary:hover {
+  background: #e8e8e8;
+  border-color: #999;
+}
+
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 12px;
+}
+
+/* ===== Modal-specific button normalization =====
+   Ensure any button inside a modal uses consistent, non-bold text and
+   matching spacing regardless of page-specific .btn rules. This targets
+   .status-btn, .btn, and .btn-sm when inside a .modal or .modal-content. */
+.modal .status-btn,
+.modal .btn,
+.modal .btn-sm,
+.modal-content .status-btn,
+.modal-content .btn,
+.modal-content .btn-sm {
+  font-weight: 400 !important;
+  text-transform: none !important;
+  letter-spacing: 0.2px !important;
+  padding: 10px 16px !important;
+  font-size: 13px !important;
+  border-radius: 6px !important;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+/* Visual disabled state for modal buttons while loader is active */
+.modal .status-btn:disabled,
+.modal .btn:disabled,
+.modal-content .status-btn:disabled,
+.modal-content .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Keep visual color treatments but ensure consistent weight */
+.modal .btn-success,
+.modal-content .btn-success {
+  background: #7b1113 !important;
+  color: #fff !important;
+}
+.modal .btn-danger,
+.modal-content .btn-danger {
+  background: #e8e8e8 !important;
+  color: #7b1113 !important;
+  border: 1px solid #d0d0d0 !important;
+}
+.modal .btn-warning,
+.modal-content .btn-warning {
+  background: #f0f0f0 !important;
+  color: #7b1113 !important;
+  border: 1px solid #d0d0d0 !important;
+}
+.modal .btn-secondary,
+.modal-content .btn-secondary {
+  background: #f0f0f0 !important;
+  color: #666 !important;
+  border: 1px solid #d0d0d0 !important;
+}
 
 /* Added responsive design for mobile devices */
 @media (max-width: 768px) {
@@ -932,5 +1195,20 @@ input[type="email"] {
 
   .info-grid {
     grid-template-columns: 1fr;
+  }
+
+  .modal-content {
+    min-width: 90%;
+    max-width: 400px;
+    padding: 24px;
+  }
+
+  .action-buttons {
+    margin-top: 16px;
+  }
+
+  .edit-status-btn {
+    padding: 8px 14px;
+    font-size: 12px;
   }
 }

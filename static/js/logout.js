@@ -3,9 +3,10 @@ function showLogoutModal() {
   // Prevent creating multiple modals
   if (document.getElementById("logoutModal")) return;
 
-  // Overlay
+  // Overlay (use the app's modal classes so shared loader can target it)
   const overlay = document.createElement("div");
   overlay.id = "logoutModal";
+  overlay.className = "modal";
   overlay.style.cssText = `
     display: flex;
     position: fixed;
@@ -14,11 +15,11 @@ function showLogoutModal() {
     justify-content: center;
     align-items: center;
     background: rgba(0,0,0,0.4);
-    z-index: 2000;
   `;
 
-  // Modal box
+  // Modal box (use modal-content class so CSS matches other modals)
   const modal = document.createElement("div");
+  modal.className = "modal-content";
   modal.style.cssText = `
     background: #fff;
     padding: 20px;
@@ -56,37 +57,38 @@ function showLogoutModal() {
     background: maroon; color: white; font-weight: bold;
   `;
   confirmBtn.addEventListener("click", () => {
-    // Disable buttons
+    // Disable buttons and prevent close
     confirmBtn.disabled = true;
     cancelBtn.disabled = true;
     closeBtn.style.pointerEvents = "none";
 
-    // Replace modal content with loading spinner
-    modal.innerHTML = `
-      <h2 style="color: maroon;">Logging Out...</h2>
-      <p>Please wait</p>
-      <div class="spinner"></div>
-    `;
+    // Use the app-wide loader to keep visual consistency
+    showLoader("Logging out — please wait...");
 
-    // Spinner CSS
-    const style = document.createElement("style");
-    style.innerHTML = `
-      .spinner {
-        margin: 20px auto;
-        width: 40px;
-        height: 40px;
-        border: 5px solid #ccc;
-        border-top-color: maroon;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
+    // Force the loader to paint immediately.
+    // If the page includes #ajaxLoader, make sure it's visible and force a reflow.
+    const ajaxLoaderEl = document.getElementById("ajaxLoader");
+    if (ajaxLoaderEl) {
+      ajaxLoaderEl.style.display = "flex";
+      // force reflow so browser paints before navigation
+      void ajaxLoaderEl.offsetHeight;
+    } else if (!document.querySelector(".modal-loader-overlay")) {
+      // Fallback: create a quick overlay so the user sees something immediately
+      const quick = document.createElement("div");
+      quick.className = "modal-loader-overlay";
+      quick.id = "logoutQuickLoader";
+      quick.innerHTML = `
+        <div class="modal-loader-content">
+          <div class="spinner" aria-hidden="true"></div>
+          <div class="modal-loader-text">Logging out — please wait...</div>
+        </div>
+      `;
+      document.body.appendChild(quick);
+      // force reflow
+      void quick.offsetHeight;
+    }
 
-    // Redirect after 1 second
+    // Delay the redirect slightly to let the loader appear to the user
     setTimeout(() => {
       window.location.href = "/logout";
     }, 1000);

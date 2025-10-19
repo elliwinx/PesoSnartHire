@@ -76,6 +76,113 @@ def api_unread_count():
     return jsonify({"success": True, "unread_count": count})
 
 
+@admin_bp.route("/approve-reupload/<int:applicant_id>", methods=["POST"])
+def approve_reupload(applicant_id):
+    try:
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,))
+        applicant = cursor.fetchone()
+
+        if not applicant:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Applicant not found"}), 404
+
+        # Update status to Approved
+        cursor.execute(
+            "UPDATE applicants SET status = %s WHERE applicant_id = %s",
+            ("Approved", applicant_id)
+        )
+        conn.commit()
+
+        # Send approval email
+        subject = "PESO SmartHire - Full Access Granted"
+        body = f"""
+        <p>Hi {applicant['first_name']},</p>
+        <p>This is PESO SmartHire Team.</p>
+        <p>Congratulations! Your reuploaded document has been reviewed and approved.</p>
+        <p>You now have full access to all features of the PESO SmartHire platform.</p>
+        <p>Thank you for your cooperation!</p>
+        <p>— PESO SmartHire Admin</p>
+        """
+        msg = Message(subject=subject, recipients=[
+                      applicant["email"]], html=body)
+        mail.send(msg)
+
+        cursor.close()
+        conn.close()
+
+        # Also flash server-side so the message is visible after reload
+        flash("Applicant approved and notified successfully", "success")
+        return jsonify({"success": True, "message": "Applicant approved and notified successfully"})
+
+    except Exception as e:
+        print(f"[v0] Error approving reupload: {e}")
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
+        flash(str(e), "danger")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@admin_bp.route("/approve-employer-reupload/<int:employer_id>", methods=["POST"])
+def approve_employer_reupload(employer_id):
+    try:
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM employers WHERE employer_id = %s", (employer_id,))
+        employer = cursor.fetchone()
+
+        if not employer:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Employer not found"}), 404
+
+        # Update status to Approved
+        cursor.execute(
+            "UPDATE employers SET status = %s WHERE employer_id = %s",
+            ("Approved", employer_id)
+        )
+        conn.commit()
+
+        # Send approval email
+        subject = "PESO SmartHire - Full Access Granted"
+        body = f"""
+        <p>Dear {employer['employer_name']},</p>
+        <p>This is PESO SmartHire Team.</p>
+        <p>Congratulations! Your reuploaded documents have been reviewed and approved.</p>
+        <p>You now have full access to all features of the PESO SmartHire employer platform.</p>
+        <p>Thank you for your cooperation!</p>
+        <p>— PESO SmartHire Admin</p>
+        """
+        msg = Message(subject=subject, recipients=[
+                      employer["email"]], html=body)
+        mail.send(msg)
+
+        cursor.close()
+        conn.close()
+
+        flash("Employer approved and notified successfully", "success")
+        return jsonify({"success": True, "message": "Employer approved and notified successfully"})
+
+    except Exception as e:
+        print(f"[v0] Error approving employer reupload: {e}")
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
+        flash(str(e), "danger")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 # ==========================
 # UPDATE NON-LIPEÑO STATUS + SEND EMAIL
 # ==========================
@@ -90,6 +197,7 @@ def update_nonlipeno_status(applicant_id):
             return jsonify({"success": False, "message": "No action provided."}), 400
 
         action = data["action"]
+        reason = None
 
         conn = create_connection()
         if not conn:
@@ -141,11 +249,14 @@ def update_nonlipeno_status(applicant_id):
 
         elif action == "rejected":
             new_status = "Rejected"
+            reason = data.get("reason") if isinstance(data, dict) else None
             subject = "PESO SmartHire - Application Status Update"
+            reason_block = f"<p><strong>Reason:</strong> {reason}</p>" if reason else ""
             body = f"""
             <p>Hi {applicant['first_name']},</p>
             <p>This is PESO SmartHire Team.</p>
             <p>We regret to inform you that your application for PESO SmartHire has been reviewed but did not meet the current requirements.</p>
+            {reason_block}
             <p>You may reapply in the future once you meet the qualifications.</p>
             <p>Thank you for your interest.</p>
             <p>— PESO SmartHire Admin</p>
@@ -165,12 +276,14 @@ def update_nonlipeno_status(applicant_id):
                 temp_password_plain = applicant["temp_password"]
 
             new_status = "Reupload"
-            subject = "PESO SmartHire - Endorsement Letter Required"
+            document_name = data.get("document_name", "Recommendation Letter")
+
+            subject = "PESO SmartHire - Document Reupload Required"
             body = f"""
             <p>Hi {applicant['first_name']},</p>
             <p>This is PESO SmartHire Team.</p>
-            <p>We have reviewed your application for PESO SmartHire and noticed that your endorsement letter needs to be updated or is missing required information.</p>
-            <p>Please log in to your account and re-upload your updated endorsement letter through the Account and Security page in your PESO SmartHire applicant portal as soon as possible.</p>
+            <p>We have reviewed your application for PESO SmartHire and noticed that your {document_name} needs to be updated or is missing required information.</p>
+            <p>Please log in to your account and re-upload your updated {document_name} through the Account and Security page in your PESO SmartHire applicant portal as soon as possible.</p>
             <p>Here are your login credentials:</p>
             <ul>
                 <li>Applicant ID: {applicant['applicant_code']}</li>
@@ -190,10 +303,17 @@ def update_nonlipeno_status(applicant_id):
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
-        cursor.execute(
-            "UPDATE applicants SET status = %s WHERE applicant_id = %s",
-            (new_status, applicant_id)
-        )
+        # Persist status and optional rejection reason
+        if reason:
+            cursor.execute(
+                "UPDATE applicants SET status = %s, rejection_reason = %s WHERE applicant_id = %s",
+                (new_status, reason, applicant_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE applicants SET status = %s WHERE applicant_id = %s",
+                (new_status, applicant_id)
+            )
         conn.commit()
 
         msg = Message(
@@ -216,39 +336,6 @@ def update_nonlipeno_status(applicant_id):
             conn.rollback()
             conn.close()
         return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
-
-
-# ===== Admin Account & Security =====
-@admin_bp.route("/account", methods=["GET", "POST"])
-def account_settings():
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
-
-    conn = create_connection()
-    if not conn:
-        flash("Database connection failed", "danger")
-        return redirect(url_for("admin.admin_home"))
-
-    if request.method == "POST":
-        new_email = request.form.get("email")
-        update_query = "UPDATE admin SET email = %s WHERE admin_id = %s"
-        result = run_query(conn, update_query,
-                           (new_email, session["admin_id"]))
-        conn.close()
-
-        if result:
-            flash("Email updated successfully", "success")
-            session["admin_email"] = new_email
-        else:
-            flash("Failed to update email", "danger")
-
-        return redirect(url_for("admin.account_settings"))
-
-    query = "SELECT admin_code, email FROM admin WHERE admin_id = %s"
-    admin_data = run_query(conn, query, (session["admin_id"],), fetch="one")
-    conn.close()
-
-    return render_template("Admin/admin_acc.html", admin=admin_data)
 
 
 # ===== Admin Login =====
@@ -421,11 +508,14 @@ def update_local_employer_status(employer_id):
 
         elif action == "rejected":
             new_status = "Rejected"
+            reason = data.get("reason") if isinstance(data, dict) else None
             subject = "PESO SmartHire - Local Recruitment Account Status Update"
+            reason_block = f"<p><strong>Reason:</strong> {reason}</p>" if reason else ""
             body = f"""
             <p>Dear {employer['employer_name']},</p>
             <p>This is PESO SmartHire Team.</p>
             <p>We regret to inform you that your local recruitment account application has been reviewed but did not meet the current requirements.</p>
+            {reason_block}
             <p>Please review the requirements and feel free to reapply in the future once you have met all the necessary qualifications.</p>
             <p>If you have any questions regarding this decision, please contact our support team.</p>
             <p>Thank you for your interest in PESO SmartHire.</p>
@@ -447,11 +537,26 @@ def update_local_employer_status(employer_id):
                 temp_password_plain = employer["temp_password"]
 
             new_status = "Reupload"
+            # document_name may be a list (from multi-select) or a string
+            requested = data.get("document_name")
+            if isinstance(requested, list):
+                requested_list = requested
+            elif isinstance(requested, str) and requested:
+                requested_list = [requested]
+            else:
+                requested_list = []
+
+            docs_block = ""
+            if requested_list:
+                docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
+                docs_block = f"<p>The documents we specifically request you to re-upload are:</p><ul>{docs_html}</ul>"
+
             subject = "PESO SmartHire - Local Recruitment Documents Update Required"
             body = f"""
             <p>Dear {employer['employer_name']},</p>
             <p>This is PESO SmartHire Team.</p>
             <p>We have reviewed your local recruitment account and noticed that some of your required documents need to be updated or are missing important information.</p>
+            {docs_block}
             <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
             <p>Here are your login credentials:</p>
             <ul>
@@ -473,31 +578,21 @@ def update_local_employer_status(employer_id):
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
-        # Update employer status
-        cursor.execute(
-            "UPDATE employers SET status = %s WHERE employer_id = %s",
-            (new_status, employer_id)
-        )
-        conn.commit()
-
-        # Send admin notification
-        admin_id = session.get("admin_id")
-        if admin_id:
+        # Update employer status and optional rejection reason
+        if action == "rejected" and reason:
             cursor.execute(
-                """
-            INSERT INTO notifications 
-                (employer_id, notification_type, title, message, recruitment_type, is_read, created_at)
-            VALUES (%s, %s, %s, %s, %s, 0, NOW())
-            """,
-                (
-                    employer_id,
-                    "employer_approval",
-                    f"Employer {new_status}",
-                    f"Employer {employer['employer_name']} has been {new_status.lower()} by admin.",
-                    "Local"
-                )
+                "UPDATE employers SET status = %s, rejection_reason = %s WHERE employer_id = %s",
+                (new_status, reason, employer_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE employers SET status = %s WHERE employer_id = %s",
+                (new_status, employer_id)
             )
         conn.commit()
+
+        # Admin notifications are intentionally handled only when the user performs an action
+        # (e.g., employer reupload). Do NOT create dashboard notifications here for admin actions.
 
         # Send email
         msg = Message(subject=subject, recipients=[
@@ -581,11 +676,14 @@ def update_international_employer_status(employer_id):
 
         elif action == "rejected":
             new_status = "Rejected"
+            reason = data.get("reason") if isinstance(data, dict) else None
             subject = "PESO SmartHire - International Recruitment Account Status Update"
+            reason_block = f"<p><strong>Reason:</strong> {reason}</p>" if reason else ""
             body = f"""
             <p>Dear {employer['employer_name']},</p>
             <p>This is PESO SmartHire Team.</p>
             <p>We regret to inform you that your international recruitment account application has been reviewed but did not meet the current requirements.</p>
+            {reason_block}
             <p>Please review the requirements and feel free to reapply in the future once you have met all the necessary qualifications for international recruitment.</p>
             <p>If you have any questions regarding this decision, please contact our support team.</p>
             <p>Thank you for your interest in PESO SmartHire.</p>
@@ -607,11 +705,26 @@ def update_international_employer_status(employer_id):
                 temp_password_plain = employer["temp_password"]
 
             new_status = "Reupload"
+            # document_name may be a list (from multi-select) or a string
+            requested = data.get("document_name")
+            if isinstance(requested, list):
+                requested_list = requested
+            elif isinstance(requested, str) and requested:
+                requested_list = [requested]
+            else:
+                requested_list = []
+
+            docs_block = ""
+            if requested_list:
+                docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
+                docs_block = f"<p>The documents we specifically request you to re-upload are:</p><ul>{docs_html}</ul>"
+
             subject = "PESO SmartHire - International Recruitment Documents Update Required"
             body = f"""
             <p>Dear {employer['employer_name']},</p>
             <p>This is PESO SmartHire Team.</p>
             <p>We have reviewed your international recruitment account and noticed that some of your required documents need to be updated or are missing important information.</p>
+            {docs_block}
             <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
             <p>Here are your login credentials:</p>
             <ul>
@@ -632,31 +745,21 @@ def update_international_employer_status(employer_id):
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
-        # Update employer status
-        cursor.execute(
-            "UPDATE employers SET status = %s WHERE employer_id = %s",
-            (new_status, employer_id)
-        )
+        # Update employer status and optional rejection reason
+        if action == "rejected" and reason:
+            cursor.execute(
+                "UPDATE employers SET status = %s, rejection_reason = %s WHERE employer_id = %s",
+                (new_status, reason, employer_id)
+            )
+        else:
+            cursor.execute(
+                "UPDATE employers SET status = %s WHERE employer_id = %s",
+                (new_status, employer_id)
+            )
         conn.commit()
 
-        # Send admin notification
-        admin_id = session.get("admin_id")
-        if admin_id:
-            cursor.execute(
-                """
-                INSERT INTO notifications 
-                    (employer_id, notification_type, title, message, recruitment_type, is_read, created_at)
-                VALUES (%s, %s, %s, %s, %s, 0, NOW())
-                """,
-                (
-                    employer_id,
-                    "employer_approval",
-                    f"Employer {new_status}",
-                    f"International employer {employer['employer_name']} has been {new_status.lower()} by admin.",
-                    "International"
-                )
-            )
-            conn.commit()
+        # Admin notifications are intentionally handled only when the user performs an action
+        # (e.g., employer reupload). Do NOT create dashboard notifications here for admin actions.
 
         # Send email
         msg = Message(subject=subject, recipients=[
@@ -674,3 +777,50 @@ def update_international_employer_status(employer_id):
             conn.rollback()
             conn.close()
         return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
+
+
+@admin_bp.route("/account-settings", methods=["GET", "POST"])
+def account_settings():
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    try:
+        conn = create_connection()
+        if not conn:
+            flash("Database connection failed", "danger")
+            return redirect(url_for("admin.admin_home"))
+
+        if request.method == "POST":
+            new_email = request.form.get("email")
+
+            update_query = "UPDATE admin SET email = %s WHERE admin_id = %s"
+            result = run_query(conn, update_query,
+                               (new_email, session["admin_id"]))
+
+            if result:
+                flash("Email updated successfully", "success")
+                session["admin_email"] = new_email
+            else:
+                flash("Failed to update email", "danger")
+
+            conn.close()
+            return redirect(url_for("admin.account_settings"))
+
+        # --- GET Request ---
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT admin_code, email FROM admin WHERE admin_id = %s",
+                       (session["admin_id"],))
+        admin = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not admin:
+            flash("Admin not found", "danger")
+            return redirect(url_for("admin.admin_home"))
+
+        return render_template("Admin/admin_acc.html", admin=admin)
+
+    except Exception as e:
+        print(f"[account_settings] Error: {e}")
+        flash("An error occurred while loading account settings", "danger")
+        return redirect(url_for("admin.admin_home"))

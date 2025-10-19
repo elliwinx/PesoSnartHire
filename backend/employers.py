@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from db_connection import create_connection, run_query
 from flask_mail import Message
 from extensions import mail
@@ -197,7 +197,89 @@ def register_employer(form_data, files):
         return True, "Registration successful! Your account is pending admin approval."
 
 
+@employers_bp.route("/login", methods=["POST"])
+def login():
+    email = request.form.get("employerEmail")
+    employer_id = request.form.get("employerID")
+    phone = request.form.get("employerPhoneNumber")
+    password = request.form.get("employerPassword")
+
+    conn = create_connection()
+    if not conn:
+        flash("DB connection failed.", "danger")
+        session['login_error'] = True
+        return redirect(url_for("home"))
+
+    query = """
+    SELECT * FROM employers
+    WHERE email=%s AND employer_code=%s AND phone=%s
+    """
+    result = run_query(conn, query, (email, employer_id, phone), fetch="one")
+
+    if not result:
+        flash("Invalid login credentials. Please check your Employer ID, email, and phone number.", "danger")
+        session['login_error'] = True
+        conn.close()
+        return redirect(url_for("home"))
+
+    employer = result
+
+    if employer["status"] not in ["Approved", "Reupload"]:
+        flash("Your account is pending approval. Please wait for admin confirmation.", "warning")
+        session['login_error'] = True
+        conn.close()
+        return redirect(url_for("home"))
+
+    if not check_password_hash(employer["password_hash"], password):
+        flash("Incorrect password. Please try again.", "danger")
+        session['login_error'] = True
+        conn.close()
+        return redirect(url_for("home"))
+
+    # Successful login
+    session["employer_id"] = employer["employer_id"]
+    session["employer_name"] = employer["employer_name"]
+    session["employer_email"] = employer["email"]
+    session["employer_status"] = employer["status"]
+
+    conn.close()
+    flash(f"Welcome back, {employer['employer_name']}!", "success")
+    return redirect(url_for("employers.employer_home"))
+
+
 # ===== Routes =====
+@employers_bp.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been logged out successfully.", "success")
+    return redirect(url_for("home"))
+
+
+# ===== Employer Navigation Pages =====
+@employers_bp.route("/home")
+def employer_home():
+    if "employer_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+    return render_template("Employer/employer_home.html")
+
+
+@employers_bp.route("/notifications")
+def notifications():
+    if "employer_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+    return render_template("Employer/notif.html")
+
+
+@employers_bp.route("/account-security")
+def account_security():
+    if "employer_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+    return render_template("Employer/acc&secu.html")
+
+
 @employers_bp.route("/employers/terms", methods=["GET", "POST"])
 def employers_terms():
     if request.method == "POST":
@@ -218,7 +300,7 @@ def employers_terms():
 def register():
     if request.method == "POST":
         print(f"[v0] Employer registration form submitted")
-        
+
         result = register_employer(request.form, request.files)
         if result is None:
             success, message = False, "Registration failed unexpectedly."
@@ -235,3 +317,76 @@ def register():
             return redirect(url_for("employers.register"))
 
     return render_template("Landing_Page/employer_registration.html")
+
+
+@employers_bp.route("/submit-reupload", methods=["POST"])
+def submit_reupload():
+    if "employer_id" not in session:
+        return jsonify({"success": False, "message": "Not authenticated"}), 401
+
+    employer_id = session["employer_id"]
+
+    # Accept a single file upload; field name can vary depending on reupload request
+    file = None
+    for key in request.files:
+        file = request.files.get(key)
+        if file:
+            field_name = key
+            break
+
+    if not file:
+        return jsonify({"success": False, "message": "No file provided"}), 400
+
+    try:
+        # Determine target subfolder/column based on uploaded field name
+        mapping = {
+            'employerBusinessPermit': ('employer_permit', 'business_permit_path'),
+            'employerCompanyLogo': ('employer_logo', 'company_logo_path'),
+            'employerPhiliobnetRegistration': ('employer_philiobnet', 'philiobnet_registration_path'),
+            'employerJobOrdersOfClient': ('employer_joborders', 'job_orders_of_client_path'),
+            'employerDOLENoPendingCase': ('employer_dole', 'dole_no_pending_case_path'),
+            'employerDOLEAuthorityToRecruit': ('employer_dole', 'dole_authority_to_recruit_path'),
+            'employerDMWNoPendingCase': ('employer_dmw', 'dmw_no_pending_case_path'),
+            'employerLicenseToRecruit': ('employer_dmw', 'license_to_recruit_path'),
+        }
+
+        subfolder = 'employer_misc'
+        column = None
+        if field_name in mapping:
+            subfolder, column = mapping[field_name]
+
+        saved_path = save_file(file, subfolder)
+        if not saved_path:
+            return jsonify({"success": False, "message": "Failed to save file"}), 500
+
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "DB connection failed"}), 500
+
+        # Update the appropriate column if detected, otherwise write to a generic notes column
+        if column:
+            query = f"UPDATE employers SET {column} = %s, status = %s WHERE employer_id = %s"
+            run_query(conn, query, (saved_path, 'Reupload', employer_id))
+        else:
+            # fallback: update job_orders_of_client_path
+            query = "UPDATE employers SET job_orders_of_client_path = %s, status = %s WHERE employer_id = %s"
+            run_query(conn, query, (saved_path, 'Reupload', employer_id))
+
+        conn.commit()
+
+        # Create admin notification so admins see that employer reuploaded documents
+        create_notification(
+            notification_type="employer_reupload",
+            title="Employer Document Reuploaded",
+            message=f"Employer ID {employer_id} has reuploaded a required document.",
+            count=1,
+            related_ids=[employer_id],
+            employer_id=employer_id
+        )
+
+        conn.close()
+        return jsonify({"success": True, "message": "Document reuploaded successfully"}), 200
+
+    except Exception as e:
+        print(f"[v0] Error submitting employer reupload: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500

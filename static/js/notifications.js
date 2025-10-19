@@ -67,6 +67,32 @@ function displayNotifications(notifications) {
   document.querySelectorAll(".card").forEach((card) => {
     card.addEventListener("click", handleNotificationClick);
   });
+
+  // Ensure 'View' buttons behave the same as clicking the card (mark as read
+  // first, then navigate). Prevent default link navigation so we can finish
+  // the mark-read request.
+  document.querySelectorAll(".view-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const card = e.target.closest(".card");
+      if (!card) return;
+      const notificationId = card.dataset.notificationId;
+      const redirectUrl = btn.getAttribute("href") || card.dataset.redirect;
+
+      try {
+        await fetch(`/admin/api/notifications/${notificationId}/read`, {
+          method: "POST",
+        });
+      } catch (err) {
+        console.error("Error marking notification as read:", err);
+      }
+
+      if (redirectUrl && redirectUrl !== "#") {
+        window.location.href = redirectUrl;
+      }
+    });
+  });
 }
 
 // Handle notification card click
