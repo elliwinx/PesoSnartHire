@@ -354,3 +354,323 @@ def view_employer(employer_id):
         from_notifications = True
 
     return render_template("Admin/employer_profile.html", employer=employer, from_notifications=from_notifications)
+
+
+# ==========================
+# UPDATE LOCAL RECRUITMENT EMPLOYER STATUS
+# ==========================
+@admin_bp.route("/update_local_employer_status/<int:employer_id>", methods=["POST"])
+def update_local_employer_status(employer_id):
+    try:
+        data = request.get_json()
+        if not data or "action" not in data:
+            return jsonify({"success": False, "message": "No action provided."}), 400
+
+        action = data["action"]
+
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM employers WHERE employer_id = %s AND recruitment_type = 'Local'",
+            (employer_id,)
+        )
+        employer = cursor.fetchone()
+
+        if not employer:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Local employer not found"}), 404
+
+        if action == "approved":
+            # Generate temporary password if not already set
+            if not employer.get("temp_password"):
+                temp_password_plain = secrets.token_urlsafe(8)
+                password_hash = generate_password_hash(temp_password_plain)
+
+                cursor.execute(
+                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    (password_hash, temp_password_plain, employer_id)
+                )
+            else:
+                temp_password_plain = employer["temp_password"]
+
+            new_status = "Approved"
+            subject = "PESO SmartHire - Local Recruitment Account Approved"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>Congratulations! Your local recruitment account has been reviewed and approved!</p>
+            <p>You may now post job orders and access your employer dashboard to manage your recruitment activities.</p>
+            <p>Included below are your login credentials:</p>
+            <ul>
+                <li>Employer ID: {employer_id}</li>
+                <li>Email: {employer['email']}</li>
+                <li>Phone Number: {employer['phone']}</li>
+                <li>Password: {temp_password_plain}</li>
+            </ul>
+            <p><strong>Please change your password after logging in for security purposes.</strong></p>
+            <p>To get started, visit our platform and log in with the credentials above. You can then begin posting job orders and managing your recruitment needs.</p>
+            <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            <p>Thank you for partnering with PESO SmartHire!</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "Local employer approved successfully! Credentials sent via email."
+
+        elif action == "rejected":
+            new_status = "Rejected"
+            subject = "PESO SmartHire - Local Recruitment Account Status Update"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>We regret to inform you that your local recruitment account application has been reviewed but did not meet the current requirements.</p>
+            <p>Please review the requirements and feel free to reapply in the future once you have met all the necessary qualifications.</p>
+            <p>If you have any questions regarding this decision, please contact our support team.</p>
+            <p>Thank you for your interest in PESO SmartHire.</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "Local employer rejected. Notification email sent."
+
+        elif action == "reupload":
+            # Generate temporary password if not already set
+            if not employer.get("temp_password"):
+                temp_password_plain = secrets.token_urlsafe(8)
+                password_hash = generate_password_hash(temp_password_plain)
+
+                cursor.execute(
+                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    (password_hash, temp_password_plain, employer_id)
+                )
+            else:
+                temp_password_plain = employer["temp_password"]
+
+            new_status = "Reupload"
+            subject = "PESO SmartHire - Local Recruitment Documents Update Required"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>We have reviewed your local recruitment account and noticed that some of your required documents need to be updated or are missing important information.</p>
+            <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
+            <p>Here are your login credentials:</p>
+            <ul>
+                <li>Employer ID: {employer_id}</li>
+                <li>Email: {employer['email']}</li>
+                <li>Phone Number: {employer['phone']}</li>
+                <li>Password: {temp_password_plain}</li>
+            </ul>
+            <p><strong>Please change your password after logging in for security purposes.</strong></p>
+            <p>Once you have updated your documents, we will review them promptly and notify you of the status.</p>
+            <p>If you need any assistance, please contact our support team.</p>
+            <p>Thank you for your cooperation!</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "Re-upload request sent. Email notification with login credentials sent to employer."
+
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Invalid action."}), 400
+
+        # Update employer status
+        cursor.execute(
+            "UPDATE employers SET status = %s WHERE employer_id = %s",
+            (new_status, employer_id)
+        )
+        conn.commit()
+
+        # Send admin notification
+        admin_id = session.get("admin_id")
+        if admin_id:
+            cursor.execute(
+                """
+            INSERT INTO notifications 
+                (employer_id, notification_type, title, message, recruitment_type, is_read, created_at)
+            VALUES (%s, %s, %s, %s, %s, 0, NOW())
+            """,
+                (
+                    employer_id,
+                    "employer_approval",
+                    f"Employer {new_status}",
+                    f"Employer {employer['employer_name']} has been {new_status.lower()} by admin.",
+                    "Local"
+                )
+            )
+        conn.commit()
+
+        # Send email
+        msg = Message(subject=subject, recipients=[
+                      employer["email"]], html=body)
+        mail.send(msg)
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": success_message})
+
+    except Exception as e:
+        print(f"[v1] Error updating status or sending email: {e}")
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
+        return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
+
+
+# ==========================
+# UPDATE INTERNATIONAL RECRUITMENT EMPLOYER STATUS
+# ==========================
+@admin_bp.route("/update_international_employer_status/<int:employer_id>", methods=["POST"])
+def update_international_employer_status(employer_id):
+    try:
+        data = request.get_json()
+        if not data or "action" not in data:
+            return jsonify({"success": False, "message": "No action provided."}), 400
+
+        action = data["action"]
+
+        conn = create_connection()
+        if not conn:
+            return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT * FROM employers WHERE employer_id = %s AND recruitment_type = 'International'",
+            (employer_id,)
+        )
+        employer = cursor.fetchone()
+
+        if not employer:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "International employer not found"}), 404
+
+        if action == "approved":
+            # Generate temporary password if not already set
+            if not employer.get("temp_password"):
+                temp_password_plain = secrets.token_urlsafe(8)
+                password_hash = generate_password_hash(temp_password_plain)
+
+                cursor.execute(
+                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    (password_hash, temp_password_plain, employer_id)
+                )
+            else:
+                temp_password_plain = employer["temp_password"]
+
+            new_status = "Approved"
+            subject = "PESO SmartHire - International Recruitment Account Approved"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>Congratulations! Your international recruitment account has been reviewed and approved!</p>
+            <p>You may now post overseas job orders and access your employer dashboard to manage your international recruitment activities.</p>
+            <p>Included below are your login credentials:</p>
+            <ul>
+                <li>Employer ID: {employer_id}</li>
+                <li>Email: {employer['email']}</li>
+                <li>Password: {temp_password_plain}</li>
+            </ul>
+            <p><strong>Please change your password after logging in for security purposes.</strong></p>
+            <p>To get started, visit our platform and log in with the credentials above. You can then begin posting overseas job orders and managing your international recruitment needs.</p>
+            <p>If you have any questions or need assistance, please contact our support team.</p>
+            <p>Thank you for partnering with PESO SmartHire!</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "International employer approved successfully! Credentials sent via email."
+
+        elif action == "rejected":
+            new_status = "Rejected"
+            subject = "PESO SmartHire - International Recruitment Account Status Update"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>We regret to inform you that your international recruitment account application has been reviewed but did not meet the current requirements.</p>
+            <p>Please review the requirements and feel free to reapply in the future once you have met all the necessary qualifications for international recruitment.</p>
+            <p>If you have any questions regarding this decision, please contact our support team.</p>
+            <p>Thank you for your interest in PESO SmartHire.</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "International employer rejected. Notification email sent."
+
+        elif action == "reupload":
+            # Generate temporary password if not already set
+            if not employer.get("temp_password"):
+                temp_password_plain = secrets.token_urlsafe(8)
+                password_hash = generate_password_hash(temp_password_plain)
+
+                cursor.execute(
+                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    (password_hash, temp_password_plain, employer_id)
+                )
+            else:
+                temp_password_plain = employer["temp_password"]
+
+            new_status = "Reupload"
+            subject = "PESO SmartHire - International Recruitment Documents Update Required"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>We have reviewed your international recruitment account and noticed that some of your required documents need to be updated or are missing important information.</p>
+            <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
+            <p>Here are your login credentials:</p>
+            <ul>
+                <li>Employer ID: {employer_id}</li>
+                <li>Email: {employer['email']}</li>
+                <li>Password: {temp_password_plain}</li>
+            </ul>
+            <p><strong>Please change your password after logging in for security purposes.</strong></p>
+            <p>Once you have updated your documents, we will review them promptly and notify you of the status.</p>
+            <p>If you need any assistance, please contact our support team.</p>
+            <p>Thank you for your cooperation!</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "Re-upload request sent. Email notification with login credentials sent to international employer."
+
+        else:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Invalid action."}), 400
+
+        # Update employer status
+        cursor.execute(
+            "UPDATE employers SET status = %s WHERE employer_id = %s",
+            (new_status, employer_id)
+        )
+        conn.commit()
+
+        # Send admin notification
+        admin_id = session.get("admin_id")
+        if admin_id:
+            cursor.execute(
+                """
+                INSERT INTO notifications 
+                    (employer_id, notification_type, title, message, recruitment_type, is_read, created_at)
+                VALUES (%s, %s, %s, %s, %s, 0, NOW())
+                """,
+                (
+                    employer_id,
+                    "employer_approval",
+                    f"Employer {new_status}",
+                    f"International employer {employer['employer_name']} has been {new_status.lower()} by admin.",
+                    "International"
+                )
+            )
+            conn.commit()
+
+        # Send email
+        msg = Message(subject=subject, recipients=[
+                      employer["email"]], html=body)
+        mail.send(msg)
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({"success": True, "message": success_message})
+
+    except Exception as e:
+        print(f"[v1] Error updating status or sending email: {e}")
+        if 'conn' in locals():
+            conn.rollback()
+            conn.close()
+        return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500

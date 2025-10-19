@@ -16,10 +16,6 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/profile.css') }}"
-    />
   </head>
   <body>
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
@@ -230,12 +226,95 @@
           {% endif %} {% endif %}
         </ul>
       </div>
+   {% if employer.status not in ['Approved', 'Rejected'] %}
+  {% if employer.recruitment_type == 'Local' %}
+    <div class="employer-details" data-employer-id="{{ employer.employer_id }}">
+      <h3>Local Recruitment Employer Actions</h3>
+      <p>
+        <strong>Contact Person:</strong>
+        <span id="employer-contact-person">{{ employer.contact_person }}</span>
+      </p>
+      <p>
+        <strong>Status:</strong>
+        <span id="employer-status">{{ employer.status }}</span>
+      </p>
 
-      <div class="section">
-        <h3>System Info</h3>
-        <p><strong>Registered At:</strong> {{ employer.created_at }}</p>
-        <p><strong>Updated At:</strong> {{ employer.updated_at }}</p>
+      <div class="employer-container" data-employer-id="{{ employer.employer_id }}"></div>
+      <div class="action-buttons" style="margin-top: 15px">
+        <button class="edit-status-btn" data-employer-id="{{ employer.employer_id }}" data-recruitment-type="{{ employer.recruitment_type }}">
+          EDIT STATUS
+        </button>
       </div>
+    </div>
+  {% elif employer.recruitment_type == 'International' %}
+    <div class="employer-details" data-employer-id="{{ employer.employer_id }}">
+      <h3>International Recruitment Employer Actions</h3>
+      <p>
+        <strong>Contact Person:</strong>
+        <span id="employer-contact-person">{{ employer.contact_person }}</span>
+      </p>
+      <p>
+        <strong>Status:</strong>
+        <span id="employer-status">{{ employer.status }}</span>
+      </p>
+
+      <div class="employer-container" data-employer-id="{{ employer.employer_id }}"></div>
+      <div class="action-buttons" style="margin-top: 15px">
+        <button class="edit-status-btn" data-employer-id="{{ employer.employer_id }}" data-recruitment-type="{{ employer.recruitment_type }}">
+          EDIT STATUS
+        </button>
+      </div>
+    </div>
+  {% endif %}
+{% endif %}
+
+<!--Modal-->
+<div
+  id="statusModal"
+  class="modal"
+  style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  "
+>
+  <div
+    style="
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      min-width: 350px;
+      text-align: center;
+    "
+  >
+    <h5>UPDATE EMPLOYER STATUS</h5>
+    <button class="btn btn-success btn-sm status-btn" data-action="approved">
+      Approve
+    </button>
+    <button class="btn btn-danger btn-sm status-btn" data-action="rejected">
+      Reject
+    </button>
+    <button class="btn btn-warning btn-sm status-btn" data-action="reupload">
+      Request Reupload
+    </button>
+    <button id="closeModal" class="btn btn-secondary btn-sm">
+      Cancel
+    </button>
+  </div>
+</div>
+
+<div class="section">
+  <h3>System Info</h3>
+  <p><strong>Registered At:</strong> {{ employer.created_at }}</p>
+  <p><strong>Updated At:</strong> {{ employer.updated_at }}</p>
+</div>
     </div>
 
     <footer class="footer">

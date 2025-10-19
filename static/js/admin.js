@@ -70,6 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const action = button.dataset.action;
         console.log("[v0] Action clicked:", action);
 
+          let endpoint = "/admin/update_local_employer_status/";
+          if (recruitmentType === "International") {
+            endpoint = "/admin/update_international_employer_status/";
+          }
+
         try {
           const response = await fetch(
             `/admin/update_nonlipeno_status/${applicantId}`,
@@ -112,3 +117,90 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const modal = document.getElementById("statusModal");
+  const closeModal = document.getElementById("closeModal");
+
+  // Select all edit buttons (Local + International)
+  const editButtons = document.querySelectorAll(".edit-status-btn");
+
+  editButtons.forEach((button) => {
+    const employerId = button.dataset.employerId;
+    const recruitmentType = button.dataset.recruitmentType; // "Local" or "International"
+    console.log("[v2] Employer ID:", employerId, "Type:", recruitmentType);
+
+    // Open modal
+    button.addEventListener("click", () => {
+      modal.style.display = "flex";
+      modal.dataset.employerId = employerId;       // store ID
+      modal.dataset.recruitmentType = recruitmentType; // store type
+    });
+  });
+
+  // Close modal
+  closeModal.addEventListener("click", () => {
+    modal.style.display = "none";
+  });
+
+  // Handle approve/reject/reupload buttons
+  document.querySelectorAll(".status-btn").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const action = button.dataset.action;
+      const employerId = modal.dataset.employerId;
+      const recruitmentType = modal.dataset.recruitmentType;
+
+      console.log("[v2] Action clicked:", action, "for employer:", employerId, recruitmentType);
+
+      // Determine correct endpoint
+      let endpoint = "/admin/update_local_employer_status/";
+      if (recruitmentType === "International") {
+        endpoint = "/admin/update_international_employer_status/";
+      }
+
+      try {
+        const response = await fetch(`${endpoint}${employerId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        });
+
+        console.log("[v2] Response status:", response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("[v2] Error response:", errorText);
+          throw new Error("Network response was not ok");
+        }
+
+        const result = await response.json();
+
+        console.log("[v2] Result:", result);
+
+      if (result.success) {
+        alert(result.message);
+
+        // Remove all instances of employer-details with this ID
+        const employerDetailsAll = document.querySelectorAll(`.employer-details[data-employer-id='${employerId}']`);
+        employerDetailsAll.forEach(el => el.remove());
+
+        // Remove the button inside notifications (optional)
+        const notifButton = document.querySelector(`.edit-status-btn[data-employer-id='${employerId}']`);
+        if (notifButton) notifButton.remove();
+
+        // Close modal
+        modal.style.display = "none";
+      }
+      } catch (error) {
+        console.error("[v2] Error updating status:", error);
+        alert("Something went wrong while updating status. Please check the console for details.");
+      }
+    });
+  });
+
+  // Close modal if clicking outside modal content
+  window.addEventListener("click", (e) => {
+    if (e.target === modal) modal.style.display = "none";
+  });
+});
+

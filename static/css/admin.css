@@ -821,6 +821,63 @@ input[type="email"] {
   color: #721c24;
 }
 
+.applicant-details, .employer-details {
+  padding: 40px;
+  border-bottom: 1px solid black;
+}
+
+ /* Modal container */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  /* Modal content */
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    min-width: 280px;
+    text-align: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  }
+
+  /* Status buttons style */
+  .status-btn {
+    display: block;
+    width: 100%;
+    padding: 10px 0;
+    margin: 15px 0;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: 0.3s ease;
+    background-color: #7b1113;
+  }
+
+  .status-btn.approve { background-color: #8B0000; } /* dark red */
+  .status-btn.reupload { background-color: #A52A2A; } /* brownish red */
+  .status-btn.reject { background-color: #B22222; } /* firebrick red */
+
+  .status-btn:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+  }
+
+  #closeModal {
+    padding: 0.25rem 0.5rem; /* smaller button */
+  }
+
+
 /* Added responsive design for mobile devices */
 @media (max-width: 768px) {
   .hero-title {
