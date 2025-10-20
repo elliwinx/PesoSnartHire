@@ -325,12 +325,72 @@ def applications():
     return render_template("Applicant/application.html")
 
 
-@applicants_bp.route("/account-security")
+@applicants_bp.route("/account-security", methods=["GET", "POST"])
 def account_security():
     if "applicant_id" not in session:
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
-    return render_template("Applicant/acc&secu.html")
+
+    applicant_id = session["applicant_id"]
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    # If POST — update applicant info
+    if request.method == "POST":
+        try:
+            update_query = """
+                UPDATE applicants SET
+                    first_name = %s,
+                    middle_name = %s,
+                    last_name = %s,
+                    age = %s,
+                    sex = %s,
+                    phone = %s,
+                    email = %s,
+                    barangay = %s,
+                    city = %s,
+                    province = %s,
+                    education = %s,
+                    is_pwd = %s,
+                    has_work_exp = %s,
+                    registration_reason = %s
+                WHERE applicant_id = %s
+            """
+            data = (
+                request.form.get("first_name"),
+                request.form.get("middle_name"),
+                request.form.get("last_name"),
+                request.form.get("age"),
+                request.form.get("sex"),
+                request.form.get("phone"),
+                request.form.get("email"),
+                request.form.get("barangay"),
+                request.form.get("city"),
+                request.form.get("province"),
+                request.form.get("education"),
+                request.form.get("is_pwd"),
+                request.form.get("has_work_exp"),
+                request.form.get("registration_reason"),
+                applicant_id,
+            )
+            run_query(conn, update_query, data)
+            conn.commit()
+            flash("Your account details have been updated successfully.", "success")
+        except Exception as e:
+            flash(f"Error updating information: {e}", "danger")
+
+    # Fetch updated info
+    applicant = run_query(
+        conn, "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,), fetch="one")
+    conn.close()
+
+    if not applicant:
+        flash("Applicant not found.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    return render_template("Applicant/acc&secu.html", applicant=applicant)
 
 
 @applicants_bp.route("/submit-reupload", methods=["POST"])

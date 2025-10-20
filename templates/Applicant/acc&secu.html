@@ -7,6 +7,14 @@
     <!-- Styles -->
     <link
       rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
       href="{{ url_for('static', filename='css/applicant.css') }}"
     />
     <link
@@ -15,6 +23,24 @@
     />
   </head>
   <body>
+    <!--Flash of Message-->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -55,18 +81,215 @@
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome</h1>
+          <h1 class="hero-title">
+            Welcome{% if session.applicant_name %}, {{ session.applicant_name
+            }}{% endif %}
+          </h1>
           <!-- You can add the applicant's name here using python-->
           <p class="hero-description">Here’s what we have today</p>
         </div>
       </div>
     </section>
 
-    <!-- Container Section -->
-    <section class="container">
-      <h2>Account & Security</h2>
-      <p>Manage your profile and application history</p>
+    <section class="account-and-security">
+      <div class="container">
+        <div class="left">
+          <h2>Account & Security</h2>
+          <p>Manage your account.</p>
+        </div>
+        <div class="right">
+          <i class="fa-solid fa-bars" id="menuToggle"></i>
+          <!--Hidden Menu-->
+          <div class="dropdown-menu" id="dropdownMenu">
+            <a href="#">Deactivate Account</a>
+            <a href="{{url_for('forgot_password.forgot_password_email')}}"
+              >Change password</a
+            >
+          </div>
+        </div>
+      </div>
     </section>
+
+
+    <div class="container form-card">
+      <!-- Tab buttons -->
+      <div class="button-container" style="display:flex;justify-content:center;gap:10px;margin-bottom:14px;">
+        <button type="button" class="tab-btn active" data-target="personal-information">
+          Personal Information
+        </button>
+        <button type="button" class="tab-btn" data-target="documents">
+          Documents
+        </button>
+      </div>
+
+      <form method="POST" enctype="multipart/form-data" id="accountForm">
+
+        <!-- PERSONAL INFORMATION (default visible) -->
+        <div id="personal-information" class="content" style="display:block;">
+          <!-- Profile top -->
+          <div class="profile-top">
+            <div class="avatar">
+              <img src="{{ url_for('static', filename=applicant.profile_pic_path) }}" alt="avatar" style="width:80px;height:80px;border-radius:8px;object-fit:cover;">
+            </div>
+            <div class="applicant-code">{{ applicant.applicant_code }}</div>
+          </div>
+
+          <!-- Info grid -->
+          <div class="info-grid">
+            <!-- First row: names -->
+            <div>
+              <label>First Name</label>
+              <input class="chip" type="text" name="first_name" value="{{ applicant.first_name }}" readonly />
+            </div>
+            <div>
+              <label>Middle Name</label>
+              <input class="chip" type="text" name="middle_name" value="{{ applicant.middle_name }}" readonly />
+            </div>
+            <div>
+              <label>Last Name</label>
+              <input class="chip" type="text" name="last_name" value="{{ applicant.last_name }}" readonly />
+            </div>
+
+            <!-- Age / Sex / Phone / Email -->
+            <div class="full">
+              <div class="info-row">
+                <div class="info-item">
+                  <label>Age</label>
+                  <input class="chip" type="number" name="age" value="{{ applicant.age }}" readonly />
+                </div>
+
+                <div class="info-item">
+                  <label>Sex</label>
+                  <select class="chip" name="sex" disabled>
+                    <option value="Male" {% if applicant.sex == 'Male' %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if applicant.sex == 'Female' %}selected{% endif %}>Female</option>
+                  </select>
+                </div>
+
+                <div class="info-item">
+                  <label>Phone Number</label>
+                  <input class="chip" type="text" name="phone" value="{{ applicant.phone }}" readonly />
+                </div>
+
+                <div class="info-item">
+                  <label>Email Address</label>
+                  <input class="chip" type="email" name="email" value="{{ applicant.email }}" readonly />
+                </div>
+              </div>
+            </div>
+
+            <!-- Barangay / City / Province -->
+            <div>
+              <label>Barangay</label>
+              <input class="chip" type="text" name="barangay" value="{{ applicant.barangay }}" readonly />
+            </div>
+            <div>
+              <label>Municipality/City</label>
+              <input class="chip" type="text" name="city" value="{{ applicant.city }}" readonly />
+            </div>
+            <div>
+              <label>Province</label>
+              <input class="chip" type="text" name="province" value="{{ applicant.province }}" readonly />
+            </div>
+
+            <!-- Education -->
+            <div class="full">
+              <label>Educational Attainment</label>
+              <input class="chip full" type="text" name="education" value="{{ applicant.education }}" readonly />
+            </div>
+
+            <!-- PWD / Work Experience -->
+            <div class="full">
+              <label>Do you identify as a Person with Disability?</label>
+              <div class="radio-row">
+                <label class="radio-inline">
+                  <input type="radio" id="pwd_yes" name="is_pwd" value="1" {% if applicant.is_pwd %}checked{% endif %} disabled />
+                  Yes
+                </label>
+                <label class="radio-inline">
+                  <input type="radio" id="pwd_no" name="is_pwd" value="0" {% if not applicant.is_pwd %}checked{% endif %} disabled />
+                  No
+                </label>
+              </div>
+
+              <!-- conditional: only show when is_pwd == 1 -->
+              <div id="pwd_details" class="conditional" style="display:none;margin-top:10px;">
+                <label style="font-size:12px;color:#333;margin-bottom:6px;display:block;">If yes, please specify disability type</label>
+                <input class="chip" type="text" name="disability_type" value="{{ applicant.disability_type or '' }}" readonly />
+              </div>
+            </div>
+
+            <!-- Work Experience row (separate row) -->
+            <div class="full" style="margin-top:8px;">
+              <label>Do you have any work experience?</label>
+              <div class="radio-row">
+                <label class="radio-inline">
+                  <input type="radio" id="exp_yes" name="has_work_exp" value="1" {% if applicant.has_work_exp %}checked{% endif %} disabled />
+                  Yes
+                </label>
+                <label class="radio-inline">
+                  <input type="radio" id="exp_no" name="has_work_exp" value="0" {% if not applicant.has_work_exp %}checked{% endif %} disabled />
+                  No
+                </label>
+              </div>
+
+              <!-- conditional: only show when has_work_exp == 1 -->
+              <div id="work_details" class="conditional" style="display:none;margin-top:10px;">
+                <label style="font-size:12px;color:#333;margin-bottom:6px;display:block;">If yes, please specify work experience length</label>
+                <input class="chip" type="text" name="work_duration" value="{{ applicant.work_duration or '' }}" readonly />
+              </div>
+            </div>
+
+            <div class="full">
+              <label>Reason for Registering in PESO SmartHire</label>
+              <textarea class="chip reason-box" name="registration_reason" rows="2" readonly>{{ applicant.registration_reason }}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- DOCUMENTS (hidden by default) -->
+        <div id="documents" class="content" style="display:none;">
+          <div class="documents">
+            <div class="document-item">
+              <div class="document-header">
+                <label>Resume</label>
+                <a href="{{ url_for('static', filename=applicant.resume_path) }}" target="_blank">View</a>
+              </div>
+              <input type="file" name="resume_file" accept=".pdf,.doc,.docx" class="file-input" />
+            </div>
+
+            {% if not applicant.is_from_lipa %}
+            <div class="document-item">
+              <div class="document-header">
+                <label>Recommendation Letter</label>
+                <a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}" target="_blank">View</a>
+              </div>
+              <input type="file" name="recommendation_file" accept=".pdf,.doc,.docx" class="file-input" />
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+
+        <!-- Edit controls (only in personal info tab) -->
+        <div class="edit-controls" style="margin-top:16px;text-align:right;">
+          <button id="cancelBtn" type="button" class="cancel-btn" style="display:none;margin-right:8px;">Cancel</button>
+          <button id="editBtn" type="button" class="edit-btn">Edit Profile</button>
+          <button id="saveBtn" type="submit" class="save-btn" style="display:none;">Save</button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Date Info -->
+    <div class="date-info">
+      {% if applicant.is_from_lipa %}
+        <p>Date of Registration: {{ applicant.accepted_terms_at or 'N/A' }}</p>
+      {% else %}
+        <p>Date of Registration: {{ applicant.accepted_terms_at or 'N/A' }}</p>
+        <p>Date of Approval: {{ applicant.approved_at or 'Pending Approval' }}</p>
+      {% endif %}
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -136,5 +359,6 @@
     {% include 'partials/loader.html' %}
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
   </body>
 </html>
