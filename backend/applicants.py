@@ -67,13 +67,17 @@ def register_applicant(form, files):
             recommendation_path = save_file(
                 files.get("applicantRecommendationLetter"), "recommendations")
 
-        city = form.get("applicantCity") or form.get("applicantCityText")
-        barangay = form.get("applicantBarangay") or form.get(
-            "applicantBarangayText")
+        if is_from_lipa:
+            city = form.get("applicantCity")
+            barangay = form.get("applicantBarangay")
+        else:
+            city = form.get("applicantCityText")
+            barangay = form.get("applicantBarangayText")
+
         pwd_type = form.get("applicantIsPWD") if is_pwd else None
         years_exp = form.get("applicantHasWorkExp") if has_work_exp else None
 
-        # ==== Set status (Active - Lipeno) (Pending - NOnlipeno)====
+        # ==== Set status (Active - Lipeno) (Pending - Nonlipeno)====
         status = "Approved" if is_from_lipa else "Pending"
 
         temp_password_plain = secrets.token_urlsafe(8)
@@ -86,14 +90,14 @@ def register_applicant(form, files):
             phone, email, is_from_lipa, province, city, barangay, education,
             is_pwd, pwd_type, has_work_exp, years_experience, registration_reason,
             profile_pic_path, resume_path, recommendation_letter_path,
-            accepted_terms, accepted_terms_at, status,
+            accepted_terms, accepted_terms_at, status, is_active,
             password_hash, temp_password
         ) VALUES (
             %(last_name)s, %(first_name)s, %(middle_name)s, %(age)s, %(sex)s,
             %(phone)s, %(email)s, %(is_from_lipa)s, %(province)s, %(city)s, %(barangay)s, %(education)s,
             %(is_pwd)s, %(pwd_type)s, %(has_work_exp)s, %(years_experience)s, %(registration_reason)s,
             %(profile_pic_path)s, %(resume_path)s, %(recommendation_letter_path)s,
-            %(accepted_terms)s, %(accepted_terms_at)s, %(status)s,
+            %(accepted_terms)s, %(accepted_terms_at)s, %(status)s, %(is_active)s,
             %(password_hash)s, %(temp_password)s
         )
         """
@@ -121,14 +125,15 @@ def register_applicant(form, files):
             "accepted_terms": accepted_terms,
             "accepted_terms_at": accepted_terms_at,
             "status": status,
+            "is_active": 1 if is_from_lipa else 0,
             "password_hash": password_hash,
             "temp_password": temp_password_plain
         }
 
-        print("[v0] Inserting applicant into database...")
+        print("Inserting applicant into database...")
         run_query(conn, query, data)
         conn.commit()
-        print("[v0] Applicant inserted and committed successfully")
+        print("Applicant inserted and committed successfully")
 
         applicant_id_row = run_query(
             conn,
@@ -136,10 +141,10 @@ def register_applicant(form, files):
             fetch="one"
         )
         applicant_id = applicant_id_row["id"] if applicant_id_row else None
-        print(f"[v0] Applicant ID: {applicant_id}")
+        print(f"Applicant ID: {applicant_id}")
 
         if is_from_lipa:
-            print("[v0] Creating notification for Lipeno applicant (auto-approved)...")
+            print("Creating notification for Lipeno applicant (auto-approved)...")
             create_notification(
                 notification_type="applicant_approval",
                 title="New Lipeno Applicant Registered",
@@ -149,10 +154,10 @@ def register_applicant(form, files):
                 residency_type="Lipeno",
                 applicant_id=applicant_id   # <-- NEW explicit FK
             )
-            print("[v0] Notification created for Lipeno applicant")
+            print("Notification created for Lipeno applicant")
         else:
             print(
-                "[v0] Creating notification for Non-Lipeno applicant (pending approval)...")
+                "Creating notification for Non-Lipeno applicant (pending approval)...")
             create_notification(
                 notification_type="applicant_approval",
                 title="Non-Lipeno Applicant Account Pending Approval",
@@ -162,7 +167,7 @@ def register_applicant(form, files):
                 residency_type="Non-Lipeno",
                 applicant_id=applicant_id   # <-- NEW explicit FK
             )
-            print("[v0] Notification created for Non-Lipeno applicant")
+            print("Notification created for Non-Lipeno applicant")
 
         # Fetch the generated applicant_code
         applicant_code_row = run_query(
@@ -202,16 +207,16 @@ def register_applicant(form, files):
                 """
             msg = Message(subject=subject, recipients=[email], html=body)
             mail.send(msg)
-            print(f"[v0] Email sent successfully to {email}")
+            print(f"Email sent successfully to {email}")
         except Exception as e:
-            print(f"[v0] Failed to send email: {e}")
+            print(f"Failed to send email: {e}")
 
         success_message = (
             "Registration successful! Login credentials have been sent to your email."
             if is_from_lipa else
             "Registration submitted! Please wait for admin approval."
         )
-        print(f"[v0] Registration completed successfully for {email}")
+        print(f"Registration completed successfully for {email}")
         return True, success_message
 
     except Exception as e:

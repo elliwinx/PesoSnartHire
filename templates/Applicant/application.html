@@ -9,6 +9,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/applicant.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
   </head>
   <body>
     <!-- Header -->
@@ -129,6 +133,9 @@
         </div>
       </div>
     </footer>
+
+    <!-- Global loader partial -->
+    {% include 'partials/loader.html' %}
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>

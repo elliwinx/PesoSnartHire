@@ -262,6 +262,10 @@ def update_nonlipeno_status(applicant_id):
             <p>— PESO SmartHire Admin</p>
             """
             success_message = "Non-Lipeño applicant has been rejected. Notification email sent."
+            cursor.execute(
+                "UPDATE applicants SET password_hash = NULL, temp_password = NULL WHERE applicant_id = %s",
+                (applicant_id,)
+            )
 
         elif action == "reupload":
             if not applicant.get("temp_password"):
@@ -304,15 +308,21 @@ def update_nonlipeno_status(applicant_id):
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
         # Persist status and optional rejection reason
+        # Automatically handle is_active flag based on status
+        if new_status == "Approved":
+            is_active_value = 1
+        else:
+            is_active_value = 0
+
         if reason:
             cursor.execute(
-                "UPDATE applicants SET status = %s, rejection_reason = %s WHERE applicant_id = %s",
-                (new_status, reason, applicant_id)
+                "UPDATE applicants SET status = %s, rejection_reason = %s, is_active = %s WHERE applicant_id = %s",
+                (new_status, reason, is_active_value, applicant_id)
             )
         else:
             cursor.execute(
-                "UPDATE applicants SET status = %s WHERE applicant_id = %s",
-                (new_status, applicant_id)
+                "UPDATE applicants SET status = %s, is_active = %s WHERE applicant_id = %s",
+                (new_status, is_active_value, applicant_id)
             )
         conn.commit()
 
@@ -522,6 +532,10 @@ def update_local_employer_status(employer_id):
             <p>— PESO SmartHire Admin</p>
             """
             success_message = "Local employer rejected. Notification email sent."
+            cursor.execute(
+                "UPDATE employers SET password_hash = NULL, temp_password = NULL WHERE employer_id = %s",
+                (employer_id,)
+            )
 
         elif action == "reupload":
             # Generate temporary password if not already set
@@ -579,15 +593,21 @@ def update_local_employer_status(employer_id):
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
         # Update employer status and optional rejection reason
-        if action == "rejected" and reason:
+        # Automatically handle is_active flag based on status
+        if new_status == "Approved":
+            is_active_value = 1
+        else:
+            is_active_value = 0
+
+        if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s WHERE employer_id = %s",
-                (new_status, reason, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s WHERE employer_id = %s",
-                (new_status, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s WHERE employer_id = %s",
+                (new_status, is_active_value, employer_id)
             )
         conn.commit()
 
@@ -690,6 +710,10 @@ def update_international_employer_status(employer_id):
             <p>— PESO SmartHire Admin</p>
             """
             success_message = "International employer rejected. Notification email sent."
+            cursor.execute(
+                "UPDATE employers SET password_hash = NULL, temp_password = NULL WHERE employer_id = %s",
+                (employer_id,)
+            )
 
         elif action == "reupload":
             # Generate temporary password if not already set
@@ -746,15 +770,21 @@ def update_international_employer_status(employer_id):
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
         # Update employer status and optional rejection reason
-        if action == "rejected" and reason:
+        # Automatically handle is_active flag based on status
+        if new_status == "Approved":
+            is_active_value = 1
+        else:
+            is_active_value = 0
+
+        if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s WHERE employer_id = %s",
-                (new_status, reason, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s WHERE employer_id = %s",
-                (new_status, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s WHERE employer_id = %s",
+                (new_status, is_active_value, employer_id)
             )
         conn.commit()
 

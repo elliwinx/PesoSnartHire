@@ -75,7 +75,7 @@ def forgot_password_request():
         msg = Message(
             "Password Reset Token",
             recipients=[email],
-            body=f"Your password reset token is: {token}\nThis token expires in 15 minutes."
+            body=f"Good Day Ka-PESO!\nYour password reset token is: {token}\nThis token expires in 15 minutes.\nIf you did not request this token, please just disregard it."
         )
         try:
             mail.send(msg)

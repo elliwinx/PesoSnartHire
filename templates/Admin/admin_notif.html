@@ -16,6 +16,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
   </head>
   <body>
     <header class="header">
@@ -28,8 +32,14 @@
         </div>
         <nav class="nav">
           <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
-          <a href="{{ url_for('admin.applicants_management') }}" class="nav-link">Applicants Management</a>
-          <a href="{{ url_for('admin.employers_management') }}" class="nav-link">Employers Management</a>
+          <a
+            href="{{ url_for('admin.applicants_management') }}"
+            class="nav-link"
+            >Applicants Management</a
+          >
+          <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
+            >Employers Management</a
+          >
           <a
             href="{{url_for('admin.notifications_page')}}"
             class="nav-link-active"
@@ -38,7 +48,9 @@
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
           >
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
@@ -62,7 +74,7 @@
       <div class="container">
         <h2>Administrative Notifications</h2>
         <p>
-          Monitor system activities, user approvals, and administrative alerts 
+          Monitor system activities, user approvals, and administrative alerts
         </p>
       </div>
     </section>
@@ -80,7 +92,6 @@
     <div class="card-list" id="notificationList">
       <!--Notifs will appear here-->
     </div>
-
 
     <footer class="footer">
       <div class="container">
@@ -145,8 +156,11 @@
       </div>
     </footer>
 
-        <!-- Scripts -->
+    <!-- Global loader partial -->
+    {% include 'partials/loader.html' %}
+    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
   </body>
 </html>

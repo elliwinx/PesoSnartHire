@@ -1,0 +1,76 @@
+/* Canonical global loader styles (moved here so loader design is consistent) */
+.modal-loader-overlay,
+#ajaxLoader.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 120500; /* stays above modals */
+}
+
+/* Content container */
+.modal-loader-content,
+#ajaxLoader .modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  background: #fff;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+/* Spinner (shared look for both types) */
+.modal-loader-overlay .spinner,
+#ajaxLoader .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e9ecef;
+  border-top-color: #7b1113;
+  border-radius: 50%;
+  animation: spin 3s linear infinite;
+}
+
+/* Keyframes for the spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Text (shared) */
+.modal-loader-overlay .modal-loader-text,
+#ajaxLoader .modal-loader-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2d3748;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .modal-loader-content,
+  #ajaxLoader .modal-content {
+    padding: 32px 24px;
+  }
+
+  .modal-loader-overlay .spinner,
+  #ajaxLoader .spinner {
+    width: 32px;
+    height: 32px;
+    border-width: 3px;
+  }
+
+  .modal-loader-overlay .modal-loader-text,
+  #ajaxLoader .modal-loader-text {
+    font-size: 14px;
+  }
+}

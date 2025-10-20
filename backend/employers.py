@@ -127,9 +127,10 @@ def register_employer(form_data, files):
             company_logo_path, business_permit_path, philiobnet_registration_path, job_orders_of_client_path,
             dole_no_pending_case_path, dole_authority_to_recruit_path,
             dmw_no_pending_case_path, license_to_recruit_path,
-            password_hash, accepted_terms, accepted_terms_at
+            password_hash, temp_password, status, is_active,
+            accepted_terms, accepted_terms_at
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, NOW()
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, 1, NOW()
         )
     """
 
@@ -140,7 +141,7 @@ def register_employer(form_data, files):
         company_logo_path, business_permit_path, philiobnet_path, job_orders_path,
         dole_no_pending_path, dole_authority_path,
         dmw_no_pending_path, license_to_recruit_path,
-        password_hash
+        password_hash, None, 'Pending', 0
     )
 
     result = run_query(conn, query, params)

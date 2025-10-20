@@ -18,6 +18,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
   </head>
   <body>
     <!-- Added inline Jinja flash messages with auto-fade -->
@@ -248,14 +252,7 @@
 
       <!-- Removed inline styles - using CSS classes instead -->
       <!-- Loader modal for async operations -->
-      <div id="ajaxLoader" class="modal">
-        <div class="modal-content">
-          <div style="margin-bottom: 8px">
-            <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px"></i>
-          </div>
-          <div id="ajaxLoaderText">Processing — please wait...</div>
-        </div>
-      </div>
+      {% include 'partials/loader.html' %}
 
       <!--Modal-->
       <div id="statusModal" class="modal">
@@ -375,6 +372,8 @@
       </div>
     </footer>
 
+    <!-- Global loader partial -->
+    {% include 'partials/loader.html' %}
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>

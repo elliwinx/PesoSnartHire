@@ -18,6 +18,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
   </head>
   <body>
     <!--Flash of Welcome Back Message-->
@@ -168,6 +172,8 @@
       </div>
     </footer>
 
+    <!-- Global loader partial -->
+    {% include 'partials/loader.html' %}
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/Notifications.js') }}"></script>
