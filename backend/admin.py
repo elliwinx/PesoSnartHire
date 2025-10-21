@@ -190,10 +190,10 @@ def approve_employer_reupload(employer_id):
 def update_nonlipeno_status(applicant_id):
     try:
         data = request.get_json()
-        print(f"[v0] Received data for applicant {applicant_id}: {data}")
+        print(f"[v1] Received data for applicant {applicant_id}: {data}")
 
         if not data or "action" not in data:
-            print("[v0] No action provided in request")
+            print("[v1] No action provided in request")
             return jsonify({"success": False, "message": "No action provided."}), 400
 
         action = data["action"]
@@ -201,7 +201,7 @@ def update_nonlipeno_status(applicant_id):
 
         conn = create_connection()
         if not conn:
-            print("[v0] Database connection failed")
+            print("[v1] Database connection failed")
             return jsonify({"success": False, "message": "Database connection failed"}), 500
 
         cursor = conn.cursor(dictionary=True)
@@ -212,23 +212,37 @@ def update_nonlipeno_status(applicant_id):
         applicant = cursor.fetchone()
 
         if not applicant:
-            print(f"[v0] Non-Lipeño applicant {applicant_id} not found in DB")
+            print(f"[v1] Non-Lipeño applicant {applicant_id} not found in DB")
             cursor.close()
             conn.close()
             return jsonify({"success": False, "message": "Non-Lipeño applicant not found"}), 404
 
-        if action == "approved":
-            if not applicant.get("temp_password"):
+        # -----------------------------
+        # HANDLE PASSWORD CREATION
+        # -----------------------------
+        temp_password_plain = None
+        has_credentials = applicant.get("password_hash") is not None
+
+        if action in ["approved", "reupload"]:
+            if not has_credentials:
+                # --- EDITED: always generate a hashed password and temp_password ---
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
-
                 cursor.execute(
                     "UPDATE applicants SET password_hash = %s, temp_password = %s WHERE applicant_id = %s",
                     (password_hash, temp_password_plain, applicant_id)
                 )
+                # Update local dict so email uses the correct password
+                applicant["temp_password"] = temp_password_plain
             else:
-                temp_password_plain = applicant["temp_password"]
+                # --- EDITED: use existing temp_password if available, otherwise mark for reset ---
+                temp_password_plain = applicant.get(
+                    "temp_password", "<reset_required>")
 
+        # -----------------------------
+        # DETERMINE STATUS AND EMAIL
+        # -----------------------------
+        if action == "approved":
             new_status = "Approved"
             subject = "PESO SmartHire - Application Approved"
             body = f"""
@@ -262,26 +276,15 @@ def update_nonlipeno_status(applicant_id):
             <p>— PESO SmartHire Admin</p>
             """
             success_message = "Non-Lipeño applicant has been rejected. Notification email sent."
+            # --- EDITED: remove credentials if rejected ---
             cursor.execute(
                 "UPDATE applicants SET password_hash = NULL, temp_password = NULL WHERE applicant_id = %s",
                 (applicant_id,)
             )
 
         elif action == "reupload":
-            if not applicant.get("temp_password"):
-                temp_password_plain = secrets.token_urlsafe(8)
-                password_hash = generate_password_hash(temp_password_plain)
-
-                cursor.execute(
-                    "UPDATE applicants SET password_hash = %s, temp_password = %s WHERE applicant_id = %s",
-                    (password_hash, temp_password_plain, applicant_id)
-                )
-            else:
-                temp_password_plain = applicant["temp_password"]
-
             new_status = "Reupload"
             document_name = data.get("document_name", "Recommendation Letter")
-
             subject = "PESO SmartHire - Document Reupload Required"
             body = f"""
             <p>Hi {applicant['first_name']},</p>
@@ -302,17 +305,15 @@ def update_nonlipeno_status(applicant_id):
             success_message = "Re-upload request sent. Email notification with login credentials sent to applicant."
 
         else:
-            print(f"[v0] Invalid action: {action}")
+            print(f"[v1] Invalid action: {action}")
             cursor.close()
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
-        # Persist status and optional rejection reason
-        # Automatically handle is_active flag based on status
-        if new_status == "Approved":
-            is_active_value = 1
-        else:
-            is_active_value = 0
+        # -----------------------------
+        # UPDATE STATUS + is_active
+        # -----------------------------
+        is_active_value = 1 if new_status == "Approved" else 0
 
         if reason:
             cursor.execute(
@@ -324,8 +325,12 @@ def update_nonlipeno_status(applicant_id):
                 "UPDATE applicants SET status = %s, is_active = %s WHERE applicant_id = %s",
                 (new_status, is_active_value, applicant_id)
             )
+
         conn.commit()
 
+        # -----------------------------
+        # SEND EMAIL
+        # -----------------------------
         msg = Message(
             subject=subject,
             recipients=[applicant["email"]],
@@ -337,11 +342,11 @@ def update_nonlipeno_status(applicant_id):
         conn.close()
 
         print(
-            f"[v0] Status updated and email sent for applicant {applicant_id}")
+            f"[v1] Status updated and email sent for applicant {applicant_id}")
         return jsonify({"success": True, "message": success_message})
 
     except Exception as e:
-        print(f"[v0] Error updating status or sending email: {e}")
+        print(f"[v1] Error updating status or sending email: {e}")
         if 'conn' in locals():
             conn.rollback()
             conn.close()

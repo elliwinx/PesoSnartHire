@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session
 from db_connection import create_connection, run_query
 from extensions import mail
+from flask import send_from_directory, make_response
 
 # Blueprints
 from backend.applicants import applicants_bp
@@ -16,10 +17,21 @@ app.secret_key = "seven-days-a-week"
 def home():
     return render_template("Landing_Page/index.html")
 
+
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("home"))
+
+
+@app.route('/uploads/<path:filename>')
+def uploaded_file(filename):
+    response = make_response(send_from_directory('uploads', filename))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 
 # ==== Mail Config ====
 app.config["MAIL_SERVER"] = "smtp.gmail.com"

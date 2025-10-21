@@ -4,7 +4,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const dropdownMenu = document.getElementById("dropdownMenu");
 
   if (menuToggle && dropdownMenu) {
-    // ensure a consistent initial hidden state
     dropdownMenu.classList.remove("show", "open");
     dropdownMenu.style.display = "none";
     menuToggle.setAttribute("aria-expanded", "false");
@@ -27,7 +26,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // close with Escape key
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && dropdownMenu.classList.contains("show")) {
         dropdownMenu.classList.remove("show", "open");
@@ -38,10 +36,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 1️⃣ Tab switching logic
+// 1️⃣ TAB SWITCHING LOGIC
 document.addEventListener("DOMContentLoaded", () => {
   const buttons = document.querySelectorAll(".tab-btn");
   const contents = document.querySelectorAll(".content");
+  const applicantStatus = document.getElementById("applicantStatus")?.value;
 
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -54,46 +53,67 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  document.getElementById("personal-information").style.display = "block";
+  // 👇 Default tab depending on applicant status
+  if (applicantStatus === "Reupload") {
+    document.getElementById("personal-information").style.display = "none";
+    document.getElementById("documents").style.display = "block";
+  } else {
+    document.getElementById("personal-information").style.display = "block";
+    document.getElementById("documents").style.display = "none";
+  }
 });
 
-// 2️⃣ Edit / Save / Cancel logic
+// 2️⃣ EDIT / SAVE / CANCEL LOGIC
 document.addEventListener("DOMContentLoaded", () => {
   const editBtn = document.getElementById("editBtn");
   const saveBtn = document.getElementById("saveBtn");
   const cancelBtn = document.getElementById("cancelBtn");
+  const fileInputs = document.querySelectorAll(".file-input");
+  const applicantStatus = document.getElementById("applicantStatus")?.value;
+
   const inputs = document.querySelectorAll(".chip");
   const selects = document.querySelectorAll("select");
   const radios = document.querySelectorAll("input[type='radio']");
-  const fileInputs = document.querySelectorAll(".file-input"); // new
 
-  editBtn.addEventListener("click", () => {
-    // Enable form editing
-    inputs.forEach((el) => el.removeAttribute("readonly"));
-    selects.forEach((el) => el.removeAttribute("disabled"));
-    radios.forEach((el) => el.removeAttribute("disabled"));
-    fileInputs.forEach((el) => (el.style.display = "block")); // show file inputs
+  // 👇 If Reupload, show file inputs immediately
+  if (applicantStatus === "Reupload") {
+    fileInputs.forEach((el) => (el.style.display = "block"));
+  } else {
+    fileInputs.forEach((el) => (el.style.display = "none"));
+  }
 
-    editBtn.style.display = "none";
-    saveBtn.style.display = "inline-block";
-    cancelBtn.style.display = "inline-block";
-  });
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      inputs.forEach((el) => el.removeAttribute("readonly"));
+      selects.forEach((el) => el.removeAttribute("disabled"));
+      radios.forEach((el) => el.removeAttribute("disabled"));
+      fileInputs.forEach((el) => (el.style.display = "block"));
 
-  cancelBtn.addEventListener("click", () => {
-    // Cancel editing
-    inputs.forEach((el) => el.setAttribute("readonly", true));
-    selects.forEach((el) => el.setAttribute("disabled", true));
-    radios.forEach((el) => el.setAttribute("disabled", true));
-    fileInputs.forEach((el) => (el.style.display = "none")); // hide file inputs
+      editBtn.style.display = "none";
+      saveBtn.style.display = "inline-block";
+      cancelBtn.style.display = "inline-block";
+    });
+  }
 
-    editBtn.style.display = "inline-block";
-    saveBtn.style.display = "none";
-    cancelBtn.style.display = "none";
-  });
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      inputs.forEach((el) => el.setAttribute("readonly", true));
+      selects.forEach((el) => el.setAttribute("disabled", true));
+      radios.forEach((el) => el.setAttribute("disabled", true));
+
+      // Hide file inputs only if NOT reupload
+      if (applicantStatus !== "Reupload") {
+        fileInputs.forEach((el) => (el.style.display = "none"));
+      }
+
+      editBtn.style.display = "inline-block";
+      saveBtn.style.display = "none";
+      cancelBtn.style.display = "none";
+    });
+  }
 });
 
-// 3️⃣ PWD / Work conditional logic  ✅  ← place this here!
-/* ---------- CONDITIONAL FIELDS (PWD / WORK) ---------- */
+// 3️⃣ CONDITIONAL FIELDS (PWD / WORK)
 (function () {
   const el = (sel) => document.querySelector(sel);
   const els = (sel) => Array.from(document.querySelectorAll(sel));

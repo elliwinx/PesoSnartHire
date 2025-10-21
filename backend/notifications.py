@@ -158,13 +158,12 @@ def build_redirect_url(notif, admin_prefix="/admin"):
             pass
 
     # Map to admin routes
-    # For applicant approval notifications prefer the specific applicant
-    # detail page when an applicant_id is available (notif -> applicant profile).
-    # If there's no applicant_id available, fall back to the applicants list.
     if ntype == "applicant_approval":
         if applicant_id:
             return f"{admin_prefix}/applicants/{applicant_id}"
         return f"{admin_prefix}/applicants"
+    if ntype == "applicant_reupload" and applicant_id:
+        return f"{admin_prefix}/applicants/{applicant_id}"
     if ntype == "employer_approval" and employer_id:
         return f"{admin_prefix}/employers/{employer_id}"
     if ntype == "applicant_reported" and applicant_id:

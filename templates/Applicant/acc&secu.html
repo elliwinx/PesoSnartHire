@@ -23,6 +23,8 @@
     />
   </head>
   <body>
+    <!--Global hidden input-->
+    <input type="hidden" id="applicantStatus" value="{{ session.get('applicant_status', '') }}">
     <!--Flash of Message-->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
@@ -86,7 +88,7 @@
             }}{% endif %}
           </h1>
           <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here’s what we have today</p>
+          <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
@@ -114,18 +116,29 @@
     <div class="container form-card">
       <!-- Tab buttons -->
       <div class="button-container" style="display:flex;justify-content:center;gap:10px;margin-bottom:14px;">
+        <!-- Hide Personal Information tab if status is Reupload -->
+        {% if session.get('applicant_status') != 'Reupload' %}
         <button type="button" class="tab-btn active" data-target="personal-information">
           Personal Information
         </button>
-        <button type="button" class="tab-btn" data-target="documents">
+        {% endif %}
+        <button type="button" class="tab-btn {% if session.get('applicant_status') == 'Reupload' %}active{% endif %}" data-target="documents">
           Documents
         </button>
       </div>
 
-      <form method="POST" enctype="multipart/form-data" id="accountForm">
+      <form id="accountForm"
+        method="POST"
+        enctype="multipart/form-data"
+        action="{% if applicant.status == 'Reupload' %}
+                  {{ url_for('applicants.submit_reupload') }}
+                {% else %}
+                  {{ url_for('applicants.update_profile') }}
+                {% endif %}">
 
-        <!-- PERSONAL INFORMATION (default visible) -->
-        <div id="personal-information" class="content" style="display:block;">
+
+        <!-- PERSONAL INFORMATION (default visible, hidden if Reupload) -->
+        <div id="personal-information" class="content {% if session.get('applicant_status') == 'Reupload' %}hidden{% endif %}">
           <!-- Profile top -->
           <div class="profile-top">
             <div class="avatar">
@@ -247,24 +260,36 @@
           </div>
         </div>
 
-        <!-- DOCUMENTS (hidden by default) -->
-        <div id="documents" class="content" style="display:none;">
+        <!-- DOCUMENTS (hidden by default, shown if Reupload) -->
+        <div id="documents" class="content {% if session.get('applicant_status') == 'Reupload' %}visible{% else %}hidden{% endif %}">
+          <!-- Add reupload message for Reupload status -->
+          {% if session.get('applicant_status') == 'Reupload' %}
+          <div style="background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:12px;margin-bottom:16px;color:#856404;">
+            <strong>Document Reupload Required</strong>
+            <p style="margin:8px 0 0 0;font-size:14px;">Please reupload your recommendation letter below. Once submitted, the admin will review your document and update your status.</p>
+          </div>
+          {% endif %}
+
           <div class="documents">
             <div class="document-item">
               <div class="document-header">
                 <label>Resume</label>
                 <a href="{{ url_for('static', filename=applicant.resume_path) }}" target="_blank">View</a>
               </div>
+              <!-- Hide resume upload for Reupload status (only recommendation letter) -->
+              {% if session.get('applicant_status') != 'Reupload' %}
               <input type="file" name="resume_file" accept=".pdf,.doc,.docx" class="file-input" />
+              {% endif %}
             </div>
 
             {% if not applicant.is_from_lipa %}
             <div class="document-item">
               <div class="document-header">
                 <label>Recommendation Letter</label>
-                <a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}" target="_blank">View</a>
+                <a href="{{ url_for('uploaded_file', filename=applicant.recommendation_letter_path) }}" target="_blank">View</a>
               </div>
-              <input type="file" name="recommendation_file" accept=".pdf,.doc,.docx" class="file-input" />
+              <!-- Always show recommendation letter upload, especially for Reupload status -->
+              <input type="file" name="recommendation_file" accept=".pdf,.doc,.docx" class="file-input" {% if session.get('applicant_status') == 'Reupload' %}required{% endif %} />
             </div>
             {% endif %}
           </div>
@@ -272,10 +297,18 @@
 
 
         <!-- Edit controls (only in personal info tab) -->
+        <!-- Show Upload button for Reupload status, Edit button for Approved status -->
         <div class="edit-controls" style="margin-top:16px;text-align:right;">
-          <button id="cancelBtn" type="button" class="cancel-btn" style="display:none;margin-right:8px;">Cancel</button>
-          <button id="editBtn" type="button" class="edit-btn">Edit Profile</button>
-          <button id="saveBtn" type="submit" class="save-btn" style="display:none;">Save</button>
+          {% if session.get('applicant_status') == 'Reupload' %}
+            <!-- Reupload workflow: Upload and Cancel buttons -->
+            <button id="cancelReuploadBtn" type="button" class="cancel-btn" style="margin-right:8px;">Cancel</button>
+            <button id="uploadBtn" type="submit" class="save-btn">Upload Document</button>
+          {% else %}
+            <!-- Normal workflow: Edit, Save, Cancel buttons -->
+            <button id="cancelBtn" type="button" class="cancel-btn" style="display:none;margin-right:8px;">Cancel</button>
+            <button id="editBtn" type="button" class="edit-btn">Edit Profile</button>
+            <button id="saveBtn" type="submit" class="save-btn" style="display:none;">Save</button>
+          {% endif %}
         </div>
 
       </form>

@@ -9,6 +9,7 @@ from extensions import mail
 from flask_mail import Message
 from .notifications import create_notification
 
+
 applicants_bp = Blueprint("applicants", __name__)
 
 UPLOAD_FOLDER = "static/uploads"
@@ -399,40 +400,75 @@ def submit_reupload():
         return jsonify({"success": False, "message": "Not authenticated"}), 401
 
     applicant_id = session["applicant_id"]
-    file = request.files.get("document")
+    file = request.files.get("recommendation_file")  # ✅ match HTML input name
 
     if not file:
         return jsonify({"success": False, "message": "No file provided"}), 400
 
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "DB connection failed"}), 500
+
     try:
-        # Save the reuploaded file
-        recommendation_path = save_file(file, "recommendations")
-
-        conn = create_connection()
-        if not conn:
-            return jsonify({"success": False, "message": "DB connection failed"}), 500
-
-        # Update applicant document
-        query = "UPDATE applicants SET recommendation_letter_path = %s WHERE applicant_id = %s"
-        run_query(conn, query, (recommendation_path, applicant_id))
-        conn.commit()
-
-        create_notification(
-            notification_type="applicant_reupload",
-            title="Applicant Document Reuploaded",
-            message="An applicant has reuploaded their required document",
-            count=1,
-            related_ids=[applicant_id],
-            applicant_id=applicant_id
+        # 🔹 Fetch applicant data (for residency_type and old file cleanup)
+        applicant_data = run_query(
+            conn,
+            "SELECT recommendation_letter_path, is_from_lipa FROM applicants WHERE applicant_id = %s",
+            (applicant_id,),
+            fetch="one"
         )
 
+        # 🧹 Delete old file if exists
+        if applicant_data and applicant_data["recommendation_letter_path"]:
+            old_path = os.path.join(
+                "static", applicant_data["recommendation_letter_path"])
+            if os.path.exists(old_path):
+                os.remove(old_path)
+                print(f"Old file removed: {old_path}")
+
+        # 💾 Save new file
+        new_path = save_file(file, "recommendations")
+
+        # 🏷 Determine residency type
+        residency_type = "Lipeno" if applicant_data and applicant_data.get(
+            "is_from_lipa") else "Non-Lipeno"
+
+        # 🗂 Update applicant record
+        run_query(
+            conn,
+            """
+            UPDATE applicants 
+            SET recommendation_letter_path = %s, status = 'Pending', is_active = 0
+            WHERE applicant_id = %s
+            """,
+            (new_path, applicant_id)
+        )
+        conn.commit()
+
+        update_query = """
+        UPDATE notifications
+        SET title = %s, message = %s, is_read = 0, updated_at = NOW()
+        WHERE applicant_id = %s AND notification_type = 'applicant_approval'
+        """
+        params = (
+            "Applicant Document Reuploaded",
+            "An applicant has reuploaded their required document and is ready for reassessment.",
+            applicant_id
+        )
+        run_query(conn, update_query, params)
+        conn.commit()
         conn.close()
 
-        return jsonify({"success": True, "message": "Document reuploaded successfully"}), 200
+        flash("Document reuploaded successfully! Please wait for admin review.", "success")
+        return redirect(url_for("home"))
 
     except Exception as e:
-        print(f"[v0] Error submitting reupload: {e}")
+        print(f"[submit_reupload] Error: {e}")
+        conn.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
+
+    finally:
+        conn.close()
 
 
 @applicants_bp.route("/terms", methods=["GET", "POST"])
