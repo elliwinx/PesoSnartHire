@@ -566,8 +566,8 @@ body {
 }
 
 .profile-top .avatar {
-  width: 110px;
-  height: 110px;
+  width: 110px; /* bigger */
+  height: 110px; /* bigger */
   border-radius: 10px;
   background: #f4f4f4;
   display: inline-flex;
@@ -575,7 +575,18 @@ body {
   justify-content: center;
   font-size: 50px;
   color: #222;
-  margin-bottom: 5px; /* space between avatar and code */
+  margin-bottom: 5px;
+  position: relative; /* for file input overlay */
+  overflow: hidden;
+  transition: border 0.3s, opacity 0.3s;
+}
+
+.profile-top .avatar img {
+  width: 100%; /* fill the avatar container width */
+  height: 100%; /* fill the avatar container height */
+  object-fit: cover; /* maintain aspect ratio, crop if needed */
+  border-radius: inherit;
+  transition: opacity 0.3s, border 0.3s;
 }
 
 .applicant-code {
@@ -864,6 +875,49 @@ body {
 .info-grid select:not([disabled]) {
   background: #fff;
   border: 1px solid #ccc;
+}
+
+.select-readonly {
+  pointer-events: none; /* Prevent changing */
+  background: #ebebeb !important; /* Light gray */
+  color: #333; /* Text color */
+}
+
+/* Only show hover overlay when in edit mode */
+.profile-top.edit-mode .avatar:hover::after {
+  content: "Change Photo";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.profile-top .avatar input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: none; /* default: cannot click */
+}
+
+.profile-top.edit-mode .avatar input[type="file"] {
+  pointer-events: auto; /* only clickable in edit mode */
+}
+
+.profile-top.edit-mode .avatar:hover::after {
+  pointer-events: none;
 }
 
 /* responsive: stack on small screens */

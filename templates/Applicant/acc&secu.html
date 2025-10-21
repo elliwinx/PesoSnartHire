@@ -133,7 +133,7 @@
         action="{% if applicant.status == 'Reupload' %}
                   {{ url_for('applicants.submit_reupload') }}
                 {% else %}
-                  {{ url_for('applicants.update_profile') }}
+                  {{ url_for('applicants.account_security') }}
                 {% endif %}">
 
 
@@ -141,8 +141,12 @@
         <div id="personal-information" class="content {% if session.get('applicant_status') == 'Reupload' %}hidden{% endif %}">
           <!-- Profile top -->
           <div class="profile-top">
-            <div class="avatar">
-              <img src="{{ url_for('static', filename=applicant.profile_pic_path) }}" alt="avatar" style="width:80px;height:80px;border-radius:8px;object-fit:cover;">
+            <div class="avatar" style="position: relative; cursor: pointer;">
+              <img id="profilePicPreview" src="{{ url_for('static', filename=applicant.profile_pic_path) }}" 
+                  alt="avatar" 
+                  style="width:80px;height:80px;border-radius:8px;object-fit:cover;">
+              <input type="file" name="profile_pic" accept="image/*" 
+                    style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;">
             </div>
             <div class="applicant-code">{{ applicant.applicant_code }}</div>
           </div>
@@ -228,11 +232,21 @@
               <!-- conditional: only show when is_pwd == 1 -->
               <div id="pwd_details" class="conditional" style="display:none;margin-top:10px;">
                 <label style="font-size:12px;color:#333;margin-bottom:6px;display:block;">If yes, please specify disability type</label>
-                <input class="chip" type="text" name="disability_type" value="{{ applicant.disability_type or '' }}" readonly />
+                <select class="chip select-readonly" name="disability_type">
+                  <option value="">Select Disability Type</option>
+                  <option value="Visual Disability" {% if applicant.pwd_type == 'Visual Disability' %}selected{% endif %}>Visual Disability</option>
+                  <option value="Hearing Disability" {% if applicant.pwd_type == 'Hearing Disability' %}selected{% endif %}>Hearing Disability</option>
+                  <option value="Speech/Communication Disability" {% if applicant.pwd_type == 'Speech/Communication Disability' %}selected{% endif %}>Speech/Communication Disability</option>
+                  <option value="Physical Disability/Orthopedic Disability" {% if applicant.pwd_type == 'Physical Disability/Orthopedic Disability' %}selected{% endif %}>Physical Disability/Orthopedic Disability</option>
+                  <option value="Intellectual Disability" {% if applicant.pwd_type == 'Intellectual Disability' %}selected{% endif %}>Intellectual Disability</option>
+                  <option value="Learning Disability" {% if applicant.pwd_type == 'Learning Disability' %}selected{% endif %}>Learning Disability</option>
+                  <option value="Psychosocial Disability" {% if applicant.pwd_type == 'Psychosocial Disability' %}selected{% endif %}>Psychosocial Disability</option>
+                  <option value="Chronic Illness" {% if applicant.pwd_type == 'Chronic Illness' %}selected{% endif %}>Chronic Illness</option>
+                  <option value="Multiple Disabilities" {% if applicant.pwd_type == 'Multiple Disabilities' %}selected{% endif %}>Multiple Disabilities</option>
+                </select>
               </div>
             </div>
 
-            <!-- Work Experience row (separate row) -->
             <div class="full" style="margin-top:8px;">
               <label>Do you have any work experience?</label>
               <div class="radio-row">
@@ -249,9 +263,17 @@
               <!-- conditional: only show when has_work_exp == 1 -->
               <div id="work_details" class="conditional" style="display:none;margin-top:10px;">
                 <label style="font-size:12px;color:#333;margin-bottom:6px;display:block;">If yes, please specify work experience length</label>
-                <input class="chip" type="text" name="work_duration" value="{{ applicant.work_duration or '' }}" readonly />
+                <select class="chip select-readonly" name="work_duration">
+                  <option value="">Select Years of Experience</option>
+                  <option value="Less than 1" {% if applicant.years_experience == 'Less than 1' %}selected{% endif %}>Less than 1 year</option>
+                  <option value="1-2" {% if applicant.years_experience == '1-2' %}selected{% endif %}>1-2 years</option>
+                  <option value="3-5" {% if applicant.years_experience == '3-5' %}selected{% endif %}>3-5 years</option>
+                  <option value="6-10" {% if applicant.years_experience == '6-10' %}selected{% endif %}>6-10 years</option>
+                  <option value="10+" {% if applicant.years_experience == '10+' %}selected{% endif %}>More than 10 years</option>
+                </select>
               </div>
             </div>
+
 
             <div class="full">
               <label>Reason for Registering in PESO SmartHire</label>

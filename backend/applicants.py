@@ -338,58 +338,133 @@ def account_security():
         flash("Database connection failed.", "danger")
         return redirect(url_for("applicants.applicant_home"))
 
-    # If POST — update applicant info
-    if request.method == "POST":
-        try:
-            update_query = """
-                UPDATE applicants SET
-                    first_name = %s,
-                    middle_name = %s,
-                    last_name = %s,
-                    age = %s,
-                    sex = %s,
-                    phone = %s,
-                    email = %s,
-                    barangay = %s,
-                    city = %s,
-                    province = %s,
-                    education = %s,
-                    is_pwd = %s,
-                    has_work_exp = %s,
-                    registration_reason = %s
-                WHERE applicant_id = %s
-            """
-            data = (
-                request.form.get("first_name"),
-                request.form.get("middle_name"),
-                request.form.get("last_name"),
-                request.form.get("age"),
-                request.form.get("sex"),
-                request.form.get("phone"),
-                request.form.get("email"),
-                request.form.get("barangay"),
-                request.form.get("city"),
-                request.form.get("province"),
-                request.form.get("education"),
-                request.form.get("is_pwd"),
-                request.form.get("has_work_exp"),
-                request.form.get("registration_reason"),
-                applicant_id,
-            )
-            run_query(conn, update_query, data)
-            conn.commit()
-            flash("Your account details have been updated successfully.", "success")
-        except Exception as e:
-            flash(f"Error updating information: {e}", "danger")
-
-    # Fetch updated info
-    applicant = run_query(
-        conn, "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,), fetch="one")
-    conn.close()
+    # --- FETCH APPLICANT FIRST ---
+    try:
+        applicant = run_query(
+            conn,
+            "SELECT * FROM applicants WHERE applicant_id = %s",
+            (applicant_id,),
+            fetch="one"
+        )
+    except Exception as e:
+        flash(f"Error fetching applicant data: {e}", "danger")
+        return redirect(url_for("applicants.applicant_home"))
 
     if not applicant:
         flash("Applicant not found.", "danger")
         return redirect(url_for("applicants.applicant_home"))
+
+    if request.method == "POST":
+        try:
+            # 🔹 Your form data
+            is_pwd = int(request.form.get("is_pwd", 0))
+            pwd_type = request.form.get("disability_type") if is_pwd else None
+            has_work_exp = int(request.form.get("has_work_exp", 0))
+            years_exp = request.form.get(
+                "work_duration") if has_work_exp else None
+
+            # 🔹 Files
+            profile_file = request.files.get("profile_pic")
+            resume_file = request.files.get("resume_file")
+            recommendation_file = request.files.get("recommendation_file")
+
+            # 🔹 Handle uploaded files
+            if profile_file and profile_file.filename:
+                if applicant["profile_pic_path"]:
+                    old_path = os.path.join(
+                        "static", applicant["profile_pic_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                profile_path = save_file(profile_file, "profile_pics")
+            else:
+                profile_path = applicant["profile_pic_path"]
+
+            if resume_file and resume_file.filename:
+                if applicant["resume_path"]:
+                    old_path = os.path.join("static", applicant["resume_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                resume_path = save_file(resume_file, "resumes")
+            else:
+                resume_path = applicant["resume_path"]
+
+            if recommendation_file and recommendation_file.filename:
+                if applicant["recommendation_letter_path"]:
+                    old_path = os.path.join(
+                        "static", applicant["recommendation_letter_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                recommendation_path = save_file(
+                    recommendation_file, "recommendations")
+            else:
+                recommendation_path = applicant["recommendation_letter_path"]
+
+            # 🔹 Update DB
+            update_query = """
+                UPDATE applicants SET
+                    first_name=%s,
+                    middle_name=%s,
+                    last_name=%s,
+                    age=%s,
+                    sex=%s,
+                    phone=%s,
+                    email=%s,
+                    barangay=%s,
+                    city=%s,
+                    province=%s,
+                    education=%s,
+                    is_pwd=%s,
+                    pwd_type=%s,
+                    has_work_exp=%s,
+                    years_experience=%s,
+                    registration_reason=%s,
+                    profile_pic_path=%s,
+                    resume_path=%s,
+                    recommendation_letter_path=%s
+                WHERE applicant_id=%s
+            """
+            data = (
+                request.form.get("first_name", ""),
+                request.form.get("middle_name", ""),
+                request.form.get("last_name", ""),
+                int(request.form.get("age", 0)) if request.form.get(
+                    "age") else None,
+                request.form.get("sex", ""),
+                request.form.get("phone", ""),
+                request.form.get("email", ""),
+                request.form.get("barangay", ""),
+                request.form.get("city", ""),
+                request.form.get("province", ""),
+                request.form.get("education", ""),
+                is_pwd,
+                pwd_type,
+                has_work_exp,
+                years_exp,
+                request.form.get("registration_reason", ""),
+                profile_path,
+                resume_path,
+                recommendation_path,
+                applicant_id
+            )
+
+            run_query(conn, update_query, data)
+            conn.commit()
+            flash(
+                "Your account details and files have been updated successfully.", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"Error updating information: {e}", "danger")
+
+    # 🔹 Re-fetch applicant after POST
+    try:
+        applicant = run_query(
+            conn,
+            "SELECT * FROM applicants WHERE applicant_id = %s",
+            (applicant_id,),
+            fetch="one"
+        )
+    finally:
+        conn.close()
 
     return render_template("Applicant/acc&secu.html", applicant=applicant)
 
