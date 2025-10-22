@@ -445,6 +445,537 @@ body {
   color: #666;
 }
 
+.account-and-security .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+}
+
+.account-and-security .left {
+  flex: 1;
+}
+
+.account-and-security .right {
+  position: relative;
+  display: inline-block;
+}
+
+.right i {
+  font-size: 19px;
+  padding-top: 5px;
+}
+
+.right i:hover {
+  cursor: pointer;
+  color: #7b1113;
+}
+
+.dropdown-menu {
+  display: none; /* hidden by default */
+  position: absolute;
+  right: 0; /* aligns under the bars icon */
+  top: 30px;
+  background: #ebebeb;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 150px;
+  z-index: 1000;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 10px;
+  color: #333;
+  text-decoration: none;
+  text-align: center;
+}
+
+.dropdown-menu a:hover {
+  background: #7b1113;
+  color: white;
+  border-radius: 10px;
+}
+
+.content {
+  background-color: #f4f4f4;
+  padding: 2rem;
+  border-radius: 10px;
+}
+
+.button-container {
+  text-align: center;
+  margin: 0 0 20px 0;
+  background-color: #d9d9d9;
+  padding: 10px;
+  border-radius: 10px;
+  display: flex; /* Use flexbox for layout */
+  justify-content: center; /* Center buttons horizontally */
+  gap: 10px; /* Space between buttons */
+  width: 100%; /* Full width of the container */
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.8s;
+  width: 50%; /* Occupy half the space of the button container */
+  box-sizing: border-box; /* Ensure padding is included in width */
+  flex: 1; /* Ensure buttons are equal width */
+  font-size: 1rem;
+}
+
+.tab-btn:hover {
+  background: white;
+  color: #7b1113;
+  border-radius: 5px;
+}
+
+.tab-btn.active {
+  background: white; /* highlight */
+  color: #7b1113;
+  border-radius: 5px;
+}
+
+/* Card / page container */
+.account-and-security + .container,
+.container.form-card {
+  max-width: 1100px;
+  margin: 28px auto;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(22, 22, 22, 0.06);
+  padding: 28px 32px;
+}
+
+/* top profile block */
+.profile-top {
+  display: flex;
+  flex-direction: column; /* stack vertically */
+  align-items: center; /* center horizontally */
+  margin-bottom: 30px;
+}
+
+.profile-top .avatar {
+  width: 110px; /* bigger */
+  height: 110px; /* bigger */
+  border-radius: 10px;
+  background: #f4f4f4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50px;
+  color: #222;
+  margin-bottom: 5px;
+  position: relative; /* for file input overlay */
+  overflow: hidden;
+  transition: border 0.3s, opacity 0.3s;
+}
+
+.profile-top .avatar img {
+  width: 100%; /* fill the avatar container width */
+  height: 100%; /* fill the avatar container height */
+  object-fit: cover; /* maintain aspect ratio, crop if needed */
+  border-radius: inherit;
+  transition: opacity 0.3s, border 0.3s;
+}
+
+.applicant-code {
+  background: #ebebeb;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #444;
+}
+
+/* grid of read-only pill inputs */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+/* label above small chips */
+.info-grid label {
+  font-size: 12px;
+  color: #333;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* fake-input chip styling (works on inputs and readonly textareas) */
+.chip {
+  background: #ebebeb;
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  font-size: 14px;
+  color: #222;
+  min-height: 40px;
+  box-sizing: border-box;
+}
+
+/* Make actual <input readonly> look like .chip */
+.info-grid input[readonly],
+.info-grid textarea[readonly],
+.info-grid select[disabled] {
+  background: #ebebeb;
+  border: none;
+  outline: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #222;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* larger single-column items */
+.info-grid .full {
+  grid-column: 1 / -1;
+}
+
+/* small single column (for short controls like Age / Sex) */
+.info-grid .small {
+  width: 120px;
+}
+
+/* row for work experience / PWD + reason */
+.bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+  align-items: center;
+}
+
+/* reason textarea */
+.reason-box {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 40px;
+}
+
+/* document section (below) */
+.documents {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px solid #efefef;
+}
+
+/* Edit button bottom-right */
+.edit-controls {
+  margin-top: 18px;
+  text-align: right;
+}
+
+.edit-btn,
+.save-btn,
+.cancel-btn {
+  background: #8b0d0d;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #777;
+  margin-right: 8px;
+}
+
+.save-btn {
+  background: #b02a2a;
+}
+
+/* small helper: align checkboxes inline with label */
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-info {
+  font-size: 12px;
+  color: #666;
+  margin: 30px;
+  text-align: center;
+  justify-content: center;
+}
+
+/* ---------- INFO ROW (Age / Sex / Phone / Email) ---------- */
+.info-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.info-row .info-item {
+  flex: 1 1 0;
+  min-width: 180px; /* prevent items from shrinking too small */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ensure the .chip style still applies inside info-item */
+.info-row .chip {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* -------- RADIO BUTTON STYLING -------- */
+.radio-row {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* space between Yes and No options */
+  margin-top: 6px; /* small gap from the question label */
+  flex-wrap: wrap; /* so it doesn’t overflow on smaller screens */
+}
+
+.radio-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* space between the circle and label text */
+  font-size: 14px;
+  color: #222;
+  cursor: pointer;
+}
+
+/* Make sure the inputs align well vertically */
+.radio-inline input[type="radio"] {
+  margin: 0;
+  transform: translateY(1px); /* slight adjustment for perfect alignment */
+}
+
+/* put this near the bottom of your CSS file */
+.info-grid .radio-row .radio-inline {
+  display: inline-flex; /* inline-flex so circle + text are inline */
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  cursor: pointer;
+}
+
+/* conditional blocks hidden by default (JS will toggle display) */
+.conditional {
+  display: none;
+}
+
+/* DOCUMENTS TAB STYLING */
+.documents {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 10px;
+}
+
+/* Each document item */
+.document-item {
+  display: flex;
+  flex-direction: column;
+  background: #f9f9f9;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid #e5e5e5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s;
+}
+
+.document-item:hover {
+  background: #fefefe;
+}
+
+/* Label and link row */
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.document-header label {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.document-header a {
+  font-size: 14px;
+  color: white;
+  background: #7b1113;
+  border-radius: 10px;
+  padding: 6px 12px;
+  text-decoration: none;
+}
+
+.document-header a:hover {
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+  font-weight: 600;
+}
+
+/* File upload field */
+.file-input {
+  margin-top: 10px;
+  display: none; /* hidden until Edit */
+  background: #fff;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.file-input:hover {
+  border-color: #999;
+}
+
+/* Responsive behavior */
+@media (max-width: 600px) {
+  .document-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+/* Ensure consistent styling between readonly and editable inputs */
+.info-grid input,
+.info-grid textarea,
+.info-grid select {
+  background: #ebebeb;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #222;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 0.3s;
+}
+
+/* Editable state (after clicking Edit) */
+.info-grid input:not([readonly]),
+.info-grid textarea:not([readonly]),
+.info-grid select:not([disabled]) {
+  background: #fff;
+  border: 1px solid #ccc;
+}
+
+.select-readonly {
+  pointer-events: none; /* Prevent changing */
+  background: #ebebeb !important; /* Light gray */
+  color: #333; /* Text color */
+}
+
+/* Only show hover overlay when in edit mode */
+.profile-top.edit-mode .avatar:hover::after {
+  content: "Change Photo";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.profile-top .avatar input[type="file"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  pointer-events: none; /* default: cannot click */
+}
+
+.profile-top.edit-mode .avatar input[type="file"] {
+  pointer-events: auto; /* only clickable in edit mode */
+}
+
+.profile-top.edit-mode .avatar:hover::after {
+  pointer-events: none;
+}
+
+/* Add missing grid column classes */
+.three-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.four-columns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.two-columns {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+/* Responsive grid columns for smaller screens */
+@media (max-width: 1024px) {
+  .four-columns {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .three-columns,
+  .four-columns,
+  .two-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* responsive: stack on small screens */
+@media (max-width: 880px) {
+  .info-row {
+    flex-direction: column;
+  }
+}
+
+/* responsive */
+@media (max-width: 880px) {
+  .info-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .welcome-title {

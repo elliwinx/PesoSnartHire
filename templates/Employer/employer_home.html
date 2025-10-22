@@ -33,12 +33,16 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{url_for('employer_home')}}" class="nav-link-active"
+          <a
+            href="{{url_for('employers.employer_home')}}"
+            class="nav-link-active"
             >Home</a
           >
           <a href="#" class="nav-link">Application Management</a>
           <a href="#" class="nav-link">Real-Time Notification</a>
-          <a href="#" class="nav-link">Account & Security</a>
+          <a href="{{url_for('employers.account_security')}}" class="nav-link"
+            >Account & Security</a
+          >
           <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
             >Log Out</a
           >
@@ -55,7 +59,10 @@
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome</h1>
+          <h1 class="hero-title">
+            Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
+            endif %}
+          </h1>
           <!-- You can add the employer's name here using python-->
           <p class="hero-description">Here's what we have today</p>
         </div>

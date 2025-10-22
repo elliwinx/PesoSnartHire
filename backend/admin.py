@@ -469,6 +469,7 @@ def update_local_employer_status(employer_id):
             return jsonify({"success": False, "message": "No action provided."}), 400
 
         action = data["action"]
+        reason = None
 
         conn = create_connection()
         if not conn:
@@ -508,7 +509,7 @@ def update_local_employer_status(employer_id):
             <p>You may now post job orders and access your employer dashboard to manage your recruitment activities.</p>
             <p>Included below are your login credentials:</p>
             <ul>
-                <li>Employer ID: {employer_id}</li>
+                <li>Employer Code: {employer['employer_code']}</li>
                 <li>Email: {employer['email']}</li>
                 <li>Phone Number: {employer['phone']}</li>
                 <li>Password: {temp_password_plain}</li>
@@ -579,7 +580,7 @@ def update_local_employer_status(employer_id):
             <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
             <p>Here are your login credentials:</p>
             <ul>
-                <li>Employer ID: {employer_id}</li>
+                <li>Employer Code: {employer['employer_code']}</li>
                 <li>Email: {employer['email']}</li>
                 <li>Phone Number: {employer['phone']}</li>
                 <li>Password: {temp_password_plain}</li>
@@ -648,6 +649,7 @@ def update_international_employer_status(employer_id):
             return jsonify({"success": False, "message": "No action provided."}), 400
 
         action = data["action"]
+        reason = None
 
         conn = create_connection()
         if not conn:
@@ -687,8 +689,9 @@ def update_international_employer_status(employer_id):
             <p>You may now post overseas job orders and access your employer dashboard to manage your international recruitment activities.</p>
             <p>Included below are your login credentials:</p>
             <ul>
-                <li>Employer ID: {employer_id}</li>
+                <li>Employer Code: {employer['employer_code']}</li>
                 <li>Email: {employer['email']}</li>
+                <li>Phone Number: {employer['phone']}</li>
                 <li>Password: {temp_password_plain}</li>
             </ul>
             <p><strong>Please change your password after logging in for security purposes.</strong></p>
@@ -757,8 +760,9 @@ def update_international_employer_status(employer_id):
             <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
             <p>Here are your login credentials:</p>
             <ul>
-                <li>Employer ID: {employer_id}</li>
+                <li>Employer Code: {employer['employer_code']}</li>
                 <li>Email: {employer['email']}</li>
+                <li>Phone Number: {employer['phone']}</li>
                 <li>Password: {temp_password_plain}</li>
             </ul>
             <p><strong>Please change your password after logging in for security purposes.</strong></p>

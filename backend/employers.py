@@ -24,8 +24,6 @@ def save_file(file, subfolder):
     os.makedirs(folder_path, exist_ok=True)
 
     filename = secure_filename(file.filename)
-
-    # Add timestamp for uniqueness
     timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
     name, ext = os.path.splitext(filename)
     unique_filename = f"{name}_{timestamp}{ext}"
@@ -33,8 +31,36 @@ def save_file(file, subfolder):
     file_path = os.path.join(folder_path, unique_filename)
     file.save(file_path)
 
-    # ✅ return the unique filename so template matches the saved file
     return os.path.join("uploads", subfolder, unique_filename).replace("\\", "/")
+
+
+def delete_file(file_path):
+    """Delete a file if it exists."""
+    if not file_path:
+        return True
+
+    try:
+        full_path = os.path.join("static", file_path)
+        if os.path.exists(full_path):
+            os.remove(full_path)
+            return True
+    except Exception as e:
+        print(f"[employers_account] Error deleting file {file_path}: {e}")
+
+    return False
+
+
+def get_employer_data(employer_id):
+    """Fetch employer data from database."""
+    conn = create_connection()
+    if not conn:
+        return None
+
+    query = "SELECT * FROM employers WHERE employer_id = %s"
+    result = run_query(conn, query, (employer_id,), fetch="one")
+    conn.close()
+
+    return result
 
 
 def register_employer(form_data, files):
@@ -237,14 +263,15 @@ def login():
         conn.close()
         return redirect(url_for("home"))
 
-    # Successful login
+    # Successful login - set session variables
     session["employer_id"] = employer["employer_id"]
     session["employer_name"] = employer["employer_name"]
+    session["contact_person"] = employer["contact_person"]
     session["employer_email"] = employer["email"]
     session["employer_status"] = employer["status"]
 
     conn.close()
-    flash(f"Welcome back, {employer['employer_name']}!", "success")
+    flash(f"Welcome back, {employer['contact_person']}!", "success")
     return redirect(url_for("employers.employer_home"))
 
 
@@ -273,12 +300,354 @@ def notifications():
     return render_template("Employer/notif.html")
 
 
-@employers_bp.route("/account-security")
+@employers_bp.route("/account-security", methods=["GET", "POST"])
 def account_security():
+    """Display employer account and security page."""
     if "employer_id" not in session:
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
-    return render_template("Employer/acc&secu.html")
+
+    employer_id = session["employer_id"]
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("employers.employer_home"))
+
+    # --- FETCH EMPLOYER FIRST ---
+    try:
+        employer = run_query(
+            conn,
+            "SELECT * FROM employers WHERE employer_id = %s",
+            (employer_id,),
+            fetch="one"
+        )
+    except Exception as e:
+        flash(f"Error fetching employer data: {e}", "danger")
+        return redirect(url_for("employers.employer_home"))
+
+    if not employer:
+        flash("Employer not found.", "danger")
+        return redirect(url_for("employers.employer_home"))
+
+    if request.method == "POST":
+        try:
+            # 🔹 Your form data
+            employer_name = request.form.get("employer_name", "")
+            industry = request.form.get("industry", "")
+            recruitment_type = request.form.get("recruitment_type", "")
+            contact_person = request.form.get("contact_person", "")
+            phone = request.form.get("phone", "")
+            email = request.form.get("email", "")
+            street = request.form.get("street", "")
+            barangay = request.form.get("barangay", "")
+            city = request.form.get("city", "")
+            province = request.form.get("province", "")
+
+            # 🔹 Files
+            company_logo_file = request.files.get("company_logo")
+            business_permit_file = request.files.get("business_permit")
+            philiobnet_registration_file = request.files.get(
+                "philiobnet_registration")
+            job_orders_file = request.files.get("job_orders")
+            dole_no_pending_file = request.files.get("dole_no_pending")
+            dole_authority_file = request.files.get("dole_authority")
+            dmw_no_pending_file = request.files.get("dmw_no_pending")
+            license_to_recruit_file = request.files.get("license_to_recruit")
+
+            # 🔹 Handle uploaded files
+            company_logo_path = employer["company_logo_path"]
+            if company_logo_file and company_logo_file.filename:
+                if employer["company_logo_path"]:
+                    old_path = os.path.join(
+                        "static", employer["company_logo_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                company_logo_path = save_file(
+                    company_logo_file, "company_logos")
+
+            business_permit_path = employer["business_permit_path"]
+            if business_permit_file and business_permit_file.filename:
+                if employer["business_permit_path"]:
+                    old_path = os.path.join(
+                        "static", employer["business_permit_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                business_permit_path = save_file(
+                    business_permit_file, "business_permits")
+
+            philiobnet_registration_path = employer["philiobnet_registration_path"]
+            if philiobnet_registration_file and philiobnet_registration_file.filename:
+                if employer["philiobnet_registration_path"]:
+                    old_path = os.path.join(
+                        "static", employer["philiobnet_registration_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                philiobnet_registration_path = save_file(
+                    philiobnet_registration_file, "philiobnet_registrations")
+
+            job_orders_path = employer["job_orders_of_client_path"]
+            if job_orders_file and job_orders_file.filename:
+                if employer["job_orders_of_client_path"]:
+                    old_path = os.path.join(
+                        "static", employer["job_orders_of_client_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                job_orders_path = save_file(job_orders_file, "job_orders")
+
+            dole_no_pending_path = employer["dole_no_pending_case_path"]
+            if dole_no_pending_file and dole_no_pending_file.filename:
+                if employer["dole_no_pending_case_path"]:
+                    old_path = os.path.join(
+                        "static", employer["dole_no_pending_case_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                dole_no_pending_path = save_file(
+                    dole_no_pending_file, "dole_documents")
+
+            dole_authority_path = employer["dole_authority_to_recruit_path"]
+            if dole_authority_file and dole_authority_file.filename:
+                if employer["dole_authority_to_recruit_path"]:
+                    old_path = os.path.join(
+                        "static", employer["dole_authority_to_recruit_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                dole_authority_path = save_file(
+                    dole_authority_file, "dole_documents")
+
+            dmw_no_pending_path = employer["dmw_no_pending_case_path"]
+            if dmw_no_pending_file and dmw_no_pending_file.filename:
+                if employer["dmw_no_pending_case_path"]:
+                    old_path = os.path.join(
+                        "static", employer["dmw_no_pending_case_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                dmw_no_pending_path = save_file(
+                    dmw_no_pending_file, "dmw_documents")
+
+            license_to_recruit_path = employer["license_to_recruit_path"]
+            if license_to_recruit_file and license_to_recruit_file.filename:
+                if employer["license_to_recruit_path"]:
+                    old_path = os.path.join(
+                        "static", employer["license_to_recruit_path"])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                license_to_recruit_path = save_file(
+                    license_to_recruit_file, "dmw_documents")
+
+            # 🔹 Update DB
+            update_query = """
+                UPDATE employers SET
+                    employer_name=%s,
+                    industry=%s,
+                    recruitment_type=%s,
+                    contact_person=%s,
+                    phone=%s,
+                    email=%s,
+                    street=%s,
+                    barangay=%s,
+                    city=%s,
+                    province=%s,
+                    company_logo_path=%s,
+                    business_permit_path=%s,
+                    philiobnet_registration_path=%s,
+                    job_orders_of_client_path=%s,
+                    dole_no_pending_case_path=%s,
+                    dole_authority_to_recruit_path=%s,
+                    dmw_no_pending_case_path=%s,
+                    license_to_recruit_path=%s
+                WHERE employer_id=%s
+            """
+            data = (
+                employer_name,
+                industry,
+                recruitment_type,
+                contact_person,
+                phone,
+                email,
+                street,
+                barangay,
+                city,
+                province,
+                company_logo_path,
+                business_permit_path,
+                philiobnet_registration_path,
+                job_orders_path,
+                dole_no_pending_path,
+                dole_authority_path,
+                dmw_no_pending_path,
+                license_to_recruit_path,
+                employer_id
+            )
+
+            run_query(conn, update_query, data)
+            conn.commit()
+            flash(
+                "Your account details and files have been updated successfully.", "success")
+        except Exception as e:
+            conn.rollback()
+            flash(f"Error updating information: {e}", "danger")
+
+    # 🔹 Re-fetch employer after POST
+    try:
+        employer = run_query(
+            conn,
+            "SELECT * FROM employers WHERE employer_id = %s",
+            (employer_id,),
+            fetch="one"
+        )
+    finally:
+        conn.close()
+
+    return render_template(
+        "Employer/acc&secu.html",
+        employer=employer,
+        employer_status=employer.get("status")
+    )
+
+
+@employers_bp.route("/submit-reupload", methods=["POST"])
+def submit_reupload():
+    """Handle employer document reupload workflow."""
+    if "employer_id" not in session:
+        return jsonify({"success": False, "message": "Not authenticated"}), 401
+
+    employer_id = session["employer_id"]
+
+    files_to_upload = {}
+    for file_key in request.files:
+        file = request.files.get(file_key)
+        if file and file.filename:
+            files_to_upload[file_key] = file
+
+    if not files_to_upload:
+        return jsonify({"success": False, "message": "No files provided"}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "DB connection failed"}), 500
+
+    try:
+        # 🔹 Fetch employer data
+        employer_data = run_query(
+            conn,
+            "SELECT * FROM employers WHERE employer_id = %s",
+            (employer_id,),
+            fetch="one"
+        )
+
+        # 🧹 Delete old files and save new ones
+        file_mapping = {
+            "business_permit": ("business_permit_path", "business_permits"),
+            "philiobnet_registration": ("philiobnet_registration_path", "philiobnet_registrations"),
+            "job_orders": ("job_orders_of_client_path", "job_orders"),
+            "dole_no_pending": ("dole_no_pending_case_path", "dole_documents"),
+            "dole_authority": ("dole_authority_to_recruit_path", "dole_documents"),
+            "dmw_no_pending": ("dmw_no_pending_case_path", "dmw_documents"),
+            "license_to_recruit": ("license_to_recruit_path", "dmw_documents"),
+        }
+
+        update_data = {}
+        for file_key, file in files_to_upload.items():
+            if file_key in file_mapping:
+                db_field, folder = file_mapping[file_key]
+
+                # Delete old file
+                if employer_data and employer_data.get(db_field):
+                    old_path = os.path.join("static", employer_data[db_field])
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+
+                # Save new file
+                new_path = save_file(file, folder)
+                update_data[db_field] = new_path
+
+        # 🗂 Update employer record
+        if update_data:
+            set_clause = ", ".join([f"{k} = %s" for k in update_data.keys()])
+            values = list(update_data.values()) + [employer_id]
+
+            run_query(
+                conn,
+                f"UPDATE employers SET {set_clause}, status = 'Pending', is_active = 0 WHERE employer_id = %s",
+                values
+            )
+            conn.commit()
+
+            update_query = """
+            UPDATE notifications
+            SET title = %s, message = %s, is_read = 0, updated_at = NOW()
+            WHERE employer_id = %s AND notification_type = 'employer_approval'
+            """
+            params = (
+                "Employer Documents Reuploaded",
+                "An employer has reuploaded their required documents and is ready for reassessment.",
+                employer_id
+            )
+            run_query(conn, update_query, params)
+            conn.commit()
+
+        flash("Documents reuploaded successfully! Please wait for admin review.", "success")
+        return redirect(url_for("employers.employer_home"))
+
+    except Exception as e:
+        print(f"[submit_reupload] Error: {e}")
+        conn.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+
+    finally:
+        conn.close()
+
+
+def run_migration():
+    conn = create_connection()
+    if not conn:
+        print("Failed to connect to database")
+        return False
+
+    try:
+        # Check if updated_at column exists, if not add it
+        check_query = "SHOW COLUMNS FROM employers LIKE 'updated_at'"
+        result = run_query(conn, check_query, fetch="one")
+
+        if not result:
+            print("Adding updated_at column...")
+            alter_query = """
+            ALTER TABLE employers 
+            ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            """
+            run_query(conn, alter_query)
+            print("✓ updated_at column added")
+
+        # Verify all document columns exist
+        required_columns = [
+            'company_logo_path',
+            'business_permit_path',
+            'philiobnet_registration_path',
+            'job_orders_of_client_path',
+            'dole_no_pending_case_path',
+            'dole_authority_to_recruit_path',
+            'dmw_no_pending_case_path',
+            'license_to_recruit_path'
+        ]
+
+        for col in required_columns:
+            check = run_query(
+                conn, f"SHOW COLUMNS FROM employers LIKE '{col}'", fetch="one")
+            if not check:
+                print(f"Warning: Column {col} not found")
+
+        print("✓ Migration completed successfully")
+        conn.close()
+        return True
+
+    except Exception as e:
+        print(f"Migration error: {e}")
+        conn.close()
+        return False
+
+
+if __name__ == "__main__":
+    run_migration()
 
 
 @employers_bp.route("/employers/terms", methods=["GET", "POST"])
@@ -318,76 +687,3 @@ def register():
             return redirect(url_for("employers.register"))
 
     return render_template("Landing_Page/employer_registration.html")
-
-
-@employers_bp.route("/submit-reupload", methods=["POST"])
-def submit_reupload():
-    if "employer_id" not in session:
-        return jsonify({"success": False, "message": "Not authenticated"}), 401
-
-    employer_id = session["employer_id"]
-
-    # Accept a single file upload; field name can vary depending on reupload request
-    file = None
-    for key in request.files:
-        file = request.files.get(key)
-        if file:
-            field_name = key
-            break
-
-    if not file:
-        return jsonify({"success": False, "message": "No file provided"}), 400
-
-    try:
-        # Determine target subfolder/column based on uploaded field name
-        mapping = {
-            'employerBusinessPermit': ('employer_permit', 'business_permit_path'),
-            'employerCompanyLogo': ('employer_logo', 'company_logo_path'),
-            'employerPhiliobnetRegistration': ('employer_philiobnet', 'philiobnet_registration_path'),
-            'employerJobOrdersOfClient': ('employer_joborders', 'job_orders_of_client_path'),
-            'employerDOLENoPendingCase': ('employer_dole', 'dole_no_pending_case_path'),
-            'employerDOLEAuthorityToRecruit': ('employer_dole', 'dole_authority_to_recruit_path'),
-            'employerDMWNoPendingCase': ('employer_dmw', 'dmw_no_pending_case_path'),
-            'employerLicenseToRecruit': ('employer_dmw', 'license_to_recruit_path'),
-        }
-
-        subfolder = 'employer_misc'
-        column = None
-        if field_name in mapping:
-            subfolder, column = mapping[field_name]
-
-        saved_path = save_file(file, subfolder)
-        if not saved_path:
-            return jsonify({"success": False, "message": "Failed to save file"}), 500
-
-        conn = create_connection()
-        if not conn:
-            return jsonify({"success": False, "message": "DB connection failed"}), 500
-
-        # Update the appropriate column if detected, otherwise write to a generic notes column
-        if column:
-            query = f"UPDATE employers SET {column} = %s, status = %s WHERE employer_id = %s"
-            run_query(conn, query, (saved_path, 'Reupload', employer_id))
-        else:
-            # fallback: update job_orders_of_client_path
-            query = "UPDATE employers SET job_orders_of_client_path = %s, status = %s WHERE employer_id = %s"
-            run_query(conn, query, (saved_path, 'Reupload', employer_id))
-
-        conn.commit()
-
-        # Create admin notification so admins see that employer reuploaded documents
-        create_notification(
-            notification_type="employer_reupload",
-            title="Employer Document Reuploaded",
-            message=f"Employer ID {employer_id} has reuploaded a required document.",
-            count=1,
-            related_ids=[employer_id],
-            employer_id=employer_id
-        )
-
-        conn.close()
-        return jsonify({"success": True, "message": "Document reuploaded successfully"}), 200
-
-    except Exception as e:
-        print(f"[v0] Error submitting employer reupload: {e}")
-        return jsonify({"success": False, "message": str(e)}), 500
