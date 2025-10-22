@@ -322,7 +322,7 @@ def update_nonlipeno_status(applicant_id):
             )
         else:
             cursor.execute(
-                "UPDATE applicants SET status = %s, is_active = %s WHERE applicant_id = %s",
+                "UPDATE applicants SET status = %s, is_active = %s, approved_at = NOW() WHERE applicant_id = %s",
                 (new_status, is_active_value, applicant_id)
             )
 
@@ -611,7 +611,7 @@ def update_local_employer_status(employer_id):
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s WHERE employer_id = %s",
+                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
                 (new_status, is_active_value, employer_id)
             )
         conn.commit()
@@ -788,7 +788,7 @@ def update_international_employer_status(employer_id):
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s WHERE employer_id = %s",
+                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
                 (new_status, is_active_value, employer_id)
             )
         conn.commit()
