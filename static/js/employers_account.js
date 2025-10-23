@@ -76,9 +76,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const saveBtn = document.getElementById("saveBtn");
   const cancelBtn = document.getElementById("cancelBtn");
   const accountForm = document.getElementById("accountForm");
-  const employerStatus = document
-    .querySelector(".form-card")
-    ?.getAttribute("data-employer-status");
 
   const inputs = document.querySelectorAll(".chip");
   const selects = document.querySelectorAll("select");
@@ -86,10 +83,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const profileTop = document.querySelector(".profile-top");
   const avatar = document.querySelector(".profile-top .avatar");
 
+  // 🧠 store original values before editing
+  let originalValues = {};
+
   // --- EDIT BUTTON ---
   if (editBtn) {
     editBtn.addEventListener("click", (e) => {
       e.preventDefault();
+
+      // store initial values before enabling edit
+      originalValues = {};
+      inputs.forEach((el) => (originalValues[el.name] = el.value));
+      selects.forEach((el) => (originalValues[el.name] = el.value));
+
       profileTop.classList.add("edit-mode");
       avatar.classList.add("editable");
 
@@ -113,6 +119,20 @@ document.addEventListener("DOMContentLoaded", () => {
   if (cancelBtn) {
     cancelBtn.addEventListener("click", (e) => {
       e.preventDefault();
+
+      // restore original values
+      inputs.forEach((el) => {
+        if (originalValues.hasOwnProperty(el.name)) {
+          el.value = originalValues[el.name];
+        }
+      });
+      selects.forEach((el) => {
+        if (originalValues.hasOwnProperty(el.name)) {
+          el.value = originalValues[el.name];
+        }
+      });
+
+      // disable again
       profileTop.classList.remove("edit-mode");
       avatar.classList.remove("editable");
 
@@ -129,6 +149,12 @@ document.addEventListener("DOMContentLoaded", () => {
       editBtn.style.display = "inline-block";
       saveBtn.style.display = "none";
       cancelBtn.style.display = "none";
+
+      // 🔄 trigger change handler for recruitment_type (so DOLE/DMW toggles back)
+      const recruitmentSelect = document.getElementById("recruitment_type");
+      if (recruitmentSelect) {
+        recruitmentSelect.dispatchEvent(new Event("change"));
+      }
     });
   }
 
@@ -136,22 +162,33 @@ document.addEventListener("DOMContentLoaded", () => {
   if (saveBtn && accountForm) {
     saveBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      inputs.forEach((el) => el.removeAttribute("readonly"));
-      selects.forEach((el) => {
-        el.removeAttribute("disabled");
-        el.classList.remove("select-readonly");
-      });
-      fileInputs.forEach((el) => el.removeAttribute("disabled"));
-
       accountForm.submit();
     });
   }
+});
 
-  if (employerStatus === "Reupload") {
-    fileInputs.forEach((el) => (el.style.display = "block"));
-  } else {
-    fileInputs.forEach((el) => (el.style.display = "none"));
+document.addEventListener("DOMContentLoaded", () => {
+  const recruitmentSelect = document.getElementById("recruitment_type");
+  const doleFields = document.querySelectorAll(".dole-docs");
+  const dmwFields = document.querySelectorAll(".dmw-docs");
+
+  function updateDocumentVisibility() {
+    const type = recruitmentSelect.value;
+
+    if (type === "Local") {
+      doleFields.forEach((el) => (el.style.display = "block"));
+      dmwFields.forEach((el) => (el.style.display = "none"));
+    } else if (type === "International") {
+      doleFields.forEach((el) => (el.style.display = "none"));
+      dmwFields.forEach((el) => (el.style.display = "block"));
+    } else {
+      doleFields.forEach((el) => (el.style.display = "none"));
+      dmwFields.forEach((el) => (el.style.display = "none"));
+    }
   }
+
+  recruitmentSelect.addEventListener("change", updateDocumentVisibility);
+  updateDocumentVisibility(); // run once on page load
 });
 
 // ============================================

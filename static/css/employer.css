@@ -664,9 +664,10 @@ body {
 
 /* document section (below) */
 .documents {
-  margin-top: 18px;
-  padding-top: 12px;
-  border-top: 1px solid #efefef;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 10px;
 }
 
 /* Edit button bottom-right */
@@ -787,6 +788,7 @@ body {
   border: 1px solid #e5e5e5;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: background 0.3s;
+  margin: 0; /* Remove any margin that might cause spacing issues */
 }
 
 .document-item:hover {
@@ -937,6 +939,33 @@ body {
   gap: 12px;
   align-items: start;
   margin-top: 18px;
+}
+
+/* =========================================================
+   FIX: Align DOLE / DMW documents spacing with other items
+   ========================================================= */
+.recruitment-docs.dole-docs,
+.recruitment-docs.dmw-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* same spacing as other .document-item */
+  margin-top: 16px; /* match the top gap of normal items */
+}
+
+/* Each nested document should look identical to other items */
+.recruitment-docs.dole-docs .document-item,
+.recruitment-docs.dmw-docs .document-item {
+  background: #f9f9f9;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s;
+}
+
+/* Optional: keep them looking unified with subtle top gap reduction */
+.documents .recruitment-docs:first-child {
+  margin-top: 10px;
 }
 
 /* Responsive grid columns for smaller screens */

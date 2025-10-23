@@ -77,10 +77,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileInputs = document.querySelectorAll(
     ".file-input, .avatar input[type='file']"
   );
-  const profileTop = document.querySelector(".profile-top"); // top-level profile block
-  const avatar = document.querySelector(".profile-top .avatar"); // the avatar container
+  const profileTop = document.querySelector(".profile-top");
+  const avatar = document.querySelector(".profile-top .avatar");
 
-  // Conditional fields
   const pwdYes = document.getElementById("pwd_yes");
   const pwdNo = document.getElementById("pwd_no");
   const pwdDetails = document.getElementById("pwd_details");
@@ -88,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const expNo = document.getElementById("exp_no");
   const workDetails = document.getElementById("work_details");
 
-  // Enable or disable inputs inside conditional sections
+  // helper: enable/disable conditional inputs
   function setConditionalInputsEditable(editable) {
     [pwdDetails, workDetails].forEach((section) => {
       if (section) {
@@ -105,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Show/hide conditional fields based on radio selection
+  // show/hide conditional sections
   function updateConditionals() {
     if (pwdDetails)
       pwdDetails.style.display = pwdYes.checked ? "block" : "none";
@@ -113,17 +112,27 @@ document.addEventListener("DOMContentLoaded", () => {
       workDetails.style.display = expYes.checked ? "block" : "none";
   }
 
-  [pwdYes, pwdNo, expYes, expNo].forEach((el) => {
-    if (el) el.addEventListener("change", updateConditionals);
-  });
+  [pwdYes, pwdNo, expYes, expNo].forEach(
+    (el) => el && el.addEventListener("change", updateConditionals)
+  );
+
+  // 🧠 store original values here
+  let originalValues = {};
 
   // --- EDIT BUTTON ---
   if (editBtn) {
     editBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      profileTop.classList.add("edit-mode"); // enable hover + click
+
+      // store all original field values
+      originalValues = {};
+      inputs.forEach((el) => (originalValues[el.name] = el.value));
+      selects.forEach((el) => (originalValues[el.name] = el.value));
+      radios.forEach((el) => (originalValues[el.name] = el.checked));
+
+      profileTop.classList.add("edit-mode");
       avatar.classList.add("editable");
-      // show file input visually if needed
+
       fileInputs.forEach((el) => {
         el.style.display = "block";
         el.removeAttribute("disabled");
@@ -134,10 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
         el.classList.remove("select-readonly");
       });
       radios.forEach((el) => el.removeAttribute("disabled"));
-      fileInputs.forEach((el) => {
-        el.style.display = "block";
-        el.removeAttribute("disabled");
-      });
       setConditionalInputsEditable(true);
 
       editBtn.style.display = "none";
@@ -152,8 +157,24 @@ document.addEventListener("DOMContentLoaded", () => {
   if (cancelBtn) {
     cancelBtn.addEventListener("click", (e) => {
       e.preventDefault();
+
+      // restore previous values
+      inputs.forEach((el) => {
+        if (originalValues.hasOwnProperty(el.name))
+          el.value = originalValues[el.name];
+      });
+      selects.forEach((el) => {
+        if (originalValues.hasOwnProperty(el.name))
+          el.value = originalValues[el.name];
+      });
+      radios.forEach((el) => {
+        if (originalValues.hasOwnProperty(el.name))
+          el.checked = originalValues[el.name];
+      });
+
       profileTop.classList.remove("edit-mode");
       avatar.classList.remove("editable");
+
       fileInputs.forEach((el) => {
         if (applicantStatus !== "Reupload") el.style.display = "none";
         el.setAttribute("disabled", true);
@@ -164,17 +185,13 @@ document.addEventListener("DOMContentLoaded", () => {
         el.classList.add("select-readonly");
       });
       radios.forEach((el) => el.setAttribute("disabled", true));
-      fileInputs.forEach((el) => {
-        if (applicantStatus !== "Reupload") el.style.display = "none";
-        el.setAttribute("disabled", true);
-      });
       setConditionalInputsEditable(false);
 
       editBtn.style.display = "inline-block";
       saveBtn.style.display = "none";
       cancelBtn.style.display = "none";
 
-      updateConditionals();
+      updateConditionals(); // reflect restored state
     });
   }
 
@@ -182,20 +199,11 @@ document.addEventListener("DOMContentLoaded", () => {
   if (saveBtn && accountForm) {
     saveBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      inputs.forEach((el) => el.removeAttribute("readonly"));
-      selects.forEach((el) => {
-        el.removeAttribute("disabled");
-        el.classList.remove("select-readonly");
-      });
-      radios.forEach((el) => el.removeAttribute("disabled"));
-      fileInputs.forEach((el) => el.removeAttribute("disabled"));
-      setConditionalInputsEditable(true);
-
       accountForm.submit();
     });
   }
 
-  // Initial display
+  // initial conditional visibility setup
   updateConditionals();
   if (applicantStatus === "Reupload") {
     fileInputs.forEach((el) => (el.style.display = "block"));

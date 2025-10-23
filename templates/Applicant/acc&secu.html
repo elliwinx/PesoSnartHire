@@ -308,7 +308,7 @@
             <div class="document-item">
               <div class="document-header">
                 <label>Recommendation Letter</label>
-                <a href="{{ url_for('uploaded_file', filename=applicant.recommendation_letter_path) }}" target="_blank">View</a>
+                <a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}" target="_blank">View</a>
               </div>
               <!-- Always show recommendation letter upload, especially for Reupload status -->
               <input type="file" name="recommendation_file" accept=".pdf,.doc,.docx" class="file-input" {% if session.get('applicant_status') == 'Reupload' %}required{% endif %} />

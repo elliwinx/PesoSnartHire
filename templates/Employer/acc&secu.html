@@ -22,6 +22,24 @@
     />
   </head>
   <body>
+     <!-- Added flash messages section for success/error notifications -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -237,50 +255,50 @@
             </div>
 
             <!-- Local recruitment documents (DOLE) -->
-            {% if employer.recruitment_type == 'Local' %}
-            <div class="document-item">
-              <div class="document-header">
-                <label>DOLE - No Pending Case Certificate</label>
-                {% if employer.dole_no_pending_case_path %}
-                <a href="{{ url_for('static', filename=employer.dole_no_pending_case_path) }}" target="_blank">View</a>
-                {% endif %}
+            <div class="recruitment-docs dole-docs">
+              <div class="document-item">
+                <div class="document-header">
+                  <label>DOLE - No Pending Case Certificate</label>
+                  {% if employer.dole_no_pending_case_path %}
+                  <a href="{{ url_for('static', filename=employer.dole_no_pending_case_path) }}" target="_blank">View</a>
+                  {% endif %}
+                </div>
+                <input type="file" name="dole_no_pending" accept=".pdf" class="file-input" />
               </div>
-              <input type="file" name="dole_no_pending" accept=".pdf" class="file-input" />
-            </div>
 
-            <div class="document-item">
-              <div class="document-header">
-                <label>DOLE - Authority to Recruit</label>
-                {% if employer.dole_authority_to_recruit_path %}
-                <a href="{{ url_for('static', filename=employer.dole_authority_to_recruit_path) }}" target="_blank">View</a>
-                {% endif %}
+              <div class="document-item">
+                <div class="document-header">
+                  <label>DOLE - Authority to Recruit</label>
+                  {% if employer.dole_authority_to_recruit_path %}
+                  <a href="{{ url_for('static', filename=employer.dole_authority_to_recruit_path) }}" target="_blank">View</a>
+                  {% endif %}
+                </div>
+                <input type="file" name="dole_authority" accept=".pdf" class="file-input" />
               </div>
-              <input type="file" name="dole_authority" accept=".pdf" class="file-input" />
             </div>
-            {% endif %}
 
             <!-- International recruitment documents (DMW) -->
-            {% if employer.recruitment_type == 'International' %}
-            <div class="document-item">
-              <div class="document-header">
-                <label>DMW - No Pending Case Certificate</label>
-                {% if employer.dmw_no_pending_case_path %}
-                <a href="{{ url_for('static', filename=employer.dmw_no_pending_case_path) }}" target="_blank">View</a>
-                {% endif %}
+            <div class="recruitment-docs dmw-docs">
+              <div class="document-item">
+                <div class="document-header">
+                  <label>DMW - No Pending Case Certificate</label>
+                  {% if employer.dmw_no_pending_case_path %}
+                  <a href="{{ url_for('static', filename=employer.dmw_no_pending_case_path) }}" target="_blank">View</a>
+                  {% endif %}
+                </div>
+                <input type="file" name="dmw_no_pending" accept=".pdf" class="file-input" />
               </div>
-              <input type="file" name="dmw_no_pending" accept=".pdf" class="file-input" />
-            </div>
 
-            <div class="document-item">
-              <div class="document-header">
-                <label>DMW - License to Recruit</label>
-                {% if employer.license_to_recruit_path %}
-                <a href="{{ url_for('static', filename=employer.license_to_recruit_path) }}" target="_blank">View</a>
-                {% endif %}
+              <div class="document-item">
+                <div class="document-header">
+                  <label>DMW - License to Recruit</label>
+                  {% if employer.license_to_recruit_path %}
+                  <a href="{{ url_for('static', filename=employer.license_to_recruit_path) }}" target="_blank">View</a>
+                  {% endif %}
+                </div>
+                <input type="file" name="license_to_recruit" accept=".pdf" class="file-input" />
               </div>
-              <input type="file" name="license_to_recruit" accept=".pdf" class="file-input" />
             </div>
-            {% endif %}
           </div>
         </div>
 
