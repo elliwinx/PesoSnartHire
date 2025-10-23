@@ -102,7 +102,8 @@
           <i class="fa-solid fa-bars" id="menuToggle"></i>
           <!--Hidden Menu-->
           <div class="dropdown-menu" id="dropdownMenu">
-            <a href="{{url_for('forgot_password.forgot_password_email')}}"
+            <a
+              href="{{ url_for('forgot_password.forgot_password_email', type='admin') }}"
               >Change password</a
             >
           </div>
