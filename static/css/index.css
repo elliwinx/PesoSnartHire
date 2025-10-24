@@ -499,6 +499,33 @@ body {
   font-size: 1rem;
 }
 
+.password-wrapper {
+  position: relative;
+}
+
+.password-wrapper input {
+  width: 100%;
+  padding-right: 60px; /* space for the toggle text */
+  box-sizing: border-box;
+}
+
+.password-wrapper .toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  font-size: 0.9em;
+  color: #ccc;
+  cursor: pointer;
+  user-select: none;
+}
+
+.password-wrapper .toggle-password:hover {
+  color: #7b1113;
+}
+
 /* Animation keyframes */
 @keyframes fadeIn {
   from {

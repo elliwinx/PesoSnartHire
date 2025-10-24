@@ -192,11 +192,11 @@ def verify_token():
 
         if not reset_entry:
             flash("Invalid or expired token.", "danger")
-            return redirect(url_for("forgot_password.forgot_password_reset_token", type=user_type))
+            return redirect(url_for("home", type=user_type))
 
         if reset_entry["expires_at"] < datetime.now():
             flash("This token has expired.", "danger")
-            return redirect(url_for("forgot_password.forgot_password_reset_token", type=user_type))
+            return redirect(url_for("home", type=user_type))
 
         flash("Token verified. You can now change your password.", "success")
         return redirect(url_for("forgot_password.forgot_password_reset", token=token, type=user_type))
