@@ -85,7 +85,6 @@
                 <option value="Hospitality, Food & Travel">
                   Hospitality, Food & Travel
                 </option>
-                <option value="Others">Others</option>
               </select>
             </div>
             <div class="form-group">
@@ -119,7 +118,10 @@
                 type="tel"
                 id="employerPhoneNumber"
                 name="employerPhoneNumber"
-                placeholder="Phone Number"
+                placeholder="+63 912 345 6789"
+                pattern="^\+63\d{10}$"
+                value="+63"
+                maxlength="13"
                 required
               />
             </div>

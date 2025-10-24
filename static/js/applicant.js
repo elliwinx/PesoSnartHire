@@ -116,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
     (el) => el && el.addEventListener("change", updateConditionals)
   );
 
-  // 🧠 store original values here
+  // store original values here
   let originalValues = {};
 
   // --- EDIT BUTTON ---
@@ -211,6 +211,27 @@ document.addEventListener("DOMContentLoaded", () => {
     fileInputs.forEach((el) => (el.style.display = "none"));
   }
 });
+
+// === PHONE INPUT HANDLER (+63 lock + 10-digit limit) ===
+const phoneInput = document.querySelector("input[name='phone']");
+
+if (phoneInput) {
+  phoneInput.addEventListener("focus", () => {
+    if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+  });
+
+  phoneInput.addEventListener("input", () => {
+    if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+    const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
+    phoneInput.value = "+63" + digits;
+  });
+
+  phoneInput.addEventListener("blur", () => {
+    if (phoneInput.value.trim() === "" || phoneInput.value === "+63") {
+      phoneInput.value = "+63";
+    }
+  });
+}
 
 // 3️⃣ CONDITIONAL FIELDS OBSERVER (PWD / WORK)
 (() => {

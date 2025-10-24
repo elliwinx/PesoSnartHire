@@ -86,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("DOMContentLoaded", () => {
   // Elements (guarded)
   const form = document.getElementById("applicantRegistrationForm");
+  const phoneInput = document.getElementById("applicantPhoneNumber");
   const fromLipaCheckbox = document.getElementById("fromLipa");
   const provinceSelect = document.getElementById("applicantProvince");
   const citySelect = document.getElementById("applicantCity");
@@ -183,6 +184,31 @@ document.addEventListener("DOMContentLoaded", () => {
     "Tibig",
     "Tipacan",
   ];
+
+  phoneInput.addEventListener("focus", () => {
+    // Always ensure the prefix exists when focused
+    if (!phoneInput.value.startsWith("+63")) {
+      phoneInput.value = "+63";
+    }
+  });
+
+  phoneInput.addEventListener("input", () => {
+    // Always keep the +63 prefix
+    if (!phoneInput.value.startsWith("+63")) {
+      phoneInput.value = "+63";
+    }
+
+    // Keep only digits after +63 and limit to 10 digits
+    const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
+    phoneInput.value = "+63" + digits;
+  });
+
+  phoneInput.addEventListener("blur", () => {
+    // If user leaves field empty, restore +63
+    if (phoneInput.value.trim() === "" || phoneInput.value === "+63") {
+      phoneInput.value = "+63";
+    }
+  });
 
   function populateBarangayDropdown(barangays) {
     if (!barangaySelect) return;
@@ -434,10 +460,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 //EMPLOYER REGISTRATION JS
 document.addEventListener("DOMContentLoaded", () => {
+  const phoneInput = document.getElementById("employerPhoneNumber");
   const form = document.getElementById("employerRegistrationForm");
   const recruitmentType = document.getElementById("employerRecruitment");
   const doleGroup = document.querySelector(".dole-group");
   const dmwGroup = document.querySelector(".dmw-group");
+
+  phoneInput.addEventListener("input", () => {
+    // Always keep the +63 prefix
+    if (!phoneInput.value.startsWith("+63")) {
+      phoneInput.value = "+63";
+    }
+
+    // Keep only digits after +63 and limit to 10 digits
+    const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
+    phoneInput.value = "+63" + digits;
+  });
+
+  phoneInput.addEventListener("blur", () => {
+    // If user leaves field empty, restore +63
+    if (phoneInput.value.trim() === "" || phoneInput.value === "+63") {
+      phoneInput.value = "+63";
+    }
+  });
 
   const doleNoPendingInput = document.getElementById(
     "employerDOLENoPendingCase"

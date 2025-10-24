@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const profileTop = document.querySelector(".profile-top");
   const avatar = document.querySelector(".profile-top .avatar");
 
-  // 🧠 store original values before editing
+  // store original values before editing
   let originalValues = {};
 
   // --- EDIT BUTTON ---
@@ -166,6 +166,27 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// === PHONE INPUT HANDLER (+63 lock + 10-digit limit) ===
+const phoneInput = document.querySelector("input[name='phone']");
+
+if (phoneInput) {
+  phoneInput.addEventListener("focus", () => {
+    if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+  });
+
+  phoneInput.addEventListener("input", () => {
+    if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+    const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
+    phoneInput.value = "+63" + digits;
+  });
+
+  phoneInput.addEventListener("blur", () => {
+    if (phoneInput.value.trim() === "" || phoneInput.value === "+63") {
+      phoneInput.value = "+63";
+    }
+  });
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   const recruitmentSelect = document.getElementById("recruitment_type");

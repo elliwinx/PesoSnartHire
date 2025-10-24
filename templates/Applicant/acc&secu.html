@@ -339,9 +339,9 @@
     <!-- Date Info -->
     <div class="date-info">
       {% if applicant.is_from_lipa %}
-        <p>Date of Registration: {{ applicant.accepted_terms_at or 'N/A' }}</p>
+        <p>Date of Registration: {{ applicant.created_at or 'N/A' }}</p>
       {% else %}
-        <p>Date of Registration: {{ applicant.accepted_terms_at or 'N/A' }}</p>
+        <p>Date of Registration: {{ applicant.created_at or 'N/A' }}</p>
         <p>Date of Approval: {{ applicant.approved_at or 'Pending Approval' }}</p>
       {% endif %}
     </div>
