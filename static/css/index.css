@@ -526,6 +526,180 @@ body {
   color: #7b1113;
 }
 
+/* About Us Section */
+.about-us {
+  padding: 80px 0;
+  background: white;
+}
+
+.about-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: left;
+  margin-bottom: 10px;
+  color: #000000;
+}
+
+.about-subtitle {
+  text-align: left;
+  font-size: 1.2rem;
+  color: #333;
+  margin-bottom: 50px;
+  max-width: 1300px;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+}
+
+.about-card {
+  background: #f8f9fa;
+  padding: 40px 30px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.about-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.about-icon {
+  width: 80px;
+  height: 80px;
+  background: #7b1113;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.about-icon i {
+  font-size: 40px;
+  color: white;
+}
+
+.about-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.about-card p {
+  color: #666;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* Service Pledge Section */
+.service-pledge {
+  padding: 80px 0;
+  background: #f8f9fa;
+}
+
+.pledge-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: left;
+  margin-bottom: 15px;
+  color: #000000;
+}
+
+.pledge-subtitle {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 40px;
+  text-align: left;
+}
+
+.pledge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+}
+
+.pledge-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.pledge-letter {
+  width: 80px;
+  height: 80px;
+  background: #7b1113;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pledge-item p {
+  color: #666;
+  line-height: 1.6;
+  font-size: 0.95rem;
+  padding-top: 0;
+}
+
+/* Office Information Section */
+.office-info {
+  padding: 80px 0;
+  background: white;
+}
+
+.office-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: left;
+  margin-bottom: 50px;
+  color: #000000;
+}
+
+.office-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.info-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.info-item i {
+  font-size: 24px;
+  color: #7b1113;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.info-item p {
+  color: #333;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
 /* Animation keyframes */
 @keyframes fadeIn {
   from {
@@ -593,6 +767,26 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover; /* ensures full cover without distortion */
+  }
+
+  .about-title,
+  .pledge-title,
+  .office-title {
+    font-size: 2rem;
+  }
+
+  .pledge-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .office-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pledge-letter {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
   }
 }
 
