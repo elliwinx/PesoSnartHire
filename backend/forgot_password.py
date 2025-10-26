@@ -159,9 +159,7 @@ def forgot_password_request_phone():
         # In production, send SMS instead of email
         # For now, we'll show the token (you should integrate with SMS service like Twilio)
        # ===== Send token via ClickSend SMS =====
-        message = f"""Good Day Ka-PESO!
-        We received a request to reset your account password.
-        Your token: {token} (expires in 15 mins).
+        message = f"""Hello from PESO! \n\nHere’s your one-time password (OTP): {token} \n\nIt’s valid for 15 minutes.
         Ignore if you didn't request this.
         - PESO Team"""
 
