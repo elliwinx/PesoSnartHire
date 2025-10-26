@@ -949,7 +949,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px; /* same spacing as other .document-item */
-  margin-top: 16px; /* match the top gap of normal items */
 }
 
 /* Each nested document should look identical to other items */
@@ -961,6 +960,7 @@ body {
   padding: 14px 18px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: background 0.3s;
+  margin-bottom: 16px;
 }
 
 /* Optional: keep them looking unified with subtle top gap reduction */
