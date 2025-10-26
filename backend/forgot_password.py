@@ -7,6 +7,7 @@ from flask_mail import Message
 from werkzeug.security import generate_password_hash
 from db_connection import create_connection, run_query
 from extensions import mail  # your Flask-Mail instance
+from backend.send_sms import send_sms
 
 forgot_password_bp = Blueprint("forgot_password", __name__)
 
@@ -157,8 +158,19 @@ def forgot_password_request_phone():
 
         # In production, send SMS instead of email
         # For now, we'll show the token (you should integrate with SMS service like Twilio)
-        flash(
-            f"Your password reset token is: {token}\n\nThis token expires in 15 minutes.", "success")
+       # ===== Send token via ClickSend SMS =====
+        message = f"""Good Day Ka-PESO!
+        We received a request to reset your account password.
+        Your token: {token} (expires in 15 mins).
+        Ignore if you didn't request this.
+        - PESO Team"""
+
+        success = send_sms(phone, message)
+
+        if success:
+            flash("Verification token sent via SMS.", "success")
+        else:
+            flash("Failed to send SMS. Please try again or contact support.", "danger")
 
         return redirect(url_for("forgot_password.forgot_password_reset_token", type=user_type))
 
