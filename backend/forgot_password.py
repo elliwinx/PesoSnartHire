@@ -45,7 +45,7 @@ def generate_token(length=6):
     return ''.join(random.choices(chars, k=length))
 
 
-# ===== STEP 1: REQUEST PASSWORD RESET (EMAIL) =====
+# ===== STEP 1A: REQUEST PASSWORD RESET (EMAIL) =====
 @forgot_password_bp.route("/request", methods=["GET", "POST"])
 def forgot_password_request():
     user_type = request.args.get("type", "admin")  # default admin
@@ -110,7 +110,7 @@ def forgot_password_request():
 # ===== STEP 1B: REQUEST PASSWORD RESET (PHONE) =====
 @forgot_password_bp.route("/request-phone", methods=["GET", "POST"])
 def forgot_password_request_phone():
-    user_type = request.args.get("type", "applicant")
+    user_type = request.args.get("type", "applicant")  # default applicant
 
     if request.method == "POST":
         phone = request.form.get("forgotPasswordPhoneNumber")
@@ -118,13 +118,13 @@ def forgot_password_request_phone():
         conn = create_connection()
         if not conn:
             flash("Database connection failed.", "danger")
-            return redirect(url_for("forgot_password.forgot_password_phone", type=user_type))
+            return redirect(url_for("forgot_password.forgot_password_request_phone", type=user_type))
 
         # Choose table based on user type (phone only for applicants and employers)
         if user_type == "admin":
             flash("Admin users must use email for password reset.", "danger")
             conn.close()
-            return redirect(url_for("forgot_password.forgot_password_phone", type=user_type))
+            return redirect(url_for("forgot_password.forgot_password", type=user_type))
 
         user_table = (
             "applicants" if user_type == "applicant"
