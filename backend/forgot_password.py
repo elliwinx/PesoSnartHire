@@ -156,16 +156,7 @@ def forgot_password_request_phone():
         run_query(conn, insert_query, (user['email'], token, expires_at))
         conn.close()
 
-        message = f"""Hello {user['email']},
-            We received a request to reset your PESO account password.
-            Your one-time password (OTP) is: {token}
-
-            This OTP is valid for 15 minutes.
-            If you did not request this, please ignore this message.
-
-            Thank you,
-            PESO Team
-            """
+        message = f"""Your PESO Smarthire verification code is {token}. It will expire in 15 minutes."""
 
         success = send_sms(phone, message)
 

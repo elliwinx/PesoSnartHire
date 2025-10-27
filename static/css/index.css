@@ -746,11 +746,16 @@ body {
   }
 
   .nav {
-    gap: 15px;
+    gap: 3px;
+    text-align: center;
   }
 
   .nav-link {
-    font-size: 12px;
+    font-size: 9px;
+  }
+
+  .login-btn {
+    padding: 4px 8px;
   }
 
   .hero-background {

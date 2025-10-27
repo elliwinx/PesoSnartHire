@@ -305,7 +305,5 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     reader.readAsDataURL(file);
   });
-
-  // Optional: click avatar image to open file picker
-  img.addEventListener("click", () => input.click());
+  ``;
 });
