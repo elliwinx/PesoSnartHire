@@ -130,6 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
       selects.forEach((el) => (originalValues[el.name] = el.value));
       radios.forEach((el) => (originalValues[el.name] = el.checked));
 
+      // ✅ store original avatar image
+      const avatarImg = document.getElementById("profilePicPreview");
+      if (avatarImg) originalValues["avatarSrc"] = avatarImg.src;
+
       profileTop.classList.add("edit-mode");
       avatar.classList.add("editable");
 
@@ -172,12 +176,19 @@ document.addEventListener("DOMContentLoaded", () => {
           el.checked = originalValues[el.name];
       });
 
+      // ✅ restore avatar image
+      const avatarImg = document.getElementById("profilePicPreview");
+      if (avatarImg && originalValues["avatarSrc"]) {
+        avatarImg.src = originalValues["avatarSrc"];
+      }
+
       profileTop.classList.remove("edit-mode");
       avatar.classList.remove("editable");
 
       fileInputs.forEach((el) => {
         if (applicantStatus !== "Reupload") el.style.display = "none";
         el.setAttribute("disabled", true);
+        el.value = ""; // clear chosen file
       });
       inputs.forEach((el) => el.setAttribute("readonly", true));
       selects.forEach((el) => {

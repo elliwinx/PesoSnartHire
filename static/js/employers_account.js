@@ -71,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // 2️⃣ EDIT / SAVE / CANCEL LOGIC
+// 2️⃣ EDIT / SAVE / CANCEL LOGIC
 document.addEventListener("DOMContentLoaded", () => {
   const editBtn = document.getElementById("editBtn");
   const saveBtn = document.getElementById("saveBtn");
@@ -95,6 +96,10 @@ document.addEventListener("DOMContentLoaded", () => {
       originalValues = {};
       inputs.forEach((el) => (originalValues[el.name] = el.value));
       selects.forEach((el) => (originalValues[el.name] = el.value));
+
+      // ✅ store original company logo
+      const logoImg = document.getElementById("companyLogoPreview");
+      if (logoImg) originalValues["logoSrc"] = logoImg.src;
 
       profileTop.classList.add("edit-mode");
       avatar.classList.add("editable");
@@ -132,6 +137,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
+      // ✅ restore original company logo
+      const logoImg = document.getElementById("companyLogoPreview");
+      if (logoImg && originalValues["logoSrc"]) {
+        logoImg.src = originalValues["logoSrc"];
+      }
+
       // disable again
       profileTop.classList.remove("edit-mode");
       avatar.classList.remove("editable");
@@ -139,6 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fileInputs.forEach((el) => {
         el.style.display = "none";
         el.setAttribute("disabled", true);
+        el.value = ""; // clear file input
       });
       inputs.forEach((el) => el.setAttribute("readonly", true));
       selects.forEach((el) => {
