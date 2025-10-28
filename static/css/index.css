@@ -712,7 +712,6 @@ body {
   align-items: start;
 }
 
-
 .info-section > .left-side,
 .info-section > .contact-section {
   display: inline-block;
@@ -728,7 +727,7 @@ body {
   padding: 25px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* Ensure contact card matches styling */
@@ -736,7 +735,7 @@ body {
   padding: 25px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   margin-left: 10px;
 }
 
@@ -886,14 +885,40 @@ body {
   transition: background 0.3s ease;
 }
 
-.submit-btn:hover {
-  background-color: #843738;
+.submit-button:hover {
+  background-color: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
 }
 
 .contact-info {
   margin-top: 20px;
   font-size: 0.95rem;
   color: #555;
+}
+
+/* Fix for loader modal centering - CORRECTED */
+#ajaxLoader.modal[style*="display: block"],
+#ajaxLoader.modal[style*="display: flex"] {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+#ajaxLoader .modal-content {
+  margin: 0 !important; /* Remove the 10% auto margin */
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+
+#ajaxLoader .modal-content > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Responsive layout for mobile */
@@ -907,7 +932,9 @@ body {
     gap: 20px;
   }
 
-  .faq-section, .contact-section, .office-info {
+  .faq-section,
+  .contact-section,
+  .office-info {
     min-width: 0;
     padding: 22px;
   }
@@ -936,7 +963,7 @@ body {
     padding: 20px;
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 
   /* Ensure contact card matches styling */
@@ -944,7 +971,7 @@ body {
     padding: 20px;
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   }
 }
 
