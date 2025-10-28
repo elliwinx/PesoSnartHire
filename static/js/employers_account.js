@@ -71,7 +71,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // 2️⃣ EDIT / SAVE / CANCEL LOGIC
-// 2️⃣ EDIT / SAVE / CANCEL LOGIC
 document.addEventListener("DOMContentLoaded", () => {
   const editBtn = document.getElementById("editBtn");
   const saveBtn = document.getElementById("saveBtn");
@@ -225,6 +224,37 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ============================================
+// AUTO SHOW FILE INPUTS FOR REUPLOAD STATE
+// ============================================
+document.addEventListener("DOMContentLoaded", () => {
+  const employerStatus = document
+    .querySelector(".form-card")
+    ?.getAttribute("data-employer-status");
+
+  if (employerStatus === "Reupload") {
+    const fileInputs = document.querySelectorAll("#documents .file-input");
+
+    // 🔹 Show all file inputs immediately
+    fileInputs.forEach((el) => {
+      el.style.display = "block";
+      el.removeAttribute("disabled");
+    });
+
+    // 🔹 Make sure the correct tab is active
+    document.getElementById("company-information").style.display = "none";
+    document.getElementById("documents").style.display = "block";
+
+    // 🔹 Lock other input fields (so only files are editable)
+    const textInputs = document.querySelectorAll(".chip, select");
+    textInputs.forEach((el) => {
+      el.setAttribute("readonly", true);
+      el.setAttribute("disabled", true);
+      el.classList.add("select-readonly");
+    });
+  }
+});
+
+// ============================================
 // COMPANY LOGO HOVER UPLOAD (like applicant avatar)
 // ============================================
 document.addEventListener("DOMContentLoaded", () => {
@@ -250,10 +280,11 @@ document.addEventListener("DOMContentLoaded", () => {
       .querySelector(".form-card")
       ?.getAttribute("data-employer-status");
     // Only allow upload in Edit mode for Approved status
-    if (
-      employerStatus === "Approved" &&
-      avatar.classList.contains("editable")
-    ) {
+    if (employerStatus === "Reupload") {
+      document.getElementById("company-information").style.display = "none";
+      document.getElementById("documents").style.display = "block";
+    }
+    {
       input.click();
     }
   });

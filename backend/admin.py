@@ -5,6 +5,7 @@ from .notifications import get_notifications, mark_notification_read, get_unread
 from extensions import mail
 from flask_mail import Message
 import secrets
+import json
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -566,6 +567,10 @@ def update_local_employer_status(employer_id):
             else:
                 requested_list = []
 
+            # convert list to JSON string (valid for JSON column)
+            documents_to_reupload = json.dumps(
+                requested_list) if requested_list else None
+
             docs_block = ""
             if requested_list:
                 docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
@@ -605,15 +610,17 @@ def update_local_employer_status(employer_id):
         else:
             is_active_value = 0
 
+        # Update employer status and save which documents need reupload
         if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
-                (new_status, reason, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s, documents_to_reupload = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value,
+                 documents_to_reupload, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
-                (new_status, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s, documents_to_reupload = %s, approved_at = NOW() WHERE employer_id = %s",
+                (new_status, is_active_value, documents_to_reupload, employer_id)
             )
         conn.commit()
 
@@ -746,6 +753,10 @@ def update_international_employer_status(employer_id):
             else:
                 requested_list = []
 
+            # convert list to JSON string (valid for JSON column)
+            documents_to_reupload = json.dumps(
+                requested_list) if requested_list else None
+
             docs_block = ""
             if requested_list:
                 docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
@@ -785,15 +796,17 @@ def update_international_employer_status(employer_id):
         else:
             is_active_value = 0
 
+# Update employer status and save which documents need reupload
         if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
-                (new_status, reason, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s, documents_to_reupload = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value,
+                 documents_to_reupload, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
-                (new_status, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s, documents_to_reupload = %s, approved_at = NOW() WHERE employer_id = %s",
+                (new_status, is_active_value, documents_to_reupload, employer_id)
             )
         conn.commit()
 
