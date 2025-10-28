@@ -622,3 +622,17 @@ document.querySelectorAll(".toggle-password").forEach((toggle) => {
     }
   });
 });
+
+document.querySelectorAll('.faq-question').forEach(button => {
+  button.addEventListener('click', () => {
+    const faqItem = button.parentElement;
+
+    // Close other FAQ items
+    document.querySelectorAll('.faq-item').forEach(item => {
+      if (item !== faqItem) item.classList.remove('active');
+    });
+
+    // Toggle current FAQ item
+    faqItem.classList.toggle('active');
+  });
+});

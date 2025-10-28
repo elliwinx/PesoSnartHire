@@ -700,6 +700,152 @@ body {
   font-size: 0.95rem;
 }
 
+/* Container for side-by-side layout */
+.info-section {
+  display: flex;
+  flex-direction: row; /* ensure FAQs are on the left, Contact on the right */
+  justify-content: center;
+  align-items: flex-start;
+  gap: 20px;
+  background-color: #f9f9f9;
+  flex-wrap: wrap; /* responsive for mobile */
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Each column */
+.faq-section, .contact-section, .office-info {
+  flex: 1;
+  min-width: 350px;
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* FAQ styles */
+.faq-section h2, .contact-section h2, .office-info {
+  color: #000000;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+/* FAQ behavior */
+.faq-item {
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7b1113;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 3.8px;
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  color: #555;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 200px;
+  padding-bottom: 10px;
+}
+
+.faq-icon {
+  font-size: 1.3rem;
+  transition: transform 0.3s ease;
+}
+
+.faq-item.active .faq-icon {
+  transform: rotate(45deg);
+}
+
+/* Contact form */
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+  margin-top: 3px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background-color: #fafafa;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #007bff;
+  background-color: #fff;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+}
+
+.submit-btn {
+  background-color: #7b1113;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.submit-btn:hover {
+  background-color: #843738;
+}
+
+.contact-info {
+  margin-top: 20px;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+/* Responsive layout for mobile */
+@media (max-width: 900px) {
+  .info-section {
+    flex-direction: column;
+    padding: 40px 20px;
+  }
+
+  .faq-section, .contact-section {
+    width: 100%;
+  }
+}
+
 /* Animation keyframes */
 @keyframes fadeIn {
   from {
