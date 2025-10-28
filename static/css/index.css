@@ -183,7 +183,7 @@ body {
 
 /* Services Section */
 .services {
-  padding: 80px 0;
+  padding: 40px 0;
   background: #f8f9fa;
 }
 
@@ -245,12 +245,6 @@ body {
   font-weight: 600;
   margin-bottom: 15px;
   color: #333;
-}
-
-.service-description {
-  color: #666;
-  line-height: 1.6;
-  font-size: 0.95rem;
 }
 
 /* Footer */
@@ -528,7 +522,7 @@ body {
 
 /* About Us Section */
 .about-us {
-  padding: 80px 0;
+  padding: 40px 0;
   background: white;
 }
 
@@ -599,7 +593,7 @@ body {
 
 /* Service Pledge Section */
 .service-pledge {
-  padding: 80px 0;
+  padding: 40px 0;
   background: #f8f9fa;
 }
 
@@ -674,8 +668,8 @@ body {
 .info-item {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
-  padding: 20px;
+  gap: 50px;
+  padding: 25px;
   background: #f8f9fa;
   border-radius: 10px;
   box-shadow: 0 5px 10px rgba(0, 0, 0, 0.08);
@@ -700,24 +694,266 @@ body {
   font-size: 0.95rem;
 }
 
-/* Animation keyframes */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+/* Container for side-by-side layout */
+.info-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+/* Use the inner .container as the layout grid so global .container styles remain intact */
+.info-section > .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr; /* make FAQs and any content span full width */
+  gap: 30px;
+  align-items: start;
+}
+
+
+.info-section > .left-side,
+.info-section > .contact-section {
+  display: inline-block;
+  vertical-align: top;
+  width: calc(50% - 10px);
+  box-sizing: border-box;
+  padding: 0; /* cards inside provide their own padding */
+}
+
+/* Ensure the nested .office-info inside .left-side looks like a card */
+.info-section > .left-side .office-info {
+  margin: 0 10px 0 0;
+  padding: 25px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* Ensure contact card matches styling */
+.info-section > .contact-section {
+  padding: 25px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  margin-left: 10px;
+}
+
+/* Responsive: on medium and smaller screens stack them beneath the FAQ */
+@media (max-width: 900px) {
+  .info-section > .left-side,
+  .info-section > .contact-section {
+    display: block;
+    width: 100%;
+    margin: 0;
   }
-  to {
-    opacity: 1;
+
+  /* FAQ container stays full width, ensure spacing */
+  .info-section > .container {
+    padding: 0;
   }
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-50px);
+/* Right column stacking behavior (office + contact) */
+.info-section > .container > .contact-section,
+.info-section > .container > .office-info {
+  display: block;
+}
+
+/* Service title and FAQs title */
+.service-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.faqs-title {
+  font-size: 1.75rem; /* larger and more visible */
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: #333;
+  letter-spacing: -0.2px;
+}
+
+/* FAQ item spacing and subtle divider */
+.faq-item {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+/* Keep FAQ question visuals consistent */
+.faq-question {
+  padding: 8px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7b1113;
+}
+
+/* FAQ behavior */
+.faq-item {
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 10px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #7b1113;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 3.8px;
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  color: #555;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 200px;
+  padding-bottom: 10px;
+}
+
+.faq-icon {
+  font-size: 1.3rem;
+  transition: transform 0.3s ease;
+}
+
+.faq-item.active .faq-icon {
+  transform: rotate(45deg);
+}
+
+/* Contact form */
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+  margin-top: 3px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1.5px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background-color: #fafafa;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: #7b1113;
+  background-color: #fff;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+}
+
+.submit-button {
+  background-color: #7b1113;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.submit-btn:hover {
+  background-color: #843738;
+}
+
+.contact-info {
+  margin-top: 20px;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+/* Responsive layout for mobile */
+@media (max-width: 900px) {
+  .info-section {
+    padding: 40px 16px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .info-section > .container {
+    grid-template-columns: 1fr; /* single column */
+    gap: 20px;
+  }
+
+  .faq-section, .contact-section, .office-info {
+    min-width: 0;
+    padding: 22px;
+  }
+
+  .faqs-title {
+    font-size: 1.5rem;
+    text-align: left;
+  }
+
+  /* When .info-section contains .left-side and .contact-section as direct children
+     (the case in the template where office-info is inside .left-side), make those
+     two elements sit side-by-side at tablet sizes. This keeps the FAQ section above
+     while showing Office & Get in Touch as two columns beneath it.
+  */
+  .info-section > .left-side,
+  .info-section > .contact-section {
+    display: inline-block;
+    vertical-align: top;
+    width: calc(50% - 10px);
+    box-sizing: border-box;
+  }
+
+  /* Make the inner .office-info look like a card when it's inside .left-side */
+  .info-section > .left-side .office-info {
+    margin: 0;
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  /* Ensure contact card matches styling */
+  .info-section > .contact-section {
+    padding: 20px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+}
+
+/* On very small screens revert to stacked single column for readability */
+@media (max-width: 480px) {
+  .info-section > .left-side,
+  .info-section > .contact-section {
+    display: block;
+    width: 100%;
   }
 }
 
@@ -822,5 +1058,26 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover; /* ensures full cover without distortion */
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
