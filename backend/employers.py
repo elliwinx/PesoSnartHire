@@ -600,13 +600,13 @@ def submit_reupload():
         conn.commit()
 
         flash("Documents reuploaded successfully! Please wait for admin review.", "success")
-        return redirect(url_for("employers.employer_home"))
+        return redirect(url_for("home"))
 
     except Exception as e:
         conn.rollback()
         print(f"[submit_reupload] Error: {e}")
         flash(f"Error during reupload: {e}", "danger")
-        return redirect(url_for("employers.account_security"))
+        return redirect(url_for("home"))
 
     finally:
         conn.close()
