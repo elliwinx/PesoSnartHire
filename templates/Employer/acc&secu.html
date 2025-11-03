@@ -110,7 +110,15 @@
         </button>
       </div>
 
-      <form id="accountForm" method="POST" enctype="multipart/form-data">
+      <form id="accountForm"
+            method="POST"
+            {% if employer_status == 'Reupload' %}
+              action="{{ url_for('employers.submit_reupload') }}"
+            {% else %}
+              action="{{ url_for('employers.account_security') }}"
+            {% endif %}
+            enctype="multipart/form-data">
+
 
         <!-- COMPANY INFORMATION (visible only for Approved status) -->
         <div id="company-information" class="content {% if employer_status != 'Approved' %}hidden{% endif %}">
@@ -211,17 +219,38 @@
           <div class="documents">
             {% if employer_status == 'Reupload' and documents_to_reupload %}
               <h3 style="margin-bottom:10px;">Please re-upload the following document(s):</h3>
+
               {% for doc in documents_to_reupload %}
-                {% set field_name = doc|lower|replace(' ', '_') %}
+                {# normalize the doc string to match DB prefix like job_orders_of_client #}
+                {% set normalized = doc.strip().lower()
+                    |replace(' - ', ' ')
+                    |replace(' / ', ' ')
+                    |replace('  ', ' ')
+                    |replace(' ', '_')
+                    |replace('-', '_') %}
+                {# handle shorter names or known variants (optional map) #}
+                {% set alias_map = {
+                  'job_orders_of_client': 'job_orders_of_client',
+                  'job_orders': 'job_orders_of_client',
+                  'business_permit': 'business_permit',
+                  'philjobnet_registration': 'philiobnet_registration',
+                  'philjobnet_registration': 'philiobnet_registration'
+                } %}
+                {% if alias_map.get(normalized) %}
+                  {% set normalized = alias_map.get(normalized) %}
+                {% endif %}
+                {% set db_field = normalized + '_path' %}
+
                 <div class="document-item">
                   <div class="document-header">
-                    <label>{{ doc }}</label>
-                    {% set db_field = field_name + '_path' %}
+                    <label>{{ doc.replace('_', ' ')|title }}</label>
                     {% if employer[db_field] %}
                       <a href="{{ url_for('static', filename=employer[db_field]) }}" target="_blank">View</a>
+                    {% else %}
+                      <span style="color: gray; font-size: 14px;">No existing file</span>
                     {% endif %}
                   </div>
-                  <input type="file" name="{{ field_name }}" accept=".pdf" class="file-input" required />
+                  <input type="file" name="{{ normalized }}" accept=".pdf" class="file-input" required />
                 </div>
               {% endfor %}
             {% else %}

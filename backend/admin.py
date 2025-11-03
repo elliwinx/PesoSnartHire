@@ -471,6 +471,7 @@ def update_local_employer_status(employer_id):
 
         action = data["action"]
         reason = None
+        documents_to_reupload = None
 
         conn = create_connection()
         if not conn:
@@ -567,9 +568,27 @@ def update_local_employer_status(employer_id):
             else:
                 requested_list = []
 
-            # convert list to JSON string (valid for JSON column)
+            # 🔹 Normalize names so they match DB field prefixes
+            normalized_map = {
+                "Business Permit": "business_permit",
+                "PhilJobNet Registration": "philiobnet_registration",
+                "Job Orders of Client": "job_orders_of_client",
+                "DOLE - No Pending Case Certificate": "dole_no_pending_case",
+                "DOLE - Authority to Recruit": "dole_authority_to_recruit",
+                "DMW - No Pending Case Certificate": "dmw_no_pending_case",
+                "DMW - License to Recruit": "license_to_recruit",
+                "Company Logo": "company_logo"
+            }
+
+            normalized_docs = [
+                normalized_map.get(doc.strip(), doc.strip(
+                ).lower().replace(' ', '_').replace('-', '_'))
+                for doc in requested_list
+            ]
+
+            # ✅ Save normalized field names in JSON column
             documents_to_reupload = json.dumps(
-                requested_list) if requested_list else None
+                normalized_docs) if normalized_docs else None
 
             docs_block = ""
             if requested_list:
@@ -657,6 +676,7 @@ def update_international_employer_status(employer_id):
 
         action = data["action"]
         reason = None
+        documents_to_reupload = None
 
         conn = create_connection()
         if not conn:
@@ -753,9 +773,27 @@ def update_international_employer_status(employer_id):
             else:
                 requested_list = []
 
-            # convert list to JSON string (valid for JSON column)
+            # 🔹 Normalize names so they match DB field prefixes
+            normalized_map = {
+                "Business Permit": "business_permit",
+                "PhilJobNet Registration": "philiobnet_registration",
+                "Job Orders of Client": "job_orders_of_client",
+                "DOLE - No Pending Case Certificate": "dole_no_pending_case",
+                "DOLE - Authority to Recruit": "dole_authority_to_recruit",
+                "DMW - No Pending Case Certificate": "dmw_no_pending_case",
+                "DMW - License to Recruit": "license_to_recruit",
+                "Company Logo": "company_logo"
+            }
+
+            normalized_docs = [
+                normalized_map.get(doc.strip(), doc.strip(
+                ).lower().replace(' ', '_').replace('-', '_'))
+                for doc in requested_list
+            ]
+
+            # ✅ Save normalized field names in JSON column
             documents_to_reupload = json.dumps(
-                requested_list) if requested_list else None
+                normalized_docs) if normalized_docs else None
 
             docs_block = ""
             if requested_list:
@@ -796,7 +834,7 @@ def update_international_employer_status(employer_id):
         else:
             is_active_value = 0
 
-# Update employer status and save which documents need reupload
+        # Update employer status and save which documents need reupload
         if reason:
             cursor.execute(
                 "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s, documents_to_reupload = %s WHERE employer_id = %s",

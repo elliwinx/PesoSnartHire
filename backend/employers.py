@@ -388,7 +388,7 @@ def account_security():
                 return current_path
 
             company_logo_path = handle_upload(
-                company_logo_file, employer["company_logo_path"], "company_logos")
+                company_logo_file, employer["company_logo_path"], "employer_logo")
             business_permit_path = handle_upload(
                 business_permit_file, employer["business_permit_path"], "business_permits")
             philiobnet_registration_path = handle_upload(
@@ -461,21 +461,23 @@ def account_security():
             fetch="one"
         )
 
-        # 🔹 Dynamically load reupload document list (if applicable)
+        # ✅ Load reupload document list (if applicable)
         documents_to_reupload = []
-        if employer.get("documents_to_reupload"):
+        if employer and employer.get("documents_to_reupload"):
             try:
                 documents_to_reupload = json.loads(
                     employer["documents_to_reupload"])
-            except Exception:
-                documents_to_reupload = [
-                    d.strip() for d in employer["documents_to_reupload"].split(",") if d.strip()]
+            except Exception as e:
+                print(
+                    f"[account_security] Invalid JSON in documents_to_reupload: {e}")
+                documents_to_reupload = []
         else:
             documents_to_reupload = []
 
     finally:
         conn.close()
 
+    # ✅ Pass parsed docs list to template
     return render_template(
         "Employer/acc&secu.html",
         employer=employer,
@@ -518,10 +520,11 @@ def submit_reupload():
 
         # Map form keys to DB columns and folders
         file_mapping = {
-            "company_logo": ("company_logo_path", "company_logos"),
+            "company_logo": ("company_logo_path", "employer_logo"),
             "business_permit": ("business_permit_path", "business_permits"),
             "philiobnet_registration": ("philiobnet_registration_path", "philiobnet_registrations"),
             "job_orders": ("job_orders_of_client_path", "job_orders"),
+            "job_orders_of_client": ("job_orders_of_client_path", "job_orders"),
             "dole_no_pending": ("dole_no_pending_case_path", "dole_documents"),
             "dole_authority": ("dole_authority_to_recruit_path", "dole_documents"),
             "dmw_no_pending": ("dmw_no_pending_case_path", "dmw_documents"),
@@ -536,16 +539,17 @@ def submit_reupload():
 
             db_field, folder = file_mapping[key]
 
-            # Delete old file
-            old_path = employer_data.get(db_field)
-            if old_path:
-                full_old_path = os.path.join("static", old_path)
-                if os.path.exists(full_old_path):
-                    os.remove(full_old_path)
+            # ✅ Only delete if the *same* file type is being reuploaded
+            if file and file.filename:
+                old_path = employer_data.get(db_field)
+                if old_path:
+                    full_old_path = os.path.join("static", old_path)
+                    if os.path.exists(full_old_path):
+                        os.remove(full_old_path)
 
-            # Save new file
-            new_path = save_file(file, folder)
-            new_files[db_field] = new_path
+                # Save new file
+                new_path = save_file(file, folder)
+                new_files[db_field] = new_path
 
         # Prepare UPDATE data, keeping old files if no new upload
         required_fields = [

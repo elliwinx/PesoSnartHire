@@ -279,12 +279,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const employerStatus = document
       .querySelector(".form-card")
       ?.getAttribute("data-employer-status");
-    // Only allow upload in Edit mode for Approved status
-    if (employerStatus === "Reupload") {
-      document.getElementById("company-information").style.display = "none";
-      document.getElementById("documents").style.display = "block";
-    }
-    {
+
+    // Only allow upload in Edit mode or Reupload state
+    if (
+      avatar.classList.contains("editable") ||
+      employerStatus === "Reupload"
+    ) {
       input.click();
     }
   });
