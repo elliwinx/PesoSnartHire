@@ -7,6 +7,7 @@ from db_connection import create_connection, run_query
 from flask_mail import Message
 from extensions import mail
 from .notifications import create_notification
+from .recaptcha import verify_recaptcha
 
 employers_bp = Blueprint("employers", __name__)
 
@@ -230,6 +231,19 @@ def login():
     employer_id = request.form.get("employerID")
     phone = request.form.get("employerPhoneNumber")
     password = request.form.get("employerPassword")
+
+    recaptcha_token = request.form.get("g-recaptcha-response")
+    if not recaptcha_token:
+        flash("Please complete the reCAPTCHA verification.", "danger")
+        session['login_error'] = True
+        return redirect(url_for("home"))
+
+    recaptcha_result = verify_recaptcha(recaptcha_token, request.remote_addr)
+    if not recaptcha_result.get("success"):
+        print("[v0] reCAPTCHA failed:", recaptcha_result)
+        flash("reCAPTCHA verification failed. Please confirm you're not a robot.", "danger")
+        session['login_error'] = True
+        return redirect(url_for("home"))
 
     conn = create_connection()
     if not conn:

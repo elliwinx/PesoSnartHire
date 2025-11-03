@@ -921,6 +921,17 @@ body {
   justify-content: center;
 }
 
+.recaptcha-container {
+  margin-top: 15px;
+  text-align: center; /* centers inline elements like .g-recaptcha */
+  box-sizing: border-box;
+}
+
+.g-recaptcha {
+  display: inline-block;
+  box-sizing: border-box;
+}
+
 /* Responsive layout for mobile */
 @media (max-width: 900px) {
   .info-section {

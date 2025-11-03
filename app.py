@@ -1,3 +1,7 @@
+from backend.forgot_password import forgot_password_bp
+from backend.admin import admin_bp
+from backend.employers import employers_bp
+from backend.applicants import applicants_bp
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session
 from db_connection import create_connection, run_query
 from extensions import mail
@@ -6,14 +10,16 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
+env_path = Path(__file__).resolve().parent / "backend" / ".env"
+load_dotenv(dotenv_path=env_path)
+
 # Blueprints
-from backend.applicants import applicants_bp
-from backend.employers import employers_bp
-from backend.admin import admin_bp
-from backend.forgot_password import forgot_password_bp
 
 app = Flask(__name__)
 app.secret_key = "seven-days-a-week"
+
+app.config["RECAPTCHA_SITE_KEY"] = os.environ.get("RECAPTCHA_SITE_KEY")
+app.config["RECAPTCHA_SECRET_KEY"] = os.environ.get("RECAPTCHA_SECRET_KEY")
 
 
 @app.route("/")
@@ -53,26 +59,11 @@ app.register_blueprint(employers_bp, url_prefix="/employers")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(forgot_password_bp, url_prefix="/forgot-password")
 
-if __name__ == "__main__":
-    app.run(debug=True)
 
-
-# ✅ Load .env from backend folder
-env_path = Path(__file__).resolve().parent / "backend" / ".env"
-load_dotenv(dotenv_path=env_path)
-
-# ✅ Debug print to confirm
-print("Loaded from:", env_path)
-print("Key:", os.environ.get("RECAPTCHA_SITE_KEY"))
-
-# ✅ Initialize Flask
-app = Flask(__name__)
-
-# ✅ Store keys in Flask config
-app.config["RECAPTCHA_SITE_KEY"] = os.environ.get("RECAPTCHA_SITE_KEY")
-app.config["RECAPTCHA_SECRET_KEY"] = os.environ.get("RECAPTCHA_SECRET_KEY")
-
-# ✅ Make RECAPTCHA_SITE_KEY available in templates
 @app.context_processor
 def inject_recaptcha_key():
     return {"RECAPTCHA_SITE_KEY": app.config.get("RECAPTCHA_SITE_KEY")}
+
+
+if __name__ == "__main__":
+    app.run(debug=True)

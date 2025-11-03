@@ -229,12 +229,27 @@ def register_applicant(form, files):
         conn.close()
 
 # ==== APPLICANT LOG IN ====
+
+
 @applicants_bp.route("/login", methods=["POST"])
 def login():
     email = request.form.get("applicantEmail")
     applicant_id = request.form.get("applicantID")
     phone = request.form.get("applicantPhoneNumber")
     password = request.form.get("applicantPassword")
+
+    recaptcha_token = request.form.get("g-recaptcha-response")
+    if not recaptcha_token:
+        flash("Please complete the reCAPTCHA verification.", "danger")
+        session['login_error'] = True
+        return redirect(url_for("home"))
+
+    recaptcha_result = verify_recaptcha(recaptcha_token, request.remote_addr)
+    if not recaptcha_result.get("success"):
+        print("[v0] reCAPTCHA failed:", recaptcha_result)
+        flash("reCAPTCHA verification failed. Please confirm you're not a robot.", "danger")
+        session['login_error'] = True
+        return redirect(url_for("home"))
 
     conn = create_connection()
     if not conn:
@@ -285,7 +300,8 @@ def logout():
     flash("You have been logged out successfully.", "success")
     return redirect(url_for("home"))
 
-    recaptcha_token = form.get("g-recaptcha-response") or request.form.get("g-recaptcha-response")
+    recaptcha_token = form.get(
+        "g-recaptcha-response") or request.form.get("g-recaptcha-response")
     recaptcha_result = verify_recaptcha(recaptcha_token, request.remote_addr)
     if not recaptcha_result.get("success"):
         print("[v0] reCAPTCHA failed:", recaptcha_result)
