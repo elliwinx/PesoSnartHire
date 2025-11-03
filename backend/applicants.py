@@ -8,7 +8,8 @@ from db_connection import create_connection, run_query
 from extensions import mail
 from flask_mail import Message
 from .notifications import create_notification
-
+from .recaptcha import verify_recaptcha
+from flask import request
 
 applicants_bp = Blueprint("applicants", __name__)
 
@@ -227,7 +228,6 @@ def register_applicant(form, files):
     finally:
         conn.close()
 
-
 # ==== APPLICANT LOG IN ====
 @applicants_bp.route("/login", methods=["POST"])
 def login():
@@ -284,6 +284,12 @@ def logout():
     session.clear()
     flash("You have been logged out successfully.", "success")
     return redirect(url_for("home"))
+
+    recaptcha_token = form.get("g-recaptcha-response") or request.form.get("g-recaptcha-response")
+    recaptcha_result = verify_recaptcha(recaptcha_token, request.remote_addr)
+    if not recaptcha_result.get("success"):
+        print("[v0] reCAPTCHA failed:", recaptcha_result)
+        return False, "reCAPTCHA verification failed. Please confirm you're not a robot."
 
 
 # ===== Applicant Navigation Pages =====

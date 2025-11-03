@@ -623,6 +623,10 @@
           >
 
           <div class="separator-line"></div>
+          <div
+            class="g-recaptcha"
+            data-sitekey="{{ RECAPTCHA_SITE_KEY | safe }}"
+          ></div>
 
           <button
             type="button"
@@ -711,6 +715,6 @@
     <script src="{{ url_for('static', filename='js/button_data_url.js') }}"></script>
     <script src="{{ url_for('static', filename='js/contact.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
-    <script src="{{ url_for('static', filename='js/contact.js') }}"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   </body>
 </html>
