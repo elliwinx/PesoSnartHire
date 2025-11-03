@@ -1,37 +1,69 @@
-from backend.forgot_password import forgot_password_bp
-from backend.admin import admin_bp
-from backend.employers import employers_bp
-from backend.applicants import applicants_bp
-from flask import Flask, jsonify, render_template, request, redirect, url_for, session
+from flask import Flask, jsonify, render_template, request, redirect, url_for, session, flash, send_from_directory, make_response
 from db_connection import create_connection, run_query
-from extensions import mail
-from flask import send_from_directory, make_response
-from pathlib import Path
-import os
+from backend.recaptcha import verify_recaptcha
 from dotenv import load_dotenv
+from pathlib import Path
+from extensions import mail
+import os
 
+# =========================================================
+# STEP 1 — Load environment variables
+# =========================================================
 env_path = Path(__file__).resolve().parent / "backend" / ".env"
 load_dotenv(dotenv_path=env_path)
 
-# Blueprints
-
+# =========================================================
+# STEP 2 — Initialize Flask app
+# =========================================================
 app = Flask(__name__)
 app.secret_key = "seven-days-a-week"
 
+# RECAPTCHA CONFIG
 app.config["RECAPTCHA_SITE_KEY"] = os.environ.get("RECAPTCHA_SITE_KEY")
 app.config["RECAPTCHA_SECRET_KEY"] = os.environ.get("RECAPTCHA_SECRET_KEY")
 
+# MAIL CONFIG
+app.config["MAIL_SERVER"] = "smtp.gmail.com"
+app.config["MAIL_PORT"] = 587
+app.config["MAIL_USE_TLS"] = True
+app.config["MAIL_USERNAME"] = "samonteralphmatthew@gmail.com"
+app.config["MAIL_PASSWORD"] = "sptkwkkzgscnsxtw"
+app.config["MAIL_DEFAULT_SENDER"] = "samonteralphmatthew@gmail.com"
 
+mail.init_app(app)
+
+# =========================================================
+# STEP 3 — Make RECAPTCHA key available in templates
+# =========================================================
+@app.context_processor
+def inject_recaptcha_key():
+    return {"RECAPTCHA_SITE_KEY": app.config.get("RECAPTCHA_SITE_KEY")}
+
+# =========================================================
+# STEP 4 — Import Blueprints
+# =========================================================
+from backend.applicants import applicants_bp
+from backend.employers import employers_bp
+from backend.admin import admin_bp
+from backend.forgot_password import forgot_password_bp
+
+# Register blueprints
+app.register_blueprint(applicants_bp, url_prefix="/applicants")
+app.register_blueprint(employers_bp, url_prefix="/employers")
+app.register_blueprint(admin_bp, url_prefix="/admin")
+app.register_blueprint(forgot_password_bp, url_prefix="/forgot-password")
+
+# =========================================================
+# STEP 5 — Routes
+# =========================================================
 @app.route("/")
 def home():
     return render_template("Landing_Page/index.html")
-
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("home"))
-
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
@@ -41,29 +73,38 @@ def uploaded_file(filename):
     response.headers["Expires"] = "0"
     return response
 
+@app.route("/login", methods=["POST"])
+def login():
+    email = request.form.get("applicantEmail")
+    password = request.form.get("applicantPassword")
 
-# ==== Mail Config ====
-app.config["MAIL_SERVER"] = "smtp.gmail.com"
-app.config["MAIL_PORT"] = 587
-app.config["MAIL_USE_TLS"] = True
-app.config["MAIL_USERNAME"] = "samonteralphmatthew@gmail.com"
-app.config["MAIL_PASSWORD"] = "sptkwkkzgscnsxtw"
-app.config["MAIL_DEFAULT_SENDER"] = "samonteralphmatthew@gmail.com"
+    token = request.form.get("g-recaptcha-response")
+    result = verify_recaptcha(token, request.remote_addr)
+    if not result.get("success"):
+        flash("CAPTCHA verification failed: " + str(result.get("error-codes")), "danger")
+        return redirect(url_for("home"))
 
-# ✅ initialize extensions here
-mail.init_app(app)
+    flash("Login successful!", "success")
+    return redirect(url_for("home"))
 
-# Register blueprints
-app.register_blueprint(applicants_bp, url_prefix="/applicants")
-app.register_blueprint(employers_bp, url_prefix="/employers")
-app.register_blueprint(admin_bp, url_prefix="/admin")
-app.register_blueprint(forgot_password_bp, url_prefix="/forgot-password")
+@app.route("/employer-login", methods=["POST"])
+def employer_login():
+    email = request.form.get("employerEmail")
+    password = request.form.get("employerPassword")
 
+    token = request.form.get("g-recaptcha-response")
+    result = verify_recaptcha(token, request.remote_addr)
+    if not result.get("success"):
+        flash("CAPTCHA verification failed: " + str(result.get("error-codes")), "danger")
+        return redirect(url_for("employer_login_page"))
 
-@app.context_processor
-def inject_recaptcha_key():
-    return {"RECAPTCHA_SITE_KEY": app.config.get("RECAPTCHA_SITE_KEY")}
+    flash("Employer login successful!", "success")
+    return redirect(url_for("employer_dashboard"))
 
-
+# =========================================================
+# STEP 6 — Run App
+# =========================================================
 if __name__ == "__main__":
+    print("Loaded from:", env_path)
+    print("Key:", os.environ.get("RECAPTCHA_SITE_KEY"))
     app.run(debug=True)
