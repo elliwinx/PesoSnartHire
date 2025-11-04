@@ -1,3 +1,7 @@
+from backend.forgot_password import forgot_password_bp
+from backend.admin import admin_bp
+from backend.employers import employers_bp
+from backend.applicants import applicants_bp
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session, flash, send_from_directory, make_response
 from db_connection import create_connection, run_query
 from backend.recaptcha import verify_recaptcha
@@ -35,17 +39,16 @@ mail.init_app(app)
 # =========================================================
 # STEP 3 — Make RECAPTCHA key available in templates
 # =========================================================
+
+
 @app.context_processor
 def inject_recaptcha_key():
     return {"RECAPTCHA_SITE_KEY": app.config.get("RECAPTCHA_SITE_KEY")}
 
+
 # =========================================================
 # STEP 4 — Import Blueprints
 # =========================================================
-from backend.applicants import applicants_bp
-from backend.employers import employers_bp
-from backend.admin import admin_bp
-from backend.forgot_password import forgot_password_bp
 
 # Register blueprints
 app.register_blueprint(applicants_bp, url_prefix="/applicants")
@@ -56,14 +59,18 @@ app.register_blueprint(forgot_password_bp, url_prefix="/forgot-password")
 # =========================================================
 # STEP 5 — Routes
 # =========================================================
+
+
 @app.route("/")
 def home():
     return render_template("Landing_Page/index.html")
+
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("home"))
+
 
 @app.route('/uploads/<path:filename>')
 def uploaded_file(filename):
@@ -73,6 +80,7 @@ def uploaded_file(filename):
     response.headers["Expires"] = "0"
     return response
 
+
 @app.route("/login", methods=["POST"])
 def login():
     email = request.form.get("applicantEmail")
@@ -81,11 +89,13 @@ def login():
     token = request.form.get("g-recaptcha-response")
     result = verify_recaptcha(token, request.remote_addr)
     if not result.get("success"):
-        flash("CAPTCHA verification failed: " + str(result.get("error-codes")), "danger")
+        flash("CAPTCHA verification failed: " +
+              str(result.get("error-codes")), "danger")
         return redirect(url_for("home"))
 
     flash("Login successful!", "success")
     return redirect(url_for("home"))
+
 
 @app.route("/employer-login", methods=["POST"])
 def employer_login():
@@ -95,11 +105,23 @@ def employer_login():
     token = request.form.get("g-recaptcha-response")
     result = verify_recaptcha(token, request.remote_addr)
     if not result.get("success"):
-        flash("CAPTCHA verification failed: " + str(result.get("error-codes")), "danger")
+        flash("CAPTCHA verification failed: " +
+              str(result.get("error-codes")), "danger")
         return redirect(url_for("employer_login_page"))
 
     flash("Employer login successful!", "success")
     return redirect(url_for("employer_dashboard"))
+
+
+@app.route("/flash", methods=["POST"])
+def flash_message():
+    data = request.get_json()
+    message = data.get("message")
+    category = data.get("category", "info")
+
+    flash(message, category)
+    return jsonify({"status": "ok"})
+
 
 # =========================================================
 # STEP 6 — Run App

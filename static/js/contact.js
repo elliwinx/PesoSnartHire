@@ -29,7 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            message: "✅ Message sent successfully!",
+            message:
+              "Thank you for reaching out. Your message was sent successfully!",
             category: "success",
           }),
         }).then(() => window.location.reload());
@@ -42,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            message: "❌ Failed to send message. Please try again.",
+            message: "Failed to send message. Please try again.",
             category: "error",
           }),
         }).then(() => window.location.reload());

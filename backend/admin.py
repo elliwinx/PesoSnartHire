@@ -5,6 +5,7 @@ from .notifications import get_notifications, mark_notification_read, get_unread
 from extensions import mail
 from flask_mail import Message
 import secrets
+import json
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -470,6 +471,7 @@ def update_local_employer_status(employer_id):
 
         action = data["action"]
         reason = None
+        documents_to_reupload = None
 
         conn = create_connection()
         if not conn:
@@ -566,6 +568,28 @@ def update_local_employer_status(employer_id):
             else:
                 requested_list = []
 
+            # 🔹 Normalize names so they match DB field prefixes
+            normalized_map = {
+                "Business Permit": "business_permit",
+                "PhilJobNet Registration": "philiobnet_registration",
+                "Job Orders of Client": "job_orders_of_client",
+                "DOLE - No Pending Case Certificate": "dole_no_pending_case",
+                "DOLE - Authority to Recruit": "dole_authority_to_recruit",
+                "DMW - No Pending Case Certificate": "dmw_no_pending_case",
+                "DMW - License to Recruit": "license_to_recruit",
+                "Company Logo": "company_logo"
+            }
+
+            normalized_docs = [
+                normalized_map.get(doc.strip(), doc.strip(
+                ).lower().replace(' ', '_').replace('-', '_'))
+                for doc in requested_list
+            ]
+
+            # ✅ Save normalized field names in JSON column
+            documents_to_reupload = json.dumps(
+                normalized_docs) if normalized_docs else None
+
             docs_block = ""
             if requested_list:
                 docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
@@ -605,15 +629,17 @@ def update_local_employer_status(employer_id):
         else:
             is_active_value = 0
 
+        # Update employer status and save which documents need reupload
         if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
-                (new_status, reason, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s, documents_to_reupload = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value,
+                 documents_to_reupload, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
-                (new_status, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s, documents_to_reupload = %s, approved_at = NOW() WHERE employer_id = %s",
+                (new_status, is_active_value, documents_to_reupload, employer_id)
             )
         conn.commit()
 
@@ -650,6 +676,7 @@ def update_international_employer_status(employer_id):
 
         action = data["action"]
         reason = None
+        documents_to_reupload = None
 
         conn = create_connection()
         if not conn:
@@ -746,6 +773,28 @@ def update_international_employer_status(employer_id):
             else:
                 requested_list = []
 
+            # 🔹 Normalize names so they match DB field prefixes
+            normalized_map = {
+                "Business Permit": "business_permit",
+                "PhilJobNet Registration": "philiobnet_registration",
+                "Job Orders of Client": "job_orders_of_client",
+                "DOLE - No Pending Case Certificate": "dole_no_pending_case",
+                "DOLE - Authority to Recruit": "dole_authority_to_recruit",
+                "DMW - No Pending Case Certificate": "dmw_no_pending_case",
+                "DMW - License to Recruit": "license_to_recruit",
+                "Company Logo": "company_logo"
+            }
+
+            normalized_docs = [
+                normalized_map.get(doc.strip(), doc.strip(
+                ).lower().replace(' ', '_').replace('-', '_'))
+                for doc in requested_list
+            ]
+
+            # ✅ Save normalized field names in JSON column
+            documents_to_reupload = json.dumps(
+                normalized_docs) if normalized_docs else None
+
             docs_block = ""
             if requested_list:
                 docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
@@ -785,15 +834,17 @@ def update_international_employer_status(employer_id):
         else:
             is_active_value = 0
 
+        # Update employer status and save which documents need reupload
         if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
-                (new_status, reason, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s, documents_to_reupload = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value,
+                 documents_to_reupload, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
-                (new_status, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s, documents_to_reupload = %s, approved_at = NOW() WHERE employer_id = %s",
+                (new_status, is_active_value, documents_to_reupload, employer_id)
             )
         conn.commit()
 
