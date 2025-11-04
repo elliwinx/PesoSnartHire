@@ -417,14 +417,14 @@ function populateDocumentOptions(recruitmentType) {
       { key: "Job Orders of Client", label: "Job Orders of Client/s" },
     ],
     International: [
+      { key: "Business Permit", label: "Business Permit" },
       {
         key: "DMW No Pending Case",
         label: "DMW - No Pending Case Certificate",
       },
       { key: "License to Recruit", label: "DMW - License to Recruit" },
-      { key: "POEA Accreditation", label: "POEA Accreditation" },
-      { key: "Placement Agreement", label: "Placement Agreement" },
-      { key: "Overseas Contract Samples", label: "Overseas Contract Samples" },
+      { key: "PhilJobNet Registration", label: "PhilJobNet Registration" },
+      { key: "Job Orders of Client", label: "Job Orders of Client/s" },
     ],
   };
 

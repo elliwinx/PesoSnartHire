@@ -9,6 +9,7 @@ from flask_mail import Message
 from extensions import mail
 from .notifications import create_notification
 from .recaptcha import verify_recaptcha
+from .recruitment_change_handler import handle_recruitment_type_change
 
 employers_bp = Blueprint("employers", __name__)
 
@@ -297,6 +298,7 @@ def logout():
     flash("You have been logged out successfully.", "success")
     return redirect(url_for("home"))
 
+
 # ===== Helper Functions =====
 
 
@@ -314,7 +316,7 @@ def employer_home():
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
 
-    # <CHANGE> Restrict Reupload status employers
+    # Restrict Reupload status employers
     if check_reupload_restriction():
         flash("Please complete your document reupload first.", "warning")
         return redirect(url_for("employers.account_security"))
@@ -328,7 +330,7 @@ def notifications():
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("home"))
 
-    # <CHANGE> Restrict Reupload status employers
+    # Restrict Reupload status employers
     if check_reupload_restriction():
         flash("Please complete your document reupload first.", "warning")
         return redirect(url_for("employers.account_security"))
@@ -365,10 +367,9 @@ def account_security():
         flash("Employer not found.", "danger")
         return redirect(url_for("employers.employer_home"))
 
-    # --- HANDLE POST (form submission) ---
     if request.method == "POST":
         try:
-            # 🔹 Get form data
+            # --- Fetch form data
             employer_name = request.form.get("employer_name", "")
             industry = request.form.get("industry", "")
             recruitment_type = request.form.get("recruitment_type", "")
@@ -380,7 +381,7 @@ def account_security():
             city = request.form.get("city", "")
             province = request.form.get("province", "")
 
-            # 🔹 Uploaded files
+            # ✅ STEP 1: Handle file uploads FIRST (before recruitment type validation)
             company_logo_file = request.files.get("company_logo")
             business_permit_file = request.files.get("business_permit")
             philiobnet_registration_file = request.files.get(
@@ -391,7 +392,7 @@ def account_security():
             dmw_no_pending_file = request.files.get("dmw_no_pending")
             license_to_recruit_file = request.files.get("license_to_recruit")
 
-            # 🔹 Handle file uploads (overwrite if new)
+            # --- File upload helper
             def handle_upload(file, current_path, folder):
                 if file and file.filename:
                     if current_path:
@@ -418,7 +419,11 @@ def account_security():
             license_to_recruit_path = handle_upload(
                 license_to_recruit_file, employer["license_to_recruit_path"], "dmw_documents")
 
-            # 🔹 Update employer record
+            documents_to_reupload_list = request.form.getlist(
+                "documents_to_reupload")
+            documents_to_reupload_json = json.dumps(
+                documents_to_reupload_list) if documents_to_reupload_list else None
+
             update_query = """
                 UPDATE employers SET
                     employer_name=%s,
@@ -439,14 +444,11 @@ def account_security():
                     dole_authority_to_recruit_path=%s,
                     dmw_no_pending_case_path=%s,
                     license_to_recruit_path=%s,
-                    documents_to_reupload=%s
+                    documents_to_reupload=%s,
+                    status=%s,
+                    is_active=%s
                 WHERE employer_id=%s
             """
-
-            documents_to_reupload_list = request.form.getlist(
-                "documents_to_reupload")  # example
-            documents_to_reupload_json = json.dumps(
-                documents_to_reupload_list) if documents_to_reupload_list else None
 
             data = (
                 employer_name, industry, recruitment_type, contact_person, phone, email,
@@ -454,11 +456,41 @@ def account_security():
                 company_logo_path, business_permit_path, philiobnet_registration_path,
                 job_orders_path, dole_no_pending_path, dole_authority_path,
                 dmw_no_pending_path, license_to_recruit_path,
-                documents_to_reupload_json,  # <-- JSON column
+                documents_to_reupload_json,
+                employer["status"], employer["is_active"],
                 employer_id
             )
+
             run_query(conn, update_query, data)
             conn.commit()
+
+            # ✅ STEP 2: Now handle recruitment type change (after files are saved to DB)
+            recruitment_type_changed = request.form.get(
+                "recruitment_type_changed")
+
+            if recruitment_type_changed == "true":
+                old_type = request.form.get("old_recruitment_type")
+                new_type = request.form.get("new_recruitment_type")
+
+                result = handle_recruitment_type_change(
+                    employer_id, conn, old_type, new_type)
+
+                if result["success"]:
+                    conn.commit()
+                    conn.close()
+                    session.clear()
+                    flash(
+                        "Recruitment type changed — Your documents will be set for verification. You cannot access your account in the mean time.", "info")
+                    return redirect(url_for("home"))
+                else:
+                    error_msg = result.get('message', 'Unknown error')
+                    if 'error' in result:
+                        error_msg = result['error']
+                    flash(
+                        f"Error updating recruitment type: {error_msg}", "danger")
+                    conn.close()
+                    return redirect(url_for("employers.account_security"))
+
             flash(
                 "Your account details and files have been updated successfully.", "success")
 
@@ -475,7 +507,7 @@ def account_security():
             fetch="one"
         )
 
-        # ✅ Load reupload document list (if applicable)
+        # Load reupload document list (if applicable)
         documents_to_reupload = []
         if employer and employer.get("documents_to_reupload"):
             try:
@@ -491,7 +523,7 @@ def account_security():
     finally:
         conn.close()
 
-    # ✅ Pass parsed docs list to template
+    # Pass parsed docs list to template
     return render_template(
         "Employer/acc&secu.html",
         employer=employer,

@@ -20,9 +20,10 @@ def create_notification(
     employer_id=None
 ):
     """
-    Insert a notification.
-    If related_ids is a single-element list and applicant_id/employer_id
-    are not provided, auto-fill the FK based on notification_type.
+    Insert or update a notification.
+    If a notification exists for the same type and user (applicant/employer),
+    update it (increment count, update message, update timestamp).
+    Otherwise, insert a new one.
     Returns (True, inserted_id) or (False, error_message).
     """
     conn = create_connection()
@@ -67,9 +68,49 @@ def create_notification(
                     "employer_outdated_docu"
                 ):
                     employer_id = single_int
-                # applicant_batch stays as related_ids only
     except Exception:
-        pass  # don't break insert if autofill fails
+        pass
+
+    check_query = "SELECT notification_id FROM notifications WHERE notification_type = %s"
+    check_params = [notification_type]
+
+    if employer_id:
+        check_query += " AND employer_id = %s"
+        check_params.append(employer_id)
+    elif applicant_id:
+        check_query += " AND applicant_id = %s"
+        check_params.append(applicant_id)
+
+    if recruitment_type:
+        check_query += " AND recruitment_type = %s"
+        check_params.append(recruitment_type)
+
+    # Only match unread notifications to reuse
+    check_query += " AND is_read = 0 LIMIT 1"
+
+    try:
+        existing = run_query(
+            conn, check_query, tuple(check_params), fetch="one")
+
+        if existing:
+            update_query = """
+                UPDATE notifications 
+                SET count = count + 1, 
+                    message = %s, 
+                    title = %s,
+                    updated_at = NOW()
+                WHERE notification_id = %s
+            """
+            run_query(conn, update_query,
+                      (message, title, existing["notification_id"]))
+            conn.commit()
+            conn.close()
+            print(
+                f"[notifications] Updated existing notification id={existing['notification_id']}, incremented count")
+            return True, existing["notification_id"]
+    except Exception as e:
+        print(f"[notifications] Error checking for existing notification: {e}")
+        # Fall through to create new one
 
     related_ids_json = json.dumps(parsed_related) if parsed_related else None
 
@@ -100,7 +141,10 @@ def create_notification(
                 inserted_id = last["id"] if last else None
             except Exception:
                 inserted_id = None
+            conn.commit()
             conn.close()
+            print(
+                f"[notifications] Inserted new notification id={inserted_id}")
             return True, inserted_id
     except Exception as e:
         print("[notifications] run_query failed:", str(e))
@@ -128,6 +172,7 @@ def create_notification(
         return False, err
 
 
+# handling recruitment change
 def build_redirect_url(notif, admin_prefix="/admin"):
     """
     Generate a redirect URL for the admin UI.

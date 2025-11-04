@@ -951,6 +951,18 @@ body {
   gap: 16px; /* same spacing as other .document-item */
 }
 
+.recruitment-docs.hidden {
+  display: none !important;
+}
+
+.recruitment-docs {
+  display: flex;
+}
+
+.document-item.hidden-doc {
+  display: none;
+}
+
 /* Each nested document should look identical to other items */
 .recruitment-docs.dole-docs .document-item,
 .recruitment-docs.dmw-docs .document-item {
