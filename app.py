@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request, redirect, url_for, session
+from flask import Flask, jsonify, render_template, request, redirect, url_for, session, flash
 from db_connection import create_connection, run_query
 from extensions import mail
 from flask import send_from_directory, make_response
@@ -31,6 +31,16 @@ def uploaded_file(filename):
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
+
+@app.route("/flash", methods=["POST"])
+def flash_message():
+    data = request.get_json()
+    message = data.get("message")
+    category = data.get("category", "info")
+
+    flash(message, category)
+    return jsonify({"status": "ok"})
 
 
 # ==== Mail Config ====
