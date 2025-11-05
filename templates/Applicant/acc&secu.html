@@ -233,7 +233,7 @@
               <div id="pwd_details" class="conditional" style="display:none;margin-top:10px;">
                 <label style="font-size:12px;color:#333;margin-bottom:6px;display:block;">If yes, please specify disability type</label>
                 <select class="chip select-readonly" name="disability_type">
-                  <option value="">Select Disability Type</option>
+                  <!--<option value="">Select Disability Type</option>-->
                   <option value="Visual Disability" {% if applicant.pwd_type == 'Visual Disability' %}selected{% endif %}>Visual Disability</option>
                   <option value="Hearing Disability" {% if applicant.pwd_type == 'Hearing Disability' %}selected{% endif %}>Hearing Disability</option>
                   <option value="Speech/Communication Disability" {% if applicant.pwd_type == 'Speech/Communication Disability' %}selected{% endif %}>Speech/Communication Disability</option>
@@ -264,7 +264,7 @@
               <div id="work_details" class="conditional" style="display:none;margin-top:10px;">
                 <label style="font-size:12px;color:#333;margin-bottom:6px;display:block;">If yes, please specify work experience length</label>
                 <select class="chip select-readonly" name="work_duration">
-                  <option value="">Select Years of Experience</option>
+                  <!--<option value="">Select Years of Experience</option>-->
                   <option value="Less than 1" {% if applicant.years_experience == 'Less than 1' %}selected{% endif %}>Less than 1 year</option>
                   <option value="1-2" {% if applicant.years_experience == '1-2' %}selected{% endif %}>1-2 years</option>
                   <option value="3-5" {% if applicant.years_experience == '3-5' %}selected{% endif %}>3-5 years</option>

@@ -11,32 +11,52 @@ from backend.send_sms import send_sms
 
 forgot_password_bp = Blueprint("forgot_password", __name__)
 
+
 # ==== FORGOT PASSWORD ROUTES =====
-
-
 @forgot_password_bp.route("/forgot-password")
 def forgot_password():
     user_type = request.args.get("type", "admin")
-    return render_template("Forgot_Password/forgot_password_f1.html", user_type=user_type)
+    next_page = request.args.get("next") or url_for(
+        "home")  # <- dynamic back
+    return render_template(
+        "Forgot_Password/forgot_password_f1.html",
+        user_type=user_type,
+        back_url=next_page
+    )
 
 
 @forgot_password_bp.route("/email")
 def forgot_password_email():
     user_type = request.args.get("type", "admin")
-    back_url = request.referrer or url_for("landing_page")
-    return render_template("Forgot_Password/forgot_password_f2_email.html", back_url=back_url, user_type=user_type)
+    # carry next from query string
+    next_page = request.args.get("next") or url_for("home")
+    return render_template(
+        "Forgot_Password/forgot_password_f2_email.html",
+        user_type=user_type,
+        back_url=next_page
+    )
 
 
 @forgot_password_bp.route("/phone")
 def forgot_password_phone():
     user_type = request.args.get("type", "applicant")
-    return render_template("Forgot_Password/forgot_password_f2_phone.html", user_type=user_type)
+    next_page = request.args.get("next") or url_for("home")
+    return render_template(
+        "Forgot_Password/forgot_password_f2_phone.html",
+        user_type=user_type,
+        back_url=next_page
+    )
 
 
 @forgot_password_bp.route("/reset_token")
 def forgot_password_reset_token():
     user_type = request.args.get("type", "admin")
-    return render_template("Forgot_Password/forgot_password_f3_token_verification.html", user_type=user_type)
+    back_url = request.args.get("next")  # <- carry from email/phone page
+    return render_template(
+        "Forgot_Password/forgot_password_f3_token_verification.html",
+        user_type=user_type,
+        back_url=back_url
+    )
 
 
 # ===== TOKEN GENERATOR =====

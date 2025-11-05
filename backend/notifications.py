@@ -207,8 +207,6 @@ def build_redirect_url(notif, admin_prefix="/admin"):
         if applicant_id:
             return f"{admin_prefix}/applicants/{applicant_id}"
         return f"{admin_prefix}/applicants"
-    if ntype == "applicant_reupload" and applicant_id:
-        return f"{admin_prefix}/applicants/{applicant_id}"
     if ntype == "employer_approval" and employer_id:
         return f"{admin_prefix}/employers/{employer_id}"
     if ntype == "applicant_reported" and applicant_id:

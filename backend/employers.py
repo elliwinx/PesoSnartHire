@@ -287,7 +287,7 @@ def login():
     session["employer_status"] = employer["status"]
 
     conn.close()
-    flash(f"Welcome back, {employer['contact_person']}!", "success")
+    flash(f"Welcome back, {employer['employer_name']}!", "success")
     return redirect(url_for("employers.employer_home"))
 
 
