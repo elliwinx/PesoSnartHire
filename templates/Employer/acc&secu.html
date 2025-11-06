@@ -86,7 +86,7 @@
           <i class="fa-solid fa-bars" id="menuToggle"></i>
           <div class="dropdown-menu" id="dropdownMenu">
             <a href="#">Deactivate Account</a>
-            <a href="{{ url_for('forgot_password.forgot_password', type='employer') }}"
+            <a href="{{ url_for('forgot_password.forgot_password', type='employer', next=request.path) }}"
               >Change password</a
             >
           </div>
@@ -145,7 +145,7 @@
             <div class="form-group">
               <label for="industry">Industry</label>
               <select class="chip" id="industry" name="industry" disabled>
-                <option value="">Select Industry</option>
+                <!--<option value="">Select Industry</option>-->
                 <option value="Technology & IT" {% if employer.industry == 'Technology & IT' %}selected{% endif %}>Technology & IT</option>
                 <option value="Finance & Insurance" {% if employer.industry == 'Finance & Insurance' %}selected{% endif %}>Finance & Insurance</option>
                 <option value="Healthcare & Pharmaceuticals" {% if employer.industry == 'Healthcare & Pharmaceuticals' %}selected{% endif %}>Healthcare & Pharmaceuticals</option>
@@ -163,11 +163,14 @@
             </div>
             <div class="form-group">
               <label for="recruitment_type">Type of Recruitment</label>
-              <select class="chip" id="recruitment_type" name="recruitment_type" disabled>
-                <option value="">Select Type</option>
+              <select id="recruitment_type" name="recruitment_type" disabled>
+                <!--<option value="">Select Type</option>-->
                 <option value="Local" {% if employer.recruitment_type == 'Local' %}selected{% endif %}>Local</option>
                 <option value="International" {% if employer.recruitment_type == 'International' %}selected{% endif %}>International</option>
               </select>
+
+              <!-- hidden input to track changes -->
+              <input type="hidden" name="recruitment_type_changed" id="recruitment_type_changed" value="false">
             </div>
           </div>
 
@@ -254,111 +257,107 @@
                 </div>
               {% endfor %}
             {% else %}
-              <!-- Normal view for Approved employers -->
-              {% if employer.recruitment_type == 'Local' %}
-                <!-- LOCAL employers: show DOLE documents -->
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>Business Permit</label>
-                    {% if employer.business_permit_path %}
-                    <a href="{{ url_for('static', filename=employer.business_permit_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="business_permit" accept=".pdf" class="file-input" />
+              <!-- LOCAL employers: show DOLE documents -->
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>Business Permit</label>
+                  {% if employer.business_permit_path %}
+                  <a href="{{ url_for('static', filename=employer.business_permit_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="business_permit" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>PhilJobNet Registration</label>
-                    {% if employer.philiobnet_registration_path %}
-                    <a href="{{ url_for('static', filename=employer.philiobnet_registration_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="philiobnet_registration" accept=".pdf" class="file-input" />
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>PhilJobNet Registration</label>
+                  {% if employer.philiobnet_registration_path %}
+                  <a href="{{ url_for('static', filename=employer.philiobnet_registration_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="philiobnet_registration" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>Job Orders of Client</label>
-                    {% if employer.job_orders_of_client_path %}
-                    <a href="{{ url_for('static', filename=employer.job_orders_of_client_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="job_orders" accept=".pdf" class="file-input" />
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>Job Orders of Client</label>
+                  {% if employer.job_orders_of_client_path %}
+                  <a href="{{ url_for('static', filename=employer.job_orders_of_client_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="job_orders" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>DOLE - No Pending Case Certificate</label>
-                    {% if employer.dole_no_pending_case_path %}
-                    <a href="{{ url_for('static', filename=employer.dole_no_pending_case_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="dole_no_pending" accept=".pdf" class="file-input" />
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>DOLE - No Pending Case Certificate</label>
+                  {% if employer.dole_no_pending_case_path %}
+                  <a href="{{ url_for('static', filename=employer.dole_no_pending_case_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="dole_no_pending" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>DOLE - Authority to Recruit</label>
-                    {% if employer.dole_authority_to_recruit_path %}
-                    <a href="{{ url_for('static', filename=employer.dole_authority_to_recruit_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="dole_authority" accept=".pdf" class="file-input" />
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>DOLE - Authority to Recruit</label>
+                  {% if employer.dole_authority_to_recruit_path %}
+                  <a href="{{ url_for('static', filename=employer.dole_authority_to_recruit_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="dole_authority" accept=".pdf" class="file-input" />
+              </div>
 
-              {% elif employer.recruitment_type == 'International' %}
-                <!-- INTERNATIONAL employers: show DMW documents -->
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>Business Permit</label>
-                    {% if employer.business_permit_path %}
-                    <a href="{{ url_for('static', filename=employer.business_permit_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="business_permit" accept=".pdf" class="file-input" />
+              <!-- INTERNATIONAL employers: show DMW documents -->
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>Business Permit</label>
+                  {% if employer.business_permit_path %}
+                  <a href="{{ url_for('static', filename=employer.business_permit_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="business_permit" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>PhilJobNet Registration</label>
-                    {% if employer.philiobnet_registration_path %}
-                    <a href="{{ url_for('static', filename=employer.philiobnet_registration_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="philiobnet_registration" accept=".pdf" class="file-input" />
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>PhilJobNet Registration</label>
+                  {% if employer.philiobnet_registration_path %}
+                  <a href="{{ url_for('static', filename=employer.philiobnet_registration_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="philiobnet_registration" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>Job Orders of Client</label>
-                    {% if employer.job_orders_of_client_path %}
-                    <a href="{{ url_for('static', filename=employer.job_orders_of_client_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="job_orders" accept=".pdf" class="file-input" />
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>Job Orders of Client</label>
+                  {% if employer.job_orders_of_client_path %}
+                  <a href="{{ url_for('static', filename=employer.job_orders_of_client_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="job_orders" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>DMW - No Pending Case Certificate</label>
-                    {% if employer.dmw_no_pending_case_path %}
-                    <a href="{{ url_for('static', filename=employer.dmw_no_pending_case_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="dmw_no_pending" accept=".pdf" class="file-input" />
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>DMW - No Pending Case Certificate</label>
+                  {% if employer.dmw_no_pending_case_path %}
+                  <a href="{{ url_for('static', filename=employer.dmw_no_pending_case_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
+                <input type="file" name="dmw_no_pending" accept=".pdf" class="file-input" />
+              </div>
 
-                <div class="document-item">
-                  <div class="document-header">
-                    <label>DMW - License to Recruit</label>
-                    {% if employer.license_to_recruit_path %}
-                    <a href="{{ url_for('static', filename=employer.license_to_recruit_path) }}" target="_blank">View</a>
-                    {% endif %}
-                  </div>
-                  <input type="file" name="license_to_recruit" accept=".pdf" class="file-input" />
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+                <div class="document-header">
+                  <label>DMW - License to Recruit</label>
+                  {% if employer.license_to_recruit_path %}
+                  <a href="{{ url_for('static', filename=employer.license_to_recruit_path) }}" target="_blank">View</a>
+                  {% endif %}
                 </div>
-              {% endif %}
+                <input type="file" name="license_to_recruit" accept=".pdf" class="file-input" />
+              </div>
             {% endif %}
           </div>
 

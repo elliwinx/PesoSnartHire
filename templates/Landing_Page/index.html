@@ -617,7 +617,7 @@
           <button type="submit">Log In</button>
 
           <a
-            href="{{ url_for('forgot_password.forgot_password', type='applicant') }}"
+            href="{{ url_for('forgot_password.forgot_password', type='applicant', next=request.path) }}"
             class="forgot-password"
             >Forgot Password?</a
           >
@@ -625,7 +625,10 @@
           <div class="separator-line"></div>
 
           <div class="recaptcha-container">
-            <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div>
+            <div
+              class="g-recaptcha"
+              data-sitekey="{{ RECAPTCHA_SITE_KEY }}"
+            ></div>
           </div>
 
           <button
@@ -692,7 +695,7 @@
           <button type="submit">Log In</button>
 
           <a
-            href="{{ url_for('forgot_password.forgot_password', type='employer') }}"
+            href="{{ url_for('forgot_password.forgot_password', type='employer', next=request.path) }}"
             class="forgot-password"
             >Forgot Password?</a
           >
@@ -700,7 +703,10 @@
           <div class="separator-line"></div>
 
           <div class="recaptcha-container">
-            <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div>
+            <div
+              class="g-recaptcha"
+              data-sitekey="{{ RECAPTCHA_SITE_KEY }}"
+            ></div>
           </div>
 
           <button

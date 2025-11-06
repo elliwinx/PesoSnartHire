@@ -228,9 +228,8 @@ def register_applicant(form, files):
     finally:
         conn.close()
 
+
 # ==== APPLICANT LOG IN ====
-
-
 @applicants_bp.route("/login", methods=["POST"])
 def login():
     email = request.form.get("applicantEmail")

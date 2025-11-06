@@ -1103,6 +1103,17 @@ input[type="email"] {
   color: #666 !important;
   border: 1px solid #d0d0d0 !important;
 }
+#documentCheckboxList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#documentCheckboxList .document-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* spacing between checkbox and label */
+}
 
 /* Added responsive design for mobile devices */
 @media (max-width: 768px) {

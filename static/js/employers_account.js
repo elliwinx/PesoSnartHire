@@ -4,6 +4,7 @@
 // ============================================
 
 // ========== DROPDOWN MENU ==========
+
 document.addEventListener("DOMContentLoaded", () => {
   const menuToggle = document.getElementById("menuToggle");
   const dropdownMenu = document.getElementById("dropdownMenu");
@@ -96,6 +97,11 @@ document.addEventListener("DOMContentLoaded", () => {
       inputs.forEach((el) => (originalValues[el.name] = el.value));
       selects.forEach((el) => (originalValues[el.name] = el.value));
 
+      const recruitmentSelect = document.getElementById("recruitment_type");
+      if (recruitmentSelect) {
+        originalValues["recruitment_type"] = recruitmentSelect.value;
+      }
+
       // ✅ store original company logo
       const logoImg = document.getElementById("companyLogoPreview");
       if (logoImg) originalValues["logoSrc"] = logoImg.src;
@@ -173,6 +179,55 @@ document.addEventListener("DOMContentLoaded", () => {
   if (saveBtn && accountForm) {
     saveBtn.addEventListener("click", (e) => {
       e.preventDefault();
+
+      const recruitmentSelect = document.getElementById("recruitment_type");
+      if (recruitmentSelect) {
+        const currentType = recruitmentSelect.value;
+        const oldType = originalValues["recruitment_type"];
+
+        console.log("[v0] Save clicked - Checking recruitment type change:", {
+          oldType,
+          currentType,
+        });
+
+        // If recruitment type changed, add hidden inputs to signal backend
+        if (oldType && currentType && oldType !== currentType) {
+          console.log(
+            "[v0] Recruitment type changed! Old:",
+            oldType,
+            "New:",
+            currentType
+          );
+
+          // Remove any existing hidden inputs first
+          const existingInputs = accountForm.querySelectorAll(
+            'input[name="recruitment_type_changed"], input[name="old_recruitment_type"], input[name="new_recruitment_type"]'
+          );
+          existingInputs.forEach((input) => input.remove());
+
+          // Add hidden inputs
+          const changedInput = document.createElement("input");
+          changedInput.type = "hidden";
+          changedInput.name = "recruitment_type_changed";
+          changedInput.value = "true";
+          accountForm.appendChild(changedInput);
+
+          const oldTypeInput = document.createElement("input");
+          oldTypeInput.type = "hidden";
+          oldTypeInput.name = "old_recruitment_type";
+          oldTypeInput.value = oldType;
+          accountForm.appendChild(oldTypeInput);
+
+          const newTypeInput = document.createElement("input");
+          newTypeInput.type = "hidden";
+          newTypeInput.name = "new_recruitment_type";
+          newTypeInput.value = currentType;
+          accountForm.appendChild(newTypeInput);
+
+          console.log("[v0] Hidden inputs added to form");
+        }
+      }
+
       accountForm.submit();
     });
   }
@@ -219,8 +274,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  recruitmentSelect.addEventListener("change", updateDocumentVisibility);
-  updateDocumentVisibility(); // run once on page load
+  if (recruitmentSelect) {
+    recruitmentSelect.addEventListener("change", updateDocumentVisibility);
+    updateDocumentVisibility(); // run once on page load
+  }
 });
 
 // ============================================
