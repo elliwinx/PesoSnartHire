@@ -617,7 +617,7 @@
           <button type="submit">Log In</button>
 
           <a
-            href="{{ url_for('forgot_password.forgot_password', type='applicant', next=request.path) }}"
+            href="{{ url_for('forgot_password.forgot_password', type='applicant') }}"
             class="forgot-password"
             >Forgot Password?</a
           >
@@ -695,7 +695,7 @@
           <button type="submit">Log In</button>
 
           <a
-            href="{{ url_for('forgot_password.forgot_password', type='employer', next=request.path) }}"
+            href="{{ url_for('forgot_password.forgot_password', type='employer') }}"
             class="forgot-password"
             >Forgot Password?</a
           >
