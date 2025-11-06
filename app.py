@@ -123,6 +123,11 @@ def flash_message():
     return jsonify({"status": "ok"})
 
 
+@app.route("/terms-and-conditions")
+def terms_and_conditions():
+    return render_template("Landing_Page/t_and_c_general.html")
+
+
 # =========================================================
 # STEP 6 — Run App
 # =========================================================
