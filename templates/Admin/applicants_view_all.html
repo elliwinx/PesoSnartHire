@@ -3,8 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Applicants - Admin Dashboard</title>
-    <!-- Icons -->
+    <title>View All Applicants</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -13,7 +12,6 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Styles -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
@@ -24,7 +22,6 @@
     />
   </head>
   <body>
-    <!--Flash of Welcome Back Message-->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
@@ -42,7 +39,7 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
-    <!-- Header -->
+
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -78,50 +75,113 @@
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
+          alt="New City Hall of Lipa City"
         />
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome, Administrator!</h1>
-          <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here's what we have today</p>
+          <h1 class="hero-title">View All Applicants</h1>
+          <p class="hero-description">
+            Browse and manage all applicant accounts
+          </p>
         </div>
       </div>
     </section>
 
-    <!-- Job Vacancies -->
-    <section class="analytics-dashboard">
-      <div class="container">
-        <h2>Applicants Management</h2>
-        <p>
-          Manage applicant accounts, verify credentials, and oversee application
-          activities
-        </p>
+    <div class="table-container">
+      <div class="back-button">
+        <a href="javascript:void(0);" onclick="window.history.back();">
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
       </div>
-    </section>
 
-    <!-- Updated buttons to navigate to proper pages -->
-    <div class="tab-group">
-      <!-- Fixed onclick syntax to avoid template conflicts -->
-      <button
-        data-url="{{ url_for('admin.applicants_for_approval') }}"
-        onclick="window.location.href=this.getAttribute('data-url')"
-      >
-        Accounts for Approval
-      </button>
-      <button
-        data-url="{{ url_for('admin.applicants_view_all') }}"
-        onclick="window.location.href=this.getAttribute('data-url')"
-      >
-        View All Applicants
-      </button>
-      <button disabled style="opacity: 0.5; cursor: not-allowed">
-        Reported Accounts
-      </button>
+      <div class="table-header">
+        <h2>All Applicants</h2>
+        <p>Filter by Lipeño or Non-Lipeño status</p>
+      </div>
+
+      <div class="search-container">
+        <div class="search-wrapper">
+          <i class="fa-solid fa-search search-icon"></i>
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search by name..."
+            onkeyup="searchApplicants()"
+          />
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <button class="filter-btn active" onclick="filterApplicants('all')">
+          All Applicants
+        </button>
+        <button class="filter-btn" onclick="filterApplicants('lipeno')">
+          Lipeño Only
+        </button>
+        <button class="filter-btn" onclick="filterApplicants('non-lipeno')">
+          Non-Lipeño Only
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        {% if applicants %}
+        <table id="applicantsTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Date of Registration</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for applicant in applicants %}
+            <tr
+              data-type="{{ 'lipeno' if applicant.is_from_lipa else 'non-lipeno' }}"
+            >
+              <td>
+                {{ applicant.first_name }} {{ applicant.middle_name }} {{
+                applicant.last_name }}
+              </td>
+              <td>
+                {% if applicant.is_from_lipa %}
+                <span class="badge badge-lipeno">Lipeño</span>
+                {% else %}
+                <span class="badge badge-non-lipeno">Non-Lipeño</span>
+                {% endif %}
+              </td>
+              <td>{{ applicant.created_at.strftime('%B %d, %Y') }}</td>
+              <td>
+                <button
+                  data-url="{{ url_for('admin.view_applicant', applicant_id=applicant.applicant_id) }}"
+                  class="btn"
+                  onclick="window.location.href=this.getAttribute('data-url')"
+                >
+                  <i class="fa-solid fa-eye"></i> View
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <!-- Added dynamic empty state for filtered results -->
+        <div id="noResultsMessage" class="empty-state" style="display: none">
+          <i class="fa-solid fa-users" style="font-size: 48px; color: #ccc"></i>
+          <h3>No Applicants Found</h3>
+          <p id="noResultsText">No applicants match your current filter</p>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="fa-solid fa-users" style="font-size: 48px; color: #ccc"></i>
+          <h3>No Applicants Found</h3>
+          <p>There are no registered applicants yet</p>
+        </div>
+        {% endif %}
+      </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -187,9 +247,7 @@
       </div>
     </footer>
 
-    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
-    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>

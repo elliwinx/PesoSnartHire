@@ -404,6 +404,55 @@ def applicants_management():
     return render_template("Admin/admin_applicant.html")
 
 
+@admin_bp.route("/applicants/for-approval")
+def applicants_for_approval():
+    """Show non-Lipeño applicants needing approval"""
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get non-Lipeño applicants with Pending status
+    cursor.execute("""
+        SELECT applicant_id, first_name, middle_name, last_name, 
+               created_at, status, is_from_lipa
+        FROM applicants 
+        WHERE is_from_lipa = 0 AND status = 'Pending'
+        ORDER BY created_at DESC
+    """)
+    applicants = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("Admin/applicants_for_approval.html", applicants=applicants)
+
+
+@admin_bp.route("/applicants/view-all")
+def applicants_view_all():
+    """Show all applicants with Lipeño/Non-Lipeño filter"""
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get all applicants (all statuses)
+    cursor.execute("""
+        SELECT applicant_id, first_name, middle_name, last_name, 
+               created_at, status, is_from_lipa
+        FROM applicants 
+        ORDER BY created_at DESC
+    """)
+    applicants = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("Admin/applicants_view_all.html", applicants=applicants)
+
+
 @admin_bp.route("/applicants/<int:applicant_id>")
 def view_applicant(applicant_id):
     conn = create_connection()
@@ -434,6 +483,55 @@ def view_applicant(applicant_id):
 @admin_bp.route("/employers")
 def employers_management():
     return render_template("Admin/admin_employer.html")
+
+
+@admin_bp.route("/employers/for-approval")
+def employers_for_approval():
+    """Show employers (local and international) needing approval"""
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get employers with Pending status
+    cursor.execute("""
+        SELECT employer_id, employer_name, recruitment_type, 
+               created_at, status
+        FROM employers 
+        WHERE status = 'Pending'
+        ORDER BY created_at DESC
+    """)
+    employers = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("Admin/employers_for_approval.html", employers=employers)
+
+
+@admin_bp.route("/employers/view-all")
+def employers_view_all():
+    """Show all employers with Local/International filter"""
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Get all employers (all statuses)
+    cursor.execute("""
+        SELECT employer_id, employer_name, recruitment_type, 
+               created_at, status
+        FROM employers 
+        ORDER BY created_at DESC
+    """)
+    employers = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("Admin/employers_view_all.html", employers=employers)
 
 
 @admin_bp.route("/employers/<int:employer_id>")

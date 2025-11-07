@@ -3,8 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Applicants - Admin Dashboard</title>
-    <!-- Icons -->
+    <title>View All Employers</title>
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -13,7 +12,6 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Styles -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
@@ -24,7 +22,6 @@
     />
   </head>
   <body>
-    <!--Flash of Welcome Back Message-->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
@@ -42,7 +39,7 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
-    <!-- Header -->
+
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -55,10 +52,12 @@
           <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
           <a
             href="{{ url_for('admin.applicants_management') }}"
-            class="nav-link-active"
+            class="nav-link"
             >Applicants Management</a
           >
-          <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
+          <a
+            href="{{ url_for('admin.employers_management') }}"
+            class="nav-link-active"
             >Employers Management</a
           >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
@@ -78,50 +77,114 @@
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
+          alt="New City Hall of Lipa City"
         />
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome, Administrator!</h1>
-          <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here's what we have today</p>
+          <h1 class="hero-title">View All Employers</h1>
+          <p class="hero-description">
+            Browse and manage all employer accounts
+          </p>
         </div>
       </div>
     </section>
 
-    <!-- Job Vacancies -->
-    <section class="analytics-dashboard">
-      <div class="container">
-        <h2>Applicants Management</h2>
-        <p>
-          Manage applicant accounts, verify credentials, and oversee application
-          activities
-        </p>
+    <div class="table-container">
+      <div class="back-button">
+        <a href="javascript:void(0);" onclick="window.history.back();">
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
       </div>
-    </section>
 
-    <!-- Updated buttons to navigate to proper pages -->
-    <div class="tab-group">
-      <!-- Fixed onclick syntax to avoid template conflicts -->
-      <button
-        data-url="{{ url_for('admin.applicants_for_approval') }}"
-        onclick="window.location.href=this.getAttribute('data-url')"
-      >
-        Accounts for Approval
-      </button>
-      <button
-        data-url="{{ url_for('admin.applicants_view_all') }}"
-        onclick="window.location.href=this.getAttribute('data-url')"
-      >
-        View All Applicants
-      </button>
-      <button disabled style="opacity: 0.5; cursor: not-allowed">
-        Reported Accounts
-      </button>
+      <div class="table-header">
+        <h2>All Employers</h2>
+        <p>Filter by Local or International recruitment</p>
+      </div>
+
+      <div class="search-container">
+        <div class="search-wrapper">
+          <i class="fa-solid fa-search search-icon"></i>
+          <input
+            type="text"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search by employer name..."
+            onkeyup="searchEmployers()"
+          />
+        </div>
+      </div>
+
+      <div class="filter-tabs">
+        <button class="filter-btn active" onclick="filterEmployers('all')">
+          All Employers
+        </button>
+        <button class="filter-btn" onclick="filterEmployers('local')">
+          Local Only
+        </button>
+        <button class="filter-btn" onclick="filterEmployers('international')">
+          International Only
+        </button>
+      </div>
+
+      <div class="table-wrapper">
+        {% if employers %}
+        <table id="employersTable">
+          <thead>
+            <tr>
+              <th>Employer Name</th>
+              <th>Recruitment Type</th>
+              <th>Date of Registration</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for employer in employers %}
+            <tr data-type="{{ employer.recruitment_type.lower() }}">
+              <td>{{ employer.employer_name }}</td>
+              <td>
+                {% if employer.recruitment_type == 'Local' %}
+                <span class="badge badge-local">Local</span>
+                {% else %}
+                <span class="badge badge-international">International</span>
+                {% endif %}
+              </td>
+              <td>{{ employer.created_at.strftime('%B %d, %Y') }}</td>
+              <td>
+                <!-- Fixed onclick to use data attribute -->
+                <button
+                  data-url="{{ url_for('admin.view_employer', employer_id=employer.employer_id) }}"
+                  class="btn"
+                  onclick="window.location.href=this.getAttribute('data-url')"
+                >
+                  <i class="fa-solid fa-eye"></i> View
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div id="noResultsMessage" class="empty-state" style="display: none">
+          <i
+            class="fa-solid fa-building"
+            style="font-size: 48px; color: #ccc"
+          ></i>
+          <h3>No Employers Found</h3>
+          <p id="noResultsText">No employers match your current filter</p>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i
+            class="fa-solid fa-building"
+            style="font-size: 48px; color: #ccc"
+          ></i>
+          <h3>No Employers Found</h3>
+          <p>There are no registered employers yet</p>
+        </div>
+        {% endif %}
+      </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -187,9 +250,7 @@
       </div>
     </footer>
 
-    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
-    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>

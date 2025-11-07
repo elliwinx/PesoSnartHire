@@ -87,7 +87,7 @@
         <div class="container">
           <h1 class="hero-title">Welcome, Administrator!</h1>
           <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here’s what we have today</p>
+          <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
@@ -103,10 +103,24 @@
       </div>
     </section>
 
+    <!-- Updated buttons to navigate to proper pages -->
     <div class="tab-group">
-      <button class="active" data-filter="all">Accounts for Approval</button>
-      <button class="active" data-filter="all">View All Employers</button>
-      <button class="active" data-filter="all">Reported Accounts</button>
+      <!-- Fixed onclick syntax to avoid template conflicts -->
+      <button
+        data-url="{{ url_for('admin.employers_for_approval') }}"
+        onclick="window.location.href=this.getAttribute('data-url')"
+      >
+        Accounts for Approval
+      </button>
+      <button
+        data-url="{{ url_for('admin.employers_view_all') }}"
+        onclick="window.location.href=this.getAttribute('data-url')"
+      >
+        View All Employers
+      </button>
+      <button disabled style="opacity: 0.5; cursor: not-allowed">
+        Reported Accounts
+      </button>
     </div>
 
     <!-- Footer -->

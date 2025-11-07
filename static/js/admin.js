@@ -717,3 +717,130 @@ if (confirmRejectionBtn && rejectionModal) {
     }
   });
 }
+
+let currentFilter = "all";
+
+function filterApplicants(filter) {
+  currentFilter = filter; // Store the current filter
+  const rows = document.querySelectorAll("#applicantsTable tbody tr");
+  const buttons = document.querySelectorAll(".filter-btn");
+
+  buttons.forEach((btn) => btn.classList.remove("active"));
+  event.target.classList.add("active");
+
+  applyFilters();
+}
+
+function searchApplicants() {
+  applyFilters();
+}
+
+function applyFilters() {
+  const searchValue = document
+    .getElementById("searchInput")
+    .value.toLowerCase();
+  const rows = document.querySelectorAll("#applicantsTable tbody tr");
+  const table = document.getElementById("applicantsTable");
+  const noResultsMessage = document.getElementById("noResultsMessage");
+  const noResultsText = document.getElementById("noResultsText");
+
+  let visibleCount = 0;
+
+  rows.forEach((row) => {
+    const type = row.getAttribute("data-type");
+    const name = row.cells[0].textContent.toLowerCase();
+
+    const matchesFilter =
+      currentFilter === "all" ||
+      (currentFilter === "lipeno" && type === "lipeno") ||
+      (currentFilter === "non-lipeno" && type === "non-lipeno");
+
+    const matchesSearch = searchValue === "" || name.includes(searchValue);
+
+    if (matchesFilter && matchesSearch) {
+      row.style.display = "";
+      visibleCount++;
+    } else {
+      row.style.display = "none";
+    }
+  });
+
+  // Show/hide empty state based on visible rows count
+  if (visibleCount === 0) {
+    table.style.display = "none";
+    noResultsMessage.style.display = "block";
+
+    if (searchValue) {
+      noResultsText.textContent = `No applicants found matching "${searchValue}"`;
+    } else if (currentFilter === "lipeno") {
+      noResultsText.textContent = "No Lipeño applicants found";
+    } else if (currentFilter === "non-lipeno") {
+      noResultsText.textContent = "No Non-Lipeño applicants found";
+    } else {
+      noResultsText.textContent = "No applicants match your current filter";
+    }
+  } else {
+    table.style.display = "table";
+    noResultsMessage.style.display = "none";
+  }
+}
+
+function filterEmployers(filter) {
+  currentFilter = filter; // Store the current filter
+  const rows = document.querySelectorAll("#employersTable tbody tr");
+  const buttons = document.querySelectorAll(".filter-btn");
+
+  buttons.forEach((btn) => btn.classList.remove("active"));
+  event.target.classList.add("active");
+
+  applyFilters();
+}
+
+function searchEmployers() {
+  applyFilters();
+}
+
+function applyFilters() {
+  const searchValue = document
+    .getElementById("searchInput")
+    .value.toLowerCase();
+  const rows = document.querySelectorAll("#employersTable tbody tr");
+  const table = document.getElementById("employersTable");
+  const noResultsMessage = document.getElementById("noResultsMessage");
+  const noResultsText = document.getElementById("noResultsText");
+
+  let visibleCount = 0;
+
+  rows.forEach((row) => {
+    const type = row.getAttribute("data-type");
+    const name = row.cells[0].textContent.toLowerCase();
+
+    const matchesFilter = currentFilter === "all" || type === currentFilter;
+    const matchesSearch = searchValue === "" || name.includes(searchValue);
+
+    if (matchesFilter && matchesSearch) {
+      row.style.display = "";
+      visibleCount++;
+    } else {
+      row.style.display = "none";
+    }
+  });
+
+  if (visibleCount === 0) {
+    table.style.display = "none";
+    noResultsMessage.style.display = "block";
+
+    if (searchValue) {
+      noResultsText.textContent = `No employers found matching "${searchValue}"`;
+    } else if (currentFilter === "local") {
+      noResultsText.textContent = "No local employers found";
+    } else if (currentFilter === "international") {
+      noResultsText.textContent = "No international employers found";
+    } else {
+      noResultsText.textContent = "No employers match your current filter";
+    }
+  } else {
+    table.style.display = "table";
+    noResultsMessage.style.display = "none";
+  }
+}
