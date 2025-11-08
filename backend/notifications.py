@@ -202,6 +202,11 @@ def build_redirect_url(notif, admin_prefix="/admin"):
         except Exception:
             pass
 
+            # ✅ handle residency change notifications
+    if ntype == "applicant_residency_change" and applicant_id:
+        return f"{admin_prefix}/applicants/{applicant_id}"
+
+
     # Map to admin routes
     if ntype == "applicant_approval":
         if applicant_id:

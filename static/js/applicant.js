@@ -38,20 +38,50 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // 1️⃣ TAB SWITCHING LOGIC
 document.addEventListener("DOMContentLoaded", () => {
-  const buttons = document.querySelectorAll(".tab-btn");
+  const buttons  = document.querySelectorAll(".tab-btn");
   const contents = document.querySelectorAll(".content");
   const applicantStatus = document.getElementById("applicantStatus")?.value;
 
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      contents.forEach((c) => (c.style.display = "none"));
-      const targetId = btn.getAttribute("data-target");
-      document.getElementById(targetId).style.display = "block";
-
-      buttons.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
+  function showTab(id) {
+    contents.forEach((c) => {
+      c.classList.add("hidden");
+      c.style.display = "none";
     });
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove("hidden");
+      el.style.display = "block";
+    }
+    buttons.forEach((b) => b.classList.remove("active"));
+    const btn = Array.from(buttons).find(b => b.getAttribute("data-target") === id);
+    if (btn) btn.classList.add("active");
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => showTab(btn.getAttribute("data-target")));
   });
+
+  if (applicantStatus === "Reupload") {
+    showTab("documents");
+  } else {
+    showTab("personal-information");
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const tab   = params.get("tab");
+  const focus = params.get("focus");
+  if (tab === "documents") {
+    showTab("documents");
+    if (focus === "reco") {
+      const reco = document.getElementById("recommendation_file");
+      if (reco) {
+        reco.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => reco.focus(), 200);
+      }
+    }
+  }
+});
+
 
   // Default tab depending on applicant status
   if (applicantStatus === "Reupload") {
@@ -60,8 +90,33 @@ document.addEventListener("DOMContentLoaded", () => {
   } else {
     document.getElementById("personal-information").style.display = "block";
     document.getElementById("documents").style.display = "none";
+  };
+
+  // URL-driven activation (e.g., ?tab=documents&focus=reco)
+const params = new URLSearchParams(window.location.search);
+const tab = params.get("tab");
+const focus = params.get("focus");
+
+if (tab === "documents") {
+  document.getElementById("personal-information").style.display = "none";
+  document.getElementById("documents").style.display = "block";
+
+  buttons.forEach((b) => b.classList.remove("active"));
+  const docsBtn = Array.from(buttons).find(
+    (b) => b.getAttribute("data-target") === "documents"
+  );
+  if (docsBtn) docsBtn.classList.add("active");
+
+  if (focus === "reco") {
+    const reco = document.getElementById("recommendation_file");
+    if (reco) {
+      reco.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => reco.focus(), 200);
+    }
   }
-});
+}
+
+
 
 // 2️⃣ EDIT / SAVE / CANCEL LOGIC
 document.addEventListener("DOMContentLoaded", () => {
@@ -318,3 +373,42 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   ``;
 });
+
+// ========== RESIDENCY TYPE CHANGE HANDLER ==========
+document.addEventListener("DOMContentLoaded", () => {
+  const cityInput = document.querySelector("input[name='city']")
+  const recommendationContainer = document.getElementById("recommendation-upload-container")
+  const recommendationFile = document.getElementById("recommendation_file")
+
+  if (!cityInput || !recommendationContainer) return
+
+  // Function to check if city is Lipa and update recommendation letter visibility
+  function updateResidencyBasedOnCity() {
+    const city = cityInput.value.trim().toUpperCase()
+    const isLipaCity = city === "LIPA CITY"
+
+    if (isLipaCity) {
+      // Lipeño - hide recommendation letter
+      recommendationContainer.style.display = "none"
+      if (recommendationFile) {
+        recommendationFile.removeAttribute("required")
+        recommendationFile.value = ""
+      }
+    } else {
+      // Non-Lipeño - show recommendation letter
+      recommendationContainer.style.display = "block"
+      if (recommendationFile) {
+        recommendationFile.setAttribute("required", "true")
+      }
+    }
+  }
+
+  // Listen for city input changes
+  cityInput.addEventListener("input", updateResidencyBasedOnCity)
+  cityInput.addEventListener("blur", updateResidencyBasedOnCity)
+
+  // Initial check on page load
+  updateResidencyBasedOnCity()
+})
+
+

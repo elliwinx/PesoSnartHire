@@ -961,3 +961,172 @@ body {
     font-size: 12px;
   }
 }
+
+/* ========== AUTOMATIC RESIDENCY DETECTION STYLES ========== */
+
+/* City input field with residency indicator */
+input[name="city"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+input[name="city"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.field-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Documents container */
+.documents-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.document-item {
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+  transition: all 0.3s ease;
+}
+
+.document-item#recommendation-upload-container {
+  border-left-color: #ffc107;
+  background-color: #fffbf0;
+}
+
+.document-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.document-header label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.document-header .required {
+  color: #dc3545;
+  margin-left: 4px;
+}
+
+.document-header a {
+  font-size: 13px;
+  color: #007bff;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.document-header a:hover {
+  color: #0056b3;
+  text-decoration: underline;
+}
+
+/* File input styling */
+.file-input {
+  width: 100%;
+  padding: 10px;
+  border: 2px dashed #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: #fff;
+}
+
+.file-input:hover {
+  border-color: #007bff;
+  background-color: #f0f8ff;
+}
+
+.file-input:focus {
+  outline: none;
+  border-color: #007bff;
+  border-style: solid;
+}
+
+.file-input[required] {
+  border-color: #ffc107;
+}
+
+.file-hint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+/* Notification animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .document-item {
+    padding: 12px;
+  }
+
+  .document-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+/* Make both class names behave the same */
+.documents,
+.documents-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Utility: easy show/hide from JS or Jinja */
+.hidden {
+  display: none !important;
+}
+
+/* If you ever mark the input required via aria-required */
+.file-input[aria-required="true"] {
+  border-color: #ffc107;
+}
+
+
+
