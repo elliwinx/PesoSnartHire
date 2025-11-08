@@ -591,3 +591,95 @@ def register():
         return redirect(url_for("applicants.register"))
 
     return render_template("Landing_Page/applicant_registration.html")
+
+@applicants_bp.route("/deactivate", methods=["POST"])
+def deactivate_applicant_account():
+    if "applicant_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    applicant_id = session["applicant_id"]
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        # Get applicant details
+        cursor.execute("""
+            SELECT applicant_id AS id,
+                   CONCAT(first_name, ' ',
+                          IFNULL(middle_name, ''), ' ',
+                          last_name) AS name,
+                   email,
+                   password_hash AS password,
+                   phone
+            FROM applicants
+            WHERE applicant_id = %s
+        """, (applicant_id,))
+        applicant = cursor.fetchone()
+
+        if not applicant:
+            return jsonify({"success": False, "message": "Applicant not found"}), 404
+
+        # Remove old record if exists, then insert into deactivated_users
+        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (applicant["id"],))
+        cursor.execute("""
+            INSERT INTO deactivated_users (id, name, email, password, phone, deactivated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
+        """, (applicant["id"], applicant["name"], applicant["email"], applicant["password"], applicant["phone"]))
+
+        # Set inactive + timestamp
+        cursor.execute("""
+            UPDATE applicants
+            SET is_active = 0, deactivated_at = NOW()
+            WHERE applicant_id = %s
+        """, (applicant_id,))
+
+        conn.commit()
+        session.clear()
+
+        return jsonify({"success": True, "message": "Your account has been deactivated and will be permanently deleted after 30 days."})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
+
+@applicants_bp.route("/reactivate", methods=["POST"])
+def reactivate_applicant_account():
+    data = request.get_json()
+    email = data.get("email")
+
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute("SELECT * FROM deactivated_users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({
+                "success": False,
+                "message": "No deactivated account found or account already permanently deleted."
+            }), 404
+
+        cursor.execute("""
+            UPDATE applicants
+            SET is_active = 1, deactivated_at = NULL
+            WHERE applicant_id = %s
+        """, (user["id"],))
+
+        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (user["id"],))
+
+        conn.commit()
+
+        return jsonify({"success": True, "message": "Your account has been successfully reactivated."})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+
+    finally:
+        cursor.close()
+        conn.close()

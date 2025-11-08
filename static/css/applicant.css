@@ -920,6 +920,27 @@ body {
   pointer-events: none;
 }
 
+div:where(.swal2-icon).swal2-warning {
+    border-color: maroon !important;
+    color: maroon !important;
+}
+
+.swal2-confirm {
+    background-color: maroon !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+.swal2-cancel {
+    background-color: #888 !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
 /* responsive: stack on small screens */
 @media (max-width: 880px) {
   .info-row {

@@ -357,3 +357,57 @@ document.addEventListener("DOMContentLoaded", () => {
     img.style.opacity = "1";
   });
 });
+
+document.getElementById("deactivateAccountBtn").addEventListener("click", async () => {
+    // 1️⃣ Ask for confirmation
+    const confirmDelete = await Swal.fire({
+        title: "Are you sure?",
+        text: "Your account will be permanently deleted after 30 days.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#8b0d0d",
+        cancelButtonColor: "gray",
+        confirmButtonText: "Confirm",
+        cancelButtonText: "Cancel"
+    });
+
+    // 2️⃣ Stop if user canceled
+    if (!confirmDelete.isConfirmed) return;
+
+    // 3️⃣ Show loader
+    showLoader("Deactivating account — please wait…");
+
+    try {
+        // 4️⃣ Call backend
+        const res = await fetch("/employers/deactivate", { method: "POST" });
+        const data = await res.json();
+
+        if (data.success) {
+            // 5️⃣ Keep loader visible for a short time (1.5s) before logout
+            setTimeout(() => {
+                hideLoader();
+                window.location.href = "/"; // logout/redirect
+            }, 1500);
+        } else {
+            hideLoader();
+            Swal.fire("Error", data.message, "error");
+        }
+
+    } catch (err) {
+        hideLoader();
+        Swal.fire("Error", "Something went wrong. Please try again later.", "error");
+    }
+});
+
+// ✅ Loader control functions
+function showLoader(text = "Processing — please wait...") {
+    const loader = document.getElementById("ajaxLoader");
+    const loaderText = document.getElementById("ajaxLoaderText");
+    if (loaderText) loaderText.textContent = text;
+    loader.style.display = "flex";
+}
+
+function hideLoader() {
+    const loader = document.getElementById("ajaxLoader");
+    loader.style.display = "none";
+}

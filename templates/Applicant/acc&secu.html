@@ -103,7 +103,7 @@
           <i class="fa-solid fa-bars" id="menuToggle"></i>
           <!--Hidden Menu-->
           <div class="dropdown-menu" id="dropdownMenu">
-            <a href="#">Deactivate Account</a>
+            <a href="#" id="deactivateApplicantBtn">Deactivate Account</a>
             <a href="{{ url_for('forgot_password.forgot_password', type='applicant') }}"
               >Change password</a
             >
@@ -415,5 +415,6 @@
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </body>
 </html>

@@ -85,7 +85,7 @@
         <div class="right">
           <i class="fa-solid fa-bars" id="menuToggle"></i>
           <div class="dropdown-menu" id="dropdownMenu">
-            <a href="#">Deactivate Account</a>
+            <a href="#" id="deactivateAccountBtn">Deactivate Account</a>
             <a href="{{ url_for('forgot_password.forgot_password', type='employer') }}"
               >Change password</a
             >
@@ -452,5 +452,6 @@
     {% include 'partials/loader.html' %}
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employers_account.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </body>
 </html>

@@ -695,3 +695,97 @@ def register():
             return redirect(url_for("employers.register"))
 
     return render_template("Landing_Page/employer_registration.html")
+
+@employers_bp.route("/deactivate", methods=["POST"])
+def deactivate_employer_account():
+    if "employer_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    employer_id = session["employer_id"]
+
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT employer_id AS id, employer_name AS name, email, password_hash AS password, phone
+            FROM employers
+            WHERE employer_id = %s
+        """, (employer_id,))
+        employer = cursor.fetchone()
+
+        if not employer:
+            return jsonify({"success": False, "message": "Employer not found"}), 404
+
+        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (employer["id"],))
+        cursor.execute("""
+            INSERT INTO deactivated_users (id, name, email, password, phone, deactivated_at)
+            VALUES (%s, %s, %s, %s, %s, NOW())
+        """, (
+            employer["id"], 
+            employer["name"], 
+            employer["email"], 
+            employer["password"], 
+            employer["phone"]
+        ))
+
+        cursor.execute("""
+            UPDATE employers
+            SET is_active = 0, deactivated_at = NOW()
+            WHERE employer_id = %s
+        """, (employer_id,))
+
+        conn.commit()
+        session.clear()
+
+        return jsonify({
+            "success": True,
+            "message": "Your account has been deactivated and will be permanently deleted after 30 days."
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@employers_bp.route("/reactivate", methods=["POST"])
+def reactivate_employer_account():
+    data = request.get_json()
+    email = data.get("email")
+
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute("SELECT * FROM deactivated_users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({
+                "success": False,
+                "message": "No deactivated account found or account already permanently deleted."
+            }), 404
+
+        cursor.execute("""
+            UPDATE employers
+            SET is_active = 1, deactivated_at = NULL
+            WHERE employer_id = %s
+        """, (user["id"],))
+
+        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (user["id"],))
+
+        conn.commit()
+
+        return jsonify({"success": True, "message": "Your account has been successfully reactivated."})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+
+    finally:
+        cursor.close()
+        conn.close()

@@ -1016,6 +1016,29 @@ body {
   font-size: 1rem;
 }
 
+/* === SweetAlert2 Maroon Theme === */
+div:where(.swal2-icon).swal2-warning {
+    border-color: maroon !important;
+    color: maroon !important;
+}
+
+.swal2-confirm {
+    background-color: maroon !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+.swal2-cancel {
+    background-color: #888 !important;
+    border: none !important;
+    color: #fff !important;
+    font-weight: 600;
+    border-radius: 6px;
+}
+
+
 /* Responsive grid columns for smaller screens */
 @media (max-width: 1024px) {
   .four-columns {
