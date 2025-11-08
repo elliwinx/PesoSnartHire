@@ -579,6 +579,7 @@ def register():
 
     return render_template("Landing_Page/applicant_registration.html")
 
+
 # ========= ACCOUNT & SECURITY (city-based residency) =========
 @applicants_bp.route("/account-security", methods=["GET", "POST"], endpoint="account_security")
 def account_security():
@@ -593,7 +594,6 @@ def account_security():
         flash("Database connection failed.", "danger")
         return redirect(url_for("applicants.applicant_home"))
 
-    # Fetch current applicant (dict-like row)
     applicant = run_query(
         conn,
         "SELECT * FROM applicants WHERE applicant_id=%s",
@@ -603,42 +603,44 @@ def account_security():
     if not applicant:
         conn.close()
         flash("Applicant not found.", "error")
-        return redirect(url_for("applicants.applicant_login"))
+        return redirect(url_for("home"))
 
     if request.method == "POST":
         try:
             # --- basic fields
-            email      = request.form.get("email", "")
-            contact_no = request.form.get("contact_number", "")
-            address    = request.form.get("address", "")
-            city_raw   = (request.form.get("city") or "").strip()
-            barangay   = request.form.get("barangay", "")
-            province   = request.form.get("province", "")
-            education  = request.form.get("education", "")
+            first_name = request.form.get("first_name", "")
+            middle_name = request.form.get("middle_name", "")
+            last_name = request.form.get("last_name", "")
+            age = int(request.form.get("age", 0)
+                      ) if request.form.get("age") else None
+            sex = request.form.get("sex", "")
+            phone = request.form.get("phone", "")
+            email = request.form.get("email", "")
+            barangay = request.form.get("barangay", "")
+            city_raw = (request.form.get("city") or "").strip()
+            province = request.form.get("province", "")
+            education = request.form.get("education", "")
 
-            is_pwd     = int(request.form.get("is_pwd", 0))
-            pwd_type   = request.form.get("disability_type") if is_pwd else None
-            has_work   = int(request.form.get("has_work_exp", 0))
-            years_exp  = request.form.get("work_duration") if has_work else None
+            is_pwd = int(request.form.get("is_pwd", 0))
+            pwd_type = request.form.get("disability_type") if is_pwd else None
+            has_work = int(request.form.get("has_work_exp", 0))
+            years_exp = request.form.get("work_duration") if has_work else None
             reg_reason = request.form.get("registration_reason", "")
 
             # --- files
             profile_file = request.files.get("profile_pic")
-            resume_file  = request.files.get("resume_file")
+            resume_file = request.files.get("resume_file")
 
-            # Pick the first non-empty reco file (handles duplicate inputs safely)
             reco_file = None
             for f in request.files.getlist("recommendation_file"):
                 if f and getattr(f, "filename", ""):
                     reco_file = f
                     break
 
-            # keep existing paths unless replaced
             profile_path = applicant["profile_pic_path"]
-            resume_path  = applicant["resume_path"]
-            reco_path    = applicant["recommendation_letter_path"]
+            resume_path = applicant["resume_path"]
+            reco_path = applicant["recommendation_letter_path"]
 
-            # save/replace profile
             if profile_file and profile_file.filename:
                 if profile_path:
                     old = os.path.join("static", profile_path)
@@ -646,7 +648,6 @@ def account_security():
                         os.remove(old)
                 profile_path = save_file(profile_file, "profile_pics")
 
-            # save/replace resume
             if resume_file and resume_file.filename:
                 if resume_path:
                     old = os.path.join("static", resume_path)
@@ -654,95 +655,131 @@ def account_security():
                         os.remove(old)
                 resume_path = save_file(resume_file, "resumes")
 
-            # --- residency compute
-            is_from_lipa_new = 1 if city_raw.upper() == "LIPA CITY" else 0
-            was_lipa         = 1 if applicant["is_from_lipa"] else 0
-            status           = applicant["status"]
+            is_from_lipa_new = int(request.form.get("is_from_lipa", 0))
+            was_lipa = 1 if applicant["is_from_lipa"] else 0
+            status = applicant["status"]
+            is_active = applicant.get("is_active", 1)
 
-            # ===== Residency change handling =====
-            if was_lipa != is_from_lipa_new:
+            residency_changed = (was_lipa != is_from_lipa_new)
+
+            if residency_changed and is_from_lipa_new == 0:
+                if not (reco_file and reco_file.filename):
+                    conn.close()
+                    flash(
+                        "You are changing your residency to Non-Lipeño. Please upload your recommendation letter before saving.", "warning")
+                    return redirect(url_for("applicants.account_security") + "?tab=documents&focus=reco")
+
+            if residency_changed:
                 if is_from_lipa_new == 1:
-                    # Non-Lipeño -> Lipeño (auto-approve, remove reco)
                     if reco_path:
                         old = os.path.join("static", reco_path)
                         if os.path.exists(old):
                             os.remove(old)
                     reco_path = None
                     status = "Approved"
+                    is_active = 1
 
-                    # notify admin
-                    create_notification(
-                        notification_type="applicant_residency_change",
-                        title="Applicant auto-approved (Lipeño)",
-                        message=f"Applicant #{applicant_id} switched to Lipeño and was auto-approved.",
-                        related_ids=[applicant_id],
-                        residency_type="Lipeno",
-                        applicant_id=applicant_id,
+                    update_query = """
+                    UPDATE notifications
+                    SET title = %s, message = %s, residency_type = %s, is_read = 0, updated_at = NOW()
+                    WHERE applicant_id = %s AND notification_type = 'applicant_approval'
+                    """
+                    params = (
+                        "Applicant Residency Changed to Lipeño",
+                        f"Applicant #{applicant_id} ({first_name} {last_name}) changed residency to Lipeño and was auto-approved.",
+                        "Lipeno",
+                        applicant_id
                     )
-                    flash("Your residency has been updated to Lipeño. Your account is now approved.", "success")
+                    run_query(conn, update_query, params)
+
+                    flash(
+                        "Your residency has been updated to Lipeño. Your account is now approved and active.", "success")
 
                 else:
-                    # Lipeño -> Non-Lipeño (needs re-verification)
-                    status = "Reupload"  # UI + admin know doc review is needed
+                    # Lipeño -> Non-Lipeño: require approval and save recommendation letter
+                    status = "Pending"
+                    is_active = 0
 
-                    # notify admin
-                    create_notification(
-                        notification_type="applicant_residency_change",
-                        title="Applicant needs re-verification (Non-Lipeño)",
-                        message=f"Applicant #{applicant_id} switched to Non-Lipeño. Please review their recommendation letter.",
-                        related_ids=[applicant_id],
-                        residency_type="Non-Lipeno",
-                        applicant_id=applicant_id,
+                    if reco_path:
+                        old = os.path.join("static", reco_path)
+                        if os.path.exists(old):
+                            os.remove(old)
+                    reco_path = save_file(reco_file, "recommendations")
+
+                    update_query = """
+                    UPDATE notifications
+                    SET title = %s, message = %s, residency_type = %s, is_read = 0, updated_at = NOW()
+                    WHERE applicant_id = %s AND notification_type = 'applicant_approval'
+                    """
+                    params = (
+                        "Applicant Residency Changed - Needs Re-verification",
+                        f"Applicant {first_name} {last_name} changed residency to Non-Lipeño. Recommendation letter uploaded and awaiting approval.",
+                        "Non-Lipeno",
+                        applicant_id
                     )
+                    run_query(conn, update_query, params)
 
-                    # Hint only if wala pang inattach na reco ngayon
-                    if not (reco_file and getattr(reco_file, "filename", "")):
-                        flash("Your residency has been updated to Non-Lipeño. Please upload a recommendation letter.", "info")
+                    flash("Your residency has been changed to Non-Lipeño. Your recommendation letter has been uploaded. Please wait for admin approval. You will be logged out.", "warning")
 
-            # Save reco if Non-Lipeño and provided (works both on first switch and later)
-            if is_from_lipa_new == 0 and reco_file and reco_file.filename:
+            elif is_from_lipa_new == 0 and reco_file and reco_file.filename:
                 if reco_path:
                     old = os.path.join("static", reco_path)
                     if os.path.exists(old):
                         os.remove(old)
                 reco_path = save_file(reco_file, "recommendations")
 
-            # --- persist (WITH address)
+                if status == "Pending":
+                    update_query = """
+                    UPDATE notifications
+                    SET title = %s, message = %s, is_read = 0, updated_at = NOW()
+                    WHERE applicant_id = %s AND notification_type = 'applicant_approval'
+                    """
+                    params = (
+                        "Non-Lipeño Applicant Document Uploaded",
+                        f"Applicant #{applicant_id} ({first_name} {last_name}) has uploaded their recommendation letter and is ready for review.",
+                        applicant_id
+                    )
+                    run_query(conn, update_query, params)
+
             run_query(
                 conn,
                 """
                 UPDATE applicants SET
-                    email=%s, phone=%s,
-                    address=%s, city=%s, barangay=%s, province=%s,
+                    first_name=%s, middle_name=%s, last_name=%s,
+                    age=%s, sex=%s,
+                    phone=%s, email=%s,
+                    barangay=%s, city=%s, province=%s,
                     education=%s,
                     is_pwd=%s, pwd_type=%s, has_work_exp=%s, years_experience=%s,
                     registration_reason=%s,
                     profile_pic_path=%s, resume_path=%s, recommendation_letter_path=%s,
-                    is_from_lipa=%s, status=%s, updated_at=NOW()
+                    is_from_lipa=%s, status=%s, is_active=%s, updated_at=NOW()
                 WHERE applicant_id=%s
                 """,
                 (
-                    email, contact_no,
-                    address, city_raw, barangay, province,
+                    first_name, middle_name, last_name,
+                    age, sex,
+                    phone, email,
+                    barangay, city_raw, province,
                     education,
                     is_pwd, pwd_type, has_work, years_exp,
                     reg_reason,
                     profile_path, resume_path, reco_path,
-                    is_from_lipa_new, status,
+                    is_from_lipa_new, status, is_active,
                     applicant_id,
                 ),
             )
             conn.commit()
 
-            # reflect new status for tab logic
             session["applicant_status"] = status
 
-            # If still Non-Lipeño and missing reco, keep user on Documents tab
-            if is_from_lipa_new == 0 and not reco_path:
+            if residency_changed and is_from_lipa_new == 0:
                 conn.close()
-                return redirect(url_for("applicants.account_security") + "?tab=documents&focus=reco")
+                session.clear()
+                return redirect(url_for("home"))
 
             conn.close()
+            flash("Your account details have been updated successfully.", "success")
             return redirect(url_for("applicants.account_security"))
 
         except Exception as e:
@@ -751,7 +788,6 @@ def account_security():
             flash(f"Error updating information: {e}", "danger")
             return redirect(url_for("applicants.account_security"))
 
-    # GET → fresh fetch then render
     applicant = run_query(
         conn,
         "SELECT * FROM applicants WHERE applicant_id=%s",
@@ -760,5 +796,3 @@ def account_security():
     )
     conn.close()
     return render_template("Applicant/acc&secu.html", applicant=applicant)
-
-

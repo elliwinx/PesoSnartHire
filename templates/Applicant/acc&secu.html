@@ -195,6 +195,20 @@
               </div>
             </div>
 
+            <div class="full">
+              <label>Are you from Lipa City, Batangas?</label>
+              <div class="radio-row">
+                <label class="radio-inline">
+                  <input type="radio" id="residency_yes" name="is_from_lipa" value="1" {% if applicant.is_from_lipa %}checked{% endif %} disabled />
+                  Yes 
+                </label>
+                <label class="radio-inline">
+                  <input type="radio" id="residency_no" name="is_from_lipa" value="0" {% if not applicant.is_from_lipa %}checked{% endif %} disabled />
+                  No 
+                </label>
+              </div>
+            </div>
+
             <!-- Barangay / City / Province -->
             <div>
               <label>Barangay</label>
@@ -283,56 +297,68 @@
         </div>
 
         <!-- ===== DOCUMENTS (city-based residency) ===== -->
-<div id="documents" class="content hidden">
-  <div class="documents">
+        <div id="documents" class="content hidden">
+          <!-- Banner hidden by default, shown only on residency change or Reupload status -->
+          <div id="residency-warning-banner" 
+              class="residency-warning-banner"
+              style="display: none;">
+            <strong id="banner-title">
+              {% if session.get('applicant_status') == 'Reupload' %}
+                Document Reupload Required
+              {% else %}
+                Residency Type Changed
+              {% endif %}
+            </strong>
+            <p style="margin:8px 0 0 0;font-size:14px;" id="banner-message">
+              {% if session.get('applicant_status') == 'Reupload' %}
+                Please reupload the requested document(s) below. Once submitted, the admin will review your documents and update your status.
+              {% else %}
+                Your residency type has changed. Please review the document requirements below and upload any necessary documents.
+              {% endif %}
+            </p>
+          </div>
 
-    <!-- Resume (always) -->
-    <div class="document-item">
-      <div class="document-header">
-        <label>Resume</label>
-        {% if applicant.resume_path %}
-          <a href="{{ url_for('static', filename=applicant.resume_path) }}"
-             target="_blank" rel="noopener">View</a>
-        {% endif %}
-      </div>
-      <input type="file" name="resume_file" id="resume_file"
-             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" class="file-input">
-      <small class="file-hint">PDF/DOC/DOCX (or image). Always required.</small>
-    </div>
+          <div class="documents">
+            <!-- Resume (always shown) -->
+            <div class="document-item">
+              <div class="document-header">
+                <label>Resume</label>
+                {% if applicant.resume_path %}
+                  <a href="{{ url_for('static', filename=applicant.resume_path) }}"
+                    target="_blank" rel="noopener">View</a>
+                {% endif %}
+              </div>
+              <input type="file" name="resume_file" id="resume_file"
+                    accept=".pdf" class="file-input">
+              <!--<small class="file-hint">PDF format only</small>-->
+            </div>
 
-   <!-- Recommendation Letter (one and only input) -->
-<div class="document-item" id="recommendation-upload-container"
-     {% if applicant.is_from_lipa %}style="display:none"{% else %}style="display:block"{% endif %}>
-  <div class="document-header">
-    <label>Recommendation Letter</label>
-    {% if applicant.recommendation_letter_path %}
-      <a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}"
-         target="_blank" rel="noopener">View</a>
-    {% endif %}
-  </div>
+            <!-- Recommendation Letter - only shown for Non-Lipeño -->
+            <div class="document-item" id="recommendation-upload-container"
+                {% if applicant.is_from_lipa %}style="display:none"{% else %}style="display:block"{% endif %}>
+              <div class="document-header">
+                <label>Recommendation Letter</label>
+                {% if applicant.recommendation_letter_path %}
+                  <a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}"
+                    target="_blank" rel="noopener">View</a>
+                {% endif %}
+              </div>
 
-  <input
-    type="file"
-    id="recommendation_file"
-    name="recommendation_file"
-    accept=".pdf,.doc,.docx"
-    class="file-input"
-    {% if not applicant.is_from_lipa %}required{% endif %}
-  />
+              <input
+                type="file"
+                id="recommendation_file"
+                name="recommendation_file"
+                accept=".pdf"
+                class="file-input"
+                {% if not applicant.is_from_lipa %}required{% endif %}
+              />
 
-  <small class="file-hint">
-    Required only for Non-Lipeño (PDF/DOC/DOCX).
-  </small>
-</div>
-
-
-
-  </div>
-</div>
-
-
-
-
+              <!--<small class="file-hint">
+                Required for Non-Lipeño residents (PDF format only)
+              </small>-->
+            </div>
+          </div>
+        </div>
 
         <!-- Edit controls (only in personal info tab) -->
         <!-- Show Upload button for Reupload status, Edit button for Approved status -->
