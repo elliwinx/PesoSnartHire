@@ -395,10 +395,22 @@ def account_security():
             # --- File upload helper
             def handle_upload(file, current_path, folder):
                 if file and file.filename:
+                    # Normalize stored path to avoid issues with leading slashes
                     if current_path:
-                        old_path = os.path.join("static", current_path)
-                        if os.path.exists(old_path):
-                            os.remove(old_path)
+                        try:
+                            normalized = current_path.lstrip('/\\')
+                            old_path = os.path.normpath(
+                                os.path.join("static", normalized))
+                            if os.path.exists(old_path):
+                                os.remove(old_path)
+                                print(
+                                    f"[account_security] Deleted old file: {old_path}")
+                            else:
+                                print(
+                                    f"[account_security] Old file not found for deletion: {old_path}")
+                        except Exception as e:
+                            print(
+                                f"[account_security] Error deleting old file {current_path}: {e}")
                     return save_file(file, folder)
                 return current_path
 
@@ -543,6 +555,18 @@ def submit_reupload():
     # Collect uploaded files
     files_to_upload = {k: v for k,
                        v in request.files.items() if v and v.filename}
+
+    # <CHANGE> DEBUG: Print what files were actually received
+    print(
+        f"[submit_reupload] Files received from form: {list(files_to_upload.keys())}")
+    print(
+        f"[submit_reupload] ALL request.files keys: {list(request.files.keys())}")
+    for key in request.files.keys():
+        file = request.files.get(key)
+        print(
+            f"[submit_reupload]   - {key}: filename={file.filename if file else 'None'}, size={len(file.read()) if file else 0}")
+        file.seek(0)  # Reset file pointer
+
     if not files_to_upload:
         flash("No files selected for reupload.", "warning")
         return redirect(url_for("employers.account_security"))
@@ -571,31 +595,36 @@ def submit_reupload():
             "philiobnet_registration": ("philiobnet_registration_path", "philiobnet_registrations"),
             "job_orders": ("job_orders_of_client_path", "job_orders"),
             "job_orders_of_client": ("job_orders_of_client_path", "job_orders"),
-            "dole_no_pending": ("dole_no_pending_case_path", "dole_documents"),
-            "dole_authority": ("dole_authority_to_recruit_path", "dole_documents"),
-            "dmw_no_pending": ("dmw_no_pending_case_path", "dmw_documents"),
-            "license_to_recruit": ("license_to_recruit_path", "dmw_documents"),
+            # <CHANGE> Fixed: match exact form field names
+            "dole_no_pending_case": ("dole_no_pending_case_path", "dole_documents"),
+            "dole_authority_to_recruit": ("dole_authority_to_recruit_path", "dole_documents"),
+            "dmw_no_pending_case": ("dmw_no_pending_case_path", "dmw_documents"),
+            "dmw_license_to_recruit": ("license_to_recruit_path", "dmw_documents"),
         }
 
         new_files = {}  # store new file paths
+        files_to_delete = {}  # store old files to delete after successful upload
 
-        for key, file in request.files.items():
+        for key, file in files_to_upload.items():
             if key not in file_mapping:
                 continue
 
             db_field, folder = file_mapping[key]
 
-            # ✅ Only delete if the *same* file type is being reuploaded
             if file and file.filename:
-                old_path = employer_data.get(db_field)
-                if old_path:
-                    full_old_path = os.path.join("static", old_path)
-                    if os.path.exists(full_old_path):
-                        os.remove(full_old_path)
-
-                # Save new file
+                # Save new file FIRST
                 new_path = save_file(file, folder)
-                new_files[db_field] = new_path
+                if new_path:
+                    new_files[db_field] = new_path
+                    # Track old file for deletion only after new save succeeds
+                    old_path = employer_data.get(db_field)
+                    if old_path:
+                        files_to_delete[db_field] = old_path
+                    print(f"[submit_reupload] New file saved: {new_path}")
+                else:
+                    flash(
+                        f"Failed to upload {key}. Please try again.", "danger")
+                    return redirect(url_for("employers.account_security"))
 
         # Prepare UPDATE data, keeping old files if no new upload
         required_fields = [
@@ -614,20 +643,45 @@ def submit_reupload():
             update_data[field] = new_files.get(
                 field) or employer_data.get(field)
 
-        # Reset status
+        # Reset status to Pending for re-review
         update_data["status"] = "Pending"
         update_data["is_active"] = 0
 
-        # Build and execute UPDATE
         set_clause = ", ".join([f"{k}=%s" for k in update_data.keys()])
         values = list(update_data.values()) + [employer_id]
 
-        run_query(
+        result = run_query(
             conn,
             f"UPDATE employers SET {set_clause} WHERE employer_id=%s",
             values
         )
-        conn.commit()
+
+        if result:
+            conn.commit()
+            print(
+                f"[submit_reupload] Database committed successfully for employer {employer_id}")
+
+            # NOW delete old files only after successful commit
+            for db_field, old_path in files_to_delete.items():
+                try:
+                    normalized = old_path.lstrip('/\\')
+                    full_old_path = os.path.normpath(
+                        os.path.join("static", normalized))
+                    if os.path.exists(full_old_path):
+                        os.remove(full_old_path)
+                        print(
+                            f"[submit_reupload] Deleted old file after DB commit: {full_old_path}")
+                    else:
+                        print(
+                            f"[submit_reupload] Old file not found: {full_old_path}")
+                except Exception as e:
+                    print(
+                        f"[submit_reupload] Error deleting old file {old_path}: {e}")
+        else:
+            print(
+                f"[submit_reupload] Database update failed for employer {employer_id}")
+            flash("Failed to update employer record. No changes were saved.", "danger")
+            return redirect(url_for("employers.account_security"))
 
         # Update notifications for admin
         run_query(
@@ -650,9 +704,9 @@ def submit_reupload():
 
     except Exception as e:
         conn.rollback()
-        print(f"[submit_reupload] Error: {e}")
+        print(f"[submit_reupload] Exception occurred: {e}")
         flash(f"Error during reupload: {e}", "danger")
-        return redirect(url_for("home"))
+        return redirect(url_for("employers.account_security"))
 
     finally:
         conn.close()
@@ -696,6 +750,7 @@ def register():
 
     return render_template("Landing_Page/employer_registration.html")
 
+
 @employers_bp.route("/deactivate", methods=["POST"])
 def deactivate_employer_account():
     if "employer_id" not in session:
@@ -707,33 +762,20 @@ def deactivate_employer_account():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        cursor.execute("""
-            SELECT employer_id AS id, employer_name AS name, email, password_hash AS password, phone
-            FROM employers
-            WHERE employer_id = %s
-        """, (employer_id,))
+        cursor.execute(
+            """SELECT employer_id AS id, employer_name AS name, email, password_hash AS password, phone FROM employers WHERE employer_id = %s""", (employer_id,))
         employer = cursor.fetchone()
 
         if not employer:
             return jsonify({"success": False, "message": "Employer not found"}), 404
 
-        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (employer["id"],))
-        cursor.execute("""
-            INSERT INTO deactivated_users (id, name, email, password, phone, deactivated_at)
-            VALUES (%s, %s, %s, %s, %s, NOW())
-        """, (
-            employer["id"], 
-            employer["name"], 
-            employer["email"], 
-            employer["password"], 
-            employer["phone"]
-        ))
+        cursor.execute(
+            "DELETE FROM deactivated_users WHERE id = %s", (employer["id"],))
+        cursor.execute("""INSERT INTO deactivated_users (id, name, email, password, phone, deactivated_at) VALUES (%s, %s, %s, %s, %s, NOW())""",
+                       (employer["id"], employer["name"], employer["email"], employer["password"], employer["phone"]))
 
-        cursor.execute("""
-            UPDATE employers
-            SET is_active = 0, deactivated_at = NOW()
-            WHERE employer_id = %s
-        """, (employer_id,))
+        cursor.execute(
+            """UPDATE employers SET is_active = 0, deactivated_at = NOW() WHERE employer_id = %s""", (employer_id,))
 
         conn.commit()
         session.clear()
@@ -761,7 +803,8 @@ def reactivate_employer_account():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        cursor.execute("SELECT * FROM deactivated_users WHERE email = %s", (email,))
+        cursor.execute(
+            "SELECT * FROM deactivated_users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         if not user:
@@ -770,13 +813,11 @@ def reactivate_employer_account():
                 "message": "No deactivated account found or account already permanently deleted."
             }), 404
 
-        cursor.execute("""
-            UPDATE employers
-            SET is_active = 1, deactivated_at = NULL
-            WHERE employer_id = %s
-        """, (user["id"],))
+        cursor.execute(
+            """UPDATE employers SET is_active = 1, deactivated_at = NULL WHERE employer_id = %s""", (user["id"],))
 
-        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (user["id"],))
+        cursor.execute(
+            "DELETE FROM deactivated_users WHERE id = %s", (user["id"],))
 
         conn.commit()
 

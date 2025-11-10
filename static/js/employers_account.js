@@ -3,6 +3,9 @@
 // Mirrors applicant flow: Tab switching, Edit/Save/Cancel, Company logo hover upload
 // ============================================
 
+// Import Swal from SweetAlert2
+const Swal = window.Swal;
+
 // ========== DROPDOWN MENU ==========
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -258,9 +261,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const recruitmentSelect = document.getElementById("recruitment_type");
   const doleFields = document.querySelectorAll(".dole-docs");
   const dmwFields = document.querySelectorAll(".dmw-docs");
+  const employerStatus = document
+    .querySelector(".form-card")
+    ?.getAttribute("data-employer-status");
 
   function updateDocumentVisibility() {
     const type = recruitmentSelect.value;
+
+    if (employerStatus === "Reupload") {
+      doleFields.forEach((el) => (el.style.display = "block"));
+      dmwFields.forEach((el) => (el.style.display = "block"));
+      return;
+    }
 
     if (type === "Local") {
       doleFields.forEach((el) => (el.style.display = "block"));
@@ -358,17 +370,19 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-document.getElementById("deactivateAccountBtn").addEventListener("click", async () => {
+document
+  .getElementById("deactivateAccountBtn")
+  .addEventListener("click", async () => {
     // 1️⃣ Ask for confirmation
     const confirmDelete = await Swal.fire({
-        title: "Are you sure?",
-        text: "Your account will be permanently deleted after 30 days.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#8b0d0d",
-        cancelButtonColor: "gray",
-        confirmButtonText: "Confirm",
-        cancelButtonText: "Cancel"
+      title: "Are you sure?",
+      text: "Your account will be permanently deleted after 30 days.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#8b0d0d",
+      cancelButtonColor: "gray",
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
     });
 
     // 2️⃣ Stop if user canceled
@@ -378,36 +392,39 @@ document.getElementById("deactivateAccountBtn").addEventListener("click", async 
     showLoader("Deactivating account — please wait…");
 
     try {
-        // 4️⃣ Call backend
-        const res = await fetch("/employers/deactivate", { method: "POST" });
-        const data = await res.json();
+      // 4️⃣ Call backend
+      const res = await fetch("/employers/deactivate", { method: "POST" });
+      const data = await res.json();
 
-        if (data.success) {
-            // 5️⃣ Keep loader visible for a short time (1.5s) before logout
-            setTimeout(() => {
-                hideLoader();
-                window.location.href = "/"; // logout/redirect
-            }, 1500);
-        } else {
-            hideLoader();
-            Swal.fire("Error", data.message, "error");
-        }
-
-    } catch (err) {
+      if (data.success) {
+        // 5️⃣ Keep loader visible for a short time (1.5s) before logout
+        setTimeout(() => {
+          hideLoader();
+          window.location.href = "/"; // logout/redirect
+        }, 1500);
+      } else {
         hideLoader();
-        Swal.fire("Error", "Something went wrong. Please try again later.", "error");
+        Swal.fire("Error", data.message, "error");
+      }
+    } catch (err) {
+      hideLoader();
+      Swal.fire(
+        "Error",
+        "Something went wrong. Please try again later.",
+        "error"
+      );
     }
-});
+  });
 
 // ✅ Loader control functions
 function showLoader(text = "Processing — please wait...") {
-    const loader = document.getElementById("ajaxLoader");
-    const loaderText = document.getElementById("ajaxLoaderText");
-    if (loaderText) loaderText.textContent = text;
-    loader.style.display = "flex";
+  const loader = document.getElementById("ajaxLoader");
+  const loaderText = document.getElementById("ajaxLoaderText");
+  if (loaderText) loaderText.textContent = text;
+  loader.style.display = "flex";
 }
 
 function hideLoader() {
-    const loader = document.getElementById("ajaxLoader");
-    loader.style.display = "none";
+  const loader = document.getElementById("ajaxLoader");
+  loader.style.display = "none";
 }
