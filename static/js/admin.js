@@ -828,19 +828,21 @@ function applyEmployerFilters() {
 
   if (visibleCount === 0) {
     table.style.display = "none";
-    noResultsMessage.style.display = "block";
+    if (noResultsMessage) noResultsMessage.style.display = "block";
 
-    if (searchValue) {
-      noResultsText.textContent = `No employers found matching "${searchValue}"`;
-    } else if (currentFilter === "local") {
-      noResultsText.textContent = "No local employers found";
-    } else if (currentFilter === "international") {
-      noResultsText.textContent = "No international employers found";
-    } else {
-      noResultsText.textContent = "No employers match your current filter";
+    if (noResultsText) {
+      if (searchValue) {
+        noResultsText.textContent = `No employers found matching "${searchValue}"`;
+      } else if (currentFilter === "local") {
+        noResultsText.textContent = "No local employers found";
+      } else if (currentFilter === "international") {
+        noResultsText.textContent = "No international employers found";
+      } else {
+        noResultsText.textContent = "No employers match your current filter";
+      }
     }
   } else {
     table.style.display = "table";
-    noResultsMessage.style.display = "none";
+    if (noResultsMessage) noResultsMessage.style.display = "none";
   }
 }

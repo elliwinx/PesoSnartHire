@@ -218,12 +218,26 @@ def update_nonlipeno_status(applicant_id):
             conn.close()
             return jsonify({"success": False, "message": "Non-Lipeño applicant not found"}), 404
 
-        has_credentials = applicant.get("password_hash") is not None
-        is_new_applicant = not has_credentials
+        # SIMPLIFIED NEW APPLICANT CHECK - Using same logic as employers
+        # An applicant is new if they've never had a password set
+        is_new_applicant = not applicant.get("password_hash")
+
+        # Check if this is a residency change request
+        is_residency_change = bool(
+            applicant.get("residency_type_change_pending"))
+        old_residency = applicant.get("old_residency_type")
+
+        print(f"[Debug] Applicant {applicant_id}:")
+        print(f"- Has password: {bool(applicant.get('password_hash'))}")
+        print(f"- Is new: {is_new_applicant}")
+        print(f"- Current status: {applicant.get('status')}")
+        print(f"- Residency change pending: {is_residency_change}")
+        if is_residency_change:
+            print(f"- Previous residency type: {old_residency}")
         temp_password_plain = None
 
         if action in ["approved", "reupload"]:
-            if not has_credentials:
+            if is_new_applicant:
                 # NEW applicant - generate credentials
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
@@ -300,38 +314,64 @@ def update_nonlipeno_status(applicant_id):
             document_name = data.get("document_name", "Recommendation Letter")
             subject = "PESO SmartHire - Document Reupload Required"
 
-            if is_new_applicant:
-                # NEW applicant - include credentials
+            if is_residency_change:
+                # This is a residency type change request
                 body = f"""
                 <p>Hi {applicant['first_name']},</p>
                 <p>This is PESO SmartHire Team.</p>
-                <p>We have reviewed your application for PESO SmartHire and noticed that your {document_name} needs to be updated or is missing required information.</p>
-                <p>Please log in to your account and re-upload your updated {document_name} through the Account and Security page in your PESO SmartHire applicant portal as soon as possible.</p>
-                <p>Here are your login credentials:</p>
+                <p>We have received your request to update your residency status. To proceed, we need you to provide your {document_name}.</p>
+                <p><strong>Required Action:</strong></p>
+                <ol>
+                    <li>Log in to your PESO SmartHire account</li>
+                    <li>Go to Account and Security</li>
+                    <li>Navigate to Documents section</li>
+                    <li>Upload your {document_name}</li>
+                </ol>
+                <p>We'll review your document once it's uploaded and update your residency status accordingly.</p>
+                <p>Note: If you've forgotten your password, you can reset it using the "Forgot Password" option on the login page.</p>
+                <p>Thank you for keeping your information up to date!</p>
+                <p>— PESO SmartHire Admin</p>
+                """
+            elif is_new_applicant:
+                # NEW applicant - send welcome email with credentials and reupload instructions
+                body = f"""
+                <p>Hi {applicant['first_name']},</p>
+                <p>This is PESO SmartHire Team.</p>
+                <p>We have reviewed your application for PESO SmartHire. To proceed with your application, we need you to upload your {document_name}.</p>
+                <p>To help you get started, here are your login credentials:</p>
                 <ul>
                     <li>Applicant ID: {applicant['applicant_code']}</li>
                     <li>Email: {applicant['email']}</li>
                     <li>Phone Number: {applicant['phone']}</li>
                     <li>Password: {temp_password_plain}</li>
                 </ul>
-                <p><strong>Please change your password after logging in for security purposes.</strong></p>
-                <p>Thank you for your cooperation!</p>
+                <p><strong>Steps to Upload Your Document:</strong></p>
+                <ol>
+                    <li>Log in to your account using the credentials above</li>
+                    <li>Go to the Account and Security page</li>
+                    <li>Navigate to the Documents section</li>
+                    <li>Upload your {document_name}</li>
+                </ol>
+                <p><strong>Important:</strong> Please change your password after your first login for security purposes.</p>
+                <p>We'll review your document once it's uploaded and notify you of any updates.</p>
+                <p>Thank you for choosing PESO SmartHire!</p>
                 <p>— PESO SmartHire Admin</p>
                 """
             else:
-                # EXISTING applicant (residency change) - no credentials
+                # EXISTING applicant - regular reupload
                 body = f"""
                 <p>Hi {applicant['first_name']},</p>
                 <p>This is PESO SmartHire Team.</p>
-                <p>We have reviewed your recent residency change and require you to upload your {document_name} for verification.</p>
-                <p>Please log in to your account using your existing credentials and upload the required {document_name} through the Documents tab in the Account and Security page.</p>
-                <p><strong>Action Required:</strong></p>
-                <ul>
+                <p>We need you to provide an updated {document_name} for your application.</p>
+                <p><strong>Required Action:</strong></p>
+                <ol>
                     <li>Log in to your PESO SmartHire account</li>
+                    <li>Go to Account and Security</li>
+                    <li>Navigate to Documents section</li>
                     <li>Upload your updated {document_name}</li>
-                </ul>
-                <p>Once you have uploaded the required document, we will review it and update your account status accordingly.</p>
-                <p>If you have forgotten your password, please use the "Forgot Password" feature on the login page.</p>
+                </ol>
+                <p>We'll review your document once it's uploaded and update your application status accordingly.</p>
+                <p>Note: If you've forgotten your password, you can reset it using the "Forgot Password" option on the login page.</p>
                 <p>Thank you for your cooperation!</p>
                 <p>— PESO SmartHire Admin</p>
                 """

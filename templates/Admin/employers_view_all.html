@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>View All Employers</title>
     <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+    />
+    <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
     />
@@ -61,7 +66,12 @@
             >Employers Management</a
           >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
-            >Notifications</a
+            >Notifications<span
+              id="notifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
           >
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
@@ -252,6 +262,7 @@
 
     {% include 'partials/loader.html' %}
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>
 </html>

@@ -1,9 +1,23 @@
+<style>
+  .action-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: flex-start;
+    align-items: center;
+  }
+</style>
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Accounts for Approval - Applicants</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+    />
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -59,7 +73,12 @@
             >Employers Management</a
           >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
-            >Notifications</a
+            >Notifications<span
+              id="notifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
           >
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
@@ -117,7 +136,7 @@
               </td>
               <td>{{ applicant.created_at.strftime('%B %d, %Y') }}</td>
               <td>
-                <div class="action-buttons">
+                <div class="action-buttons2">
                   <button
                     data-url="{{ url_for('admin.view_applicant', applicant_id=applicant.applicant_id) }}"
                     class="btn btn-view"
@@ -125,12 +144,12 @@
                   >
                     <i class="fa-solid fa-eye"></i> View
                   </button>
-                  <button
+                  <!--<button
                     onclick="editStatus('{{ applicant.applicant_id }}')"
                     class="btn btn-edit"
                   >
                     <i class="fa-solid fa-edit"></i> Edit Status
-                  </button>
+                  </button>-->
                 </div>
               </td>
             </tr>
@@ -214,12 +233,13 @@
 
     {% include 'partials/loader.html' %}
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script>
+    <!--<script>
       function editStatus(applicantId) {
         // Redirect to applicant profile where edit status modal will open
         window.location.href = "/admin/applicants/" + applicantId;
-      }
+    }-->
     </script>
   </body>
 </html>

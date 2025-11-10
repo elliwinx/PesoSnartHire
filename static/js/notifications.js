@@ -1,6 +1,8 @@
 // Notification management for admin dashboard
-
-let currentFilter = "all";
+if (typeof window.notifSystemInitialized === "undefined") {
+  window.notifSystemInitialized = true;
+  window.currentFilter = "all";
+}
 
 // Fetch and display notifications
 async function fetchNotifications(filter = "all") {
@@ -56,7 +58,10 @@ function displayNotifications(notifications) {
         <!-- Right: badge + button -->
         <div class="card-actions">
           ${badge}
-          <a href="${notif.redirect_url || "#"}" class="view-btn">View</a>
+          <a href="${notif.redirect_url || "#"}" class="view-btn">
+            <i class="fa-solid fa-eye"></i>
+            View
+          </a>
         </div>
       </div>
     `;
@@ -84,6 +89,8 @@ function displayNotifications(notifications) {
         await fetch(`/admin/api/notifications/${notificationId}/read`, {
           method: "POST",
         });
+        // Refresh notifications to update badge
+        fetchNotifications(currentFilter);
       } catch (err) {
         console.error("Error marking notification as read:", err);
       }
@@ -109,6 +116,8 @@ async function handleNotificationClick(event) {
       method: "POST",
     });
     console.log("[v0] Notification marked as read");
+    // Refresh notifications to update badge
+    fetchNotifications(currentFilter);
   } catch (error) {
     console.error("[v0] Error marking notification as read:", error);
   }
@@ -148,7 +157,7 @@ function setupFilterButtons() {
 
       // Fetch notifications with new filter
       const filter = button.dataset.filter;
-      currentFilter = filter;
+      window.currentFilter = filter;
       console.log("[v0] Filter changed to:", filter);
       fetchNotifications(filter);
     });
@@ -159,7 +168,7 @@ function setupFilterButtons() {
 function startNotificationPolling() {
   setInterval(() => {
     console.log("[v0] Polling for new notifications");
-    fetchNotifications(currentFilter);
+    fetchNotifications(window.currentFilter);
     updateNotifBadge(); // <--- ALSO check the badge when polling
   }, 30000); // 30 seconds
 }
@@ -170,13 +179,23 @@ async function updateNotifBadge() {
     const res = await fetch("/admin/api/notifications/unread-count");
     const data = await res.json();
 
-    const badge = document.getElementById("notifBadge"); // <--- your badge span in navbar
+    let badge = document.getElementById("notifBadge");
+    // Fallback: try to find badge in all nav links if not found
+    if (!badge) {
+      const navLinks = document.querySelectorAll(".nav-link, .nav-link-active");
+      navLinks.forEach((link) => {
+        const possibleBadge = link.querySelector(".notif-badge");
+        if (possibleBadge) badge = possibleBadge;
+      });
+    }
 
-    if (data.success && data.unread_count > 0) {
-      badge.style.display = "inline-block";
-      badge.textContent = "●"; // or data.unread_count if you prefer number
-    } else {
-      badge.style.display = "none";
+    if (badge) {
+      if (data.success && data.unread_count > 0) {
+        badge.style.display = "inline-block";
+        badge.textContent = "●"; // or data.unread_count if you prefer number
+      } else {
+        badge.style.display = "none";
+      }
     }
   } catch (err) {
     console.error("Error fetching unread count:", err);
@@ -190,4 +209,9 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchNotifications("all");
   startNotificationPolling();
   updateNotifBadge(); // <--- also run immediately when page loads
+
+  // Global polling for notif badge (always updates every 30s)
+  setInterval(() => {
+    updateNotifBadge();
+  }, 30000);
 });

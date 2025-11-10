@@ -267,15 +267,17 @@ input[type="email"] {
 }
 
 .notif-badge {
-  background: #ffc107; /* yellow, or red if you prefer */
-  color: transparent; /* hides text if you just want a dot */
-  font-size: 10px;
+  background: #ffc107; /* yellow */
+  color: #ffc107; /* show yellow dot */
+  font-size: 18px;
   border-radius: 50%;
-  width: 10px;
-  height: 10px;
+  width: 18px;
+  height: 18px;
   display: inline-block;
   margin-left: 6px;
   vertical-align: middle;
+  text-align: center;
+  line-height: 18px;
 }
 
 .container h2 {
@@ -459,16 +461,25 @@ input[type="email"] {
 .card-actions .view-btn {
   background: #7b1113;
   color: #fff;
-  padding: 0.5rem 0.6rem;
-  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
   text-decoration: none;
-  font-size: 12px;
+  font-size: 14px;
+  border: 1px solid #7b1113;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(123, 17, 19, 0.1);
 }
 
 .card-actions .view-btn:hover {
   background: white;
   color: #7b1113;
   border: 1px solid #7b1113;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(123, 17, 19, 0.15);
 }
 
 .card:hover {
@@ -945,7 +956,6 @@ input[type="email"] {
   gap: 10px;
 }
 
-/* Updated button styling - removed tacky colors, use #7b1113 accent, improved spacing */
 .edit-status-btn {
   padding: 8px 16px;
   background: #7b1113;
@@ -972,7 +982,6 @@ input[type="email"] {
   box-shadow: 0 1px 4px rgba(123, 17, 19, 0.15);
 }
 
-/* Updated status button styling with #7b1113 color scheme */
 .status-btn {
   padding: 10px 16px;
   margin: 6px 0;

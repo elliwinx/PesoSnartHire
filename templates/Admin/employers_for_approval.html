@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Accounts for Approval - Employers</title>
     <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+    />
+    <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
     />
@@ -61,7 +66,12 @@
             >Employers Management</a
           >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
-            >Notifications</a
+            >Notifications<span
+              id="notifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
           >
           <a href="{{url_for('admin.account_settings')}}" class="nav-link"
             >Account & Security</a
@@ -136,7 +146,7 @@
               </td>
               <td>{{ employer.created_at.strftime('%B %d, %Y') }}</td>
               <td>
-                <div class="action-buttons">
+                <div class="action-buttons2">
                   <button
                     data-url="{{ url_for('admin.view_employer', employer_id=employer.employer_id) }}"
                     class="btn btn-view"
@@ -144,12 +154,12 @@
                   >
                     <i class="fa-solid fa-eye"></i> View
                   </button>
-                  <button
+                  <!--<button
                     onclick="editStatus('{{ employer.employer_id }}')"
                     class="btn btn-edit"
                   >
                     <i class="fa-solid fa-edit"></i> Edit Status
-                  </button>
+                  </button>-->
                 </div>
               </td>
             </tr>
@@ -233,8 +243,9 @@
 
     {% include 'partials/loader.html' %}
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script>
+    <!--<script>
       function filterEmployers(filter) {
         const rows = document.querySelectorAll("#employersTable tbody tr");
         const buttons = document.querySelectorAll(".filter-btn");
@@ -257,6 +268,6 @@
       function editStatus(employerId) {
         window.location.href = "/admin/employers/" + employerId;
       }
-    </script>
+    </script>-->
   </body>
 </html>
