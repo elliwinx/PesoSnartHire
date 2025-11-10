@@ -218,25 +218,22 @@ def update_nonlipeno_status(applicant_id):
             conn.close()
             return jsonify({"success": False, "message": "Non-Lipeño applicant not found"}), 404
 
-        # -----------------------------
-        # HANDLE PASSWORD CREATION
-        # -----------------------------
-        temp_password_plain = None
         has_credentials = applicant.get("password_hash") is not None
+        is_new_applicant = not has_credentials
+        temp_password_plain = None
 
         if action in ["approved", "reupload"]:
             if not has_credentials:
-                # --- EDITED: always generate a hashed password and temp_password ---
+                # NEW applicant - generate credentials
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
                 cursor.execute(
                     "UPDATE applicants SET password_hash = %s, temp_password = %s WHERE applicant_id = %s",
                     (password_hash, temp_password_plain, applicant_id)
                 )
-                # Update local dict so email uses the correct password
                 applicant["temp_password"] = temp_password_plain
             else:
-                # --- EDITED: use existing temp_password if available, otherwise mark for reset ---
+                # EXISTING applicant - use existing temp_password if available
                 temp_password_plain = applicant.get(
                     "temp_password", "<reset_required>")
 
@@ -246,20 +243,36 @@ def update_nonlipeno_status(applicant_id):
         if action == "approved":
             new_status = "Approved"
             subject = "PESO SmartHire - Application Approved"
-            body = f"""
-            <p>Hi {applicant['first_name']},</p>
-            <p>This is PESO SmartHire Team.</p>
-            <p>Congratulations! Your registration has been reviewed and approved!</p>
-            <p>Included below are your login credentials:</p>
-            <ul>
-                <li>Applicant ID: {applicant['applicant_code']}</li>
-                <li>Email: {applicant['email']}</li>
-                <li>Phone Number: {applicant['phone']}</li>
-                <li>Password: {temp_password_plain}</li>
-            </ul>
-            <p><strong>Please change your password after logging in.</strong></p>
-            <p>Thank you for joining our PESO SmartHire Platform.</p>
-            """
+
+            if is_new_applicant:
+                # NEW applicant - send email with credentials
+                body = f"""
+                <p>Hi {applicant['first_name']},</p>
+                <p>This is PESO SmartHire Team.</p>
+                <p>Congratulations! Your registration has been reviewed and approved!</p>
+                <p>Included below are your login credentials:</p>
+                <ul>
+                    <li>Applicant ID: {applicant['applicant_code']}</li>
+                    <li>Email: {applicant['email']}</li>
+                    <li>Phone Number: {applicant['phone']}</li>
+                    <li>Password: {temp_password_plain}</li>
+                </ul>
+                <p><strong>Please change your password after logging in.</strong></p>
+                <p>Thank you for joining our PESO SmartHire Platform.</p>
+                <p>— PESO SmartHire Admin</p>
+                """
+            else:
+                # EXISTING applicant (residency change) - send approval without credentials
+                body = f"""
+                <p>Hi {applicant['first_name']},</p>
+                <p>This is PESO SmartHire Team.</p>
+                <p>Congratulations! Your residency change has been reviewed and approved.</p>
+                <p>You now have full access to all features of the PESO SmartHire platform.</p>
+                <p>You can log in using your existing credentials to continue using our services.</p>
+                <p>Thank you for keeping your information up to date!</p>
+                <p>— PESO SmartHire Admin</p>
+                """
+
             success_message = "Non-Lipeño applicant approved successfully! Credentials sent via email."
 
         elif action == "rejected":
@@ -277,7 +290,6 @@ def update_nonlipeno_status(applicant_id):
             <p>— PESO SmartHire Admin</p>
             """
             success_message = "Non-Lipeño applicant has been rejected. Notification email sent."
-            # --- EDITED: remove credentials if rejected ---
             cursor.execute(
                 "UPDATE applicants SET password_hash = NULL, temp_password = NULL WHERE applicant_id = %s",
                 (applicant_id,)
@@ -287,23 +299,44 @@ def update_nonlipeno_status(applicant_id):
             new_status = "Reupload"
             document_name = data.get("document_name", "Recommendation Letter")
             subject = "PESO SmartHire - Document Reupload Required"
-            body = f"""
-            <p>Hi {applicant['first_name']},</p>
-            <p>This is PESO SmartHire Team.</p>
-            <p>We have reviewed your application for PESO SmartHire and noticed that your {document_name} needs to be updated or is missing required information.</p>
-            <p>Please log in to your account and re-upload your updated {document_name} through the Account and Security page in your PESO SmartHire applicant portal as soon as possible.</p>
-            <p>Here are your login credentials:</p>
-            <ul>
-                <li>Applicant ID: {applicant['applicant_code']}</li>
-                <li>Email: {applicant['email']}</li>
-                <li>Phone Number: {applicant['phone']}</li>
-                <li>Password: {temp_password_plain}</li>
-            </ul>
-            <p><strong>Please change your password after logging in for security purposes.</strong></p>
-            <p>Thank you for your cooperation!</p>
-            <p>— PESO SmartHire Admin</p>
-            """
-            success_message = "Re-upload request sent. Email notification with login credentials sent to applicant."
+
+            if is_new_applicant:
+                # NEW applicant - include credentials
+                body = f"""
+                <p>Hi {applicant['first_name']},</p>
+                <p>This is PESO SmartHire Team.</p>
+                <p>We have reviewed your application for PESO SmartHire and noticed that your {document_name} needs to be updated or is missing required information.</p>
+                <p>Please log in to your account and re-upload your updated {document_name} through the Account and Security page in your PESO SmartHire applicant portal as soon as possible.</p>
+                <p>Here are your login credentials:</p>
+                <ul>
+                    <li>Applicant ID: {applicant['applicant_code']}</li>
+                    <li>Email: {applicant['email']}</li>
+                    <li>Phone Number: {applicant['phone']}</li>
+                    <li>Password: {temp_password_plain}</li>
+                </ul>
+                <p><strong>Please change your password after logging in for security purposes.</strong></p>
+                <p>Thank you for your cooperation!</p>
+                <p>— PESO SmartHire Admin</p>
+                """
+            else:
+                # EXISTING applicant (residency change) - no credentials
+                body = f"""
+                <p>Hi {applicant['first_name']},</p>
+                <p>This is PESO SmartHire Team.</p>
+                <p>We have reviewed your recent residency change and require you to upload your {document_name} for verification.</p>
+                <p>Please log in to your account using your existing credentials and upload the required {document_name} through the Documents tab in the Account and Security page.</p>
+                <p><strong>Action Required:</strong></p>
+                <ul>
+                    <li>Log in to your PESO SmartHire account</li>
+                    <li>Upload your updated {document_name}</li>
+                </ul>
+                <p>Once you have uploaded the required document, we will review it and update your account status accordingly.</p>
+                <p>If you have forgotten your password, please use the "Forgot Password" feature on the login page.</p>
+                <p>Thank you for your cooperation!</p>
+                <p>— PESO SmartHire Admin</p>
+                """
+
+            success_message = "Re-upload request sent. Email notification sent to applicant."
 
         else:
             print(f"[v1] Invalid action: {action}")

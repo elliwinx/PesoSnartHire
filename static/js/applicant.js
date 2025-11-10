@@ -42,26 +42,82 @@ document.addEventListener("DOMContentLoaded", () => {
   const contents = document.querySelectorAll(".content");
   const applicantStatus = document.getElementById("applicantStatus")?.value;
 
-  buttons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      contents.forEach((c) => (c.style.display = "none"));
-      const targetId = btn.getAttribute("data-target");
-      document.getElementById(targetId).style.display = "block";
-
-      buttons.forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
+  function showTab(id) {
+    contents.forEach((c) => {
+      c.classList.add("hidden");
+      c.style.display = "none";
     });
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove("hidden");
+      el.style.display = "block";
+    }
+    buttons.forEach((b) => b.classList.remove("active"));
+    const btn = Array.from(buttons).find(
+      (b) => b.getAttribute("data-target") === id
+    );
+    if (btn) btn.classList.add("active");
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () =>
+      showTab(btn.getAttribute("data-target"))
+    );
   });
 
-  // Default tab depending on applicant status
   if (applicantStatus === "Reupload") {
-    document.getElementById("personal-information").style.display = "none";
-    document.getElementById("documents").style.display = "block";
+    showTab("documents");
   } else {
-    document.getElementById("personal-information").style.display = "block";
-    document.getElementById("documents").style.display = "none";
+    showTab("personal-information");
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get("tab");
+  const focus = params.get("focus");
+  if (tab === "documents") {
+    showTab("documents");
+    if (focus === "reco") {
+      const reco = document.getElementById("recommendation_file");
+      if (reco) {
+        reco.scrollIntoView({ behavior: "smooth", block: "center" });
+        setTimeout(() => reco.focus(), 200);
+      }
+    }
   }
 });
+
+// Default tab depending on applicant status
+if (applicantStatus === "Reupload") {
+  document.getElementById("personal-information").style.display = "none";
+  document.getElementById("documents").style.display = "block";
+} else {
+  document.getElementById("personal-information").style.display = "block";
+  document.getElementById("documents").style.display = "none";
+}
+
+// URL-driven activation (e.g., ?tab=documents&focus=reco)
+const params = new URLSearchParams(window.location.search);
+const tab = params.get("tab");
+const focus = params.get("focus");
+
+if (tab === "documents") {
+  document.getElementById("personal-information").style.display = "none";
+  document.getElementById("documents").style.display = "block";
+
+  buttons.forEach((b) => b.classList.remove("active"));
+  const docsBtn = Array.from(buttons).find(
+    (b) => b.getAttribute("data-target") === "documents"
+  );
+  if (docsBtn) docsBtn.classList.add("active");
+
+  if (focus === "reco") {
+    const reco = document.getElementById("recommendation_file");
+    if (reco) {
+      reco.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => reco.focus(), 200);
+    }
+  }
+}
 
 // 2️⃣ EDIT / SAVE / CANCEL LOGIC
 document.addEventListener("DOMContentLoaded", () => {
@@ -87,7 +143,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const expNo = document.getElementById("exp_no");
   const workDetails = document.getElementById("work_details");
 
-  // helper: enable/disable conditional inputs
+  const residencyYes = document.getElementById("residency_yes");
+  const residencyNo = document.getElementById("residency_no");
+  const cityInput = document.querySelector('input[name="city"]');
+
   function setConditionalInputsEditable(editable) {
     [pwdDetails, workDetails].forEach((section) => {
       if (section) {
@@ -104,33 +163,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // show/hide conditional sections
   function updateConditionals() {
     if (pwdDetails)
       pwdDetails.style.display = pwdYes.checked ? "block" : "none";
     if (workDetails)
       workDetails.style.display = expYes.checked ? "block" : "none";
   }
-
   [pwdYes, pwdNo, expYes, expNo].forEach(
     (el) => el && el.addEventListener("change", updateConditionals)
   );
 
-  // store original values here
   let originalValues = {};
 
-  // --- EDIT BUTTON ---
   if (editBtn) {
     editBtn.addEventListener("click", (e) => {
       e.preventDefault();
 
-      // store all original field values
       originalValues = {};
       inputs.forEach((el) => (originalValues[el.name] = el.value));
       selects.forEach((el) => (originalValues[el.name] = el.value));
-      radios.forEach((el) => (originalValues[el.name] = el.checked));
+      radios.forEach((el) => {
+        if (el.id) {
+          originalValues[el.id] = el.checked;
+        }
+      });
 
-      // ✅ store original avatar image
       const avatarImg = document.getElementById("profilePicPreview");
       if (avatarImg) originalValues["avatarSrc"] = avatarImg.src;
 
@@ -157,12 +214,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- CANCEL BUTTON ---
   if (cancelBtn) {
     cancelBtn.addEventListener("click", (e) => {
       e.preventDefault();
 
-      // restore previous values
+      if (typeof window.setResidencyCancelMode === "function") {
+        window.setResidencyCancelMode(true);
+      }
+
       inputs.forEach((el) => {
         if (originalValues.hasOwnProperty(el.name))
           el.value = originalValues[el.name];
@@ -171,12 +230,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (originalValues.hasOwnProperty(el.name))
           el.value = originalValues[el.name];
       });
+
       radios.forEach((el) => {
-        if (originalValues.hasOwnProperty(el.name))
-          el.checked = originalValues[el.name];
+        if (el.id && originalValues.hasOwnProperty(el.id)) {
+          el.checked = originalValues[el.id];
+        }
       });
 
-      // ✅ restore avatar image
       const avatarImg = document.getElementById("profilePicPreview");
       if (avatarImg && originalValues["avatarSrc"]) {
         avatarImg.src = originalValues["avatarSrc"];
@@ -188,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
       fileInputs.forEach((el) => {
         if (applicantStatus !== "Reupload") el.style.display = "none";
         el.setAttribute("disabled", true);
-        el.value = ""; // clear chosen file
+        el.value = "";
       });
       inputs.forEach((el) => el.setAttribute("readonly", true));
       selects.forEach((el) => {
@@ -202,19 +262,57 @@ document.addEventListener("DOMContentLoaded", () => {
       saveBtn.style.display = "none";
       cancelBtn.style.display = "none";
 
-      updateConditionals(); // reflect restored state
+      updateConditionals();
+
+      if (typeof window.setResidencyEditMode === "function") {
+        window.setResidencyEditMode(false);
+      }
+
+      if (typeof window.updateResidencyRequirements === "function") {
+        window.updateResidencyRequirements();
+      }
+
+      if (typeof window.setResidencyCancelMode === "function") {
+        window.setResidencyCancelMode(false);
+      }
     });
   }
 
-  // --- SAVE BUTTON ---
   if (saveBtn && accountForm) {
     saveBtn.addEventListener("click", (e) => {
       e.preventDefault();
+
+      const currentIsLipeno = residencyYes ? residencyYes.checked : false;
+      const originalIsLipeno = originalValues["residency_yes"] === true;
+      const changedToNonLipeno = originalIsLipeno && !currentIsLipeno;
+
+      if (changedToNonLipeno) {
+        const recommendationFile = document.getElementById(
+          "recommendation_file"
+        );
+        const hasFile =
+          recommendationFile && recommendationFile.files.length > 0;
+
+        if (!hasFile) {
+          showFlash(
+            "You are changing your residency to Non-Lipeño. Please upload your recommendation letter before saving.",
+            "danger"
+          );
+          if (recommendationFile) {
+            recommendationFile.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+            setTimeout(() => recommendationFile.focus(), 300);
+          }
+          return;
+        }
+      }
+
       accountForm.submit();
     });
   }
 
-  // initial conditional visibility setup
   updateConditionals();
   if (applicantStatus === "Reupload") {
     fileInputs.forEach((el) => (el.style.display = "block"));
@@ -318,17 +416,20 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   ``;
 });
-document.getElementById("deactivateApplicantBtn").addEventListener("click", async () => {
+
+document
+  .getElementById("deactivateApplicantBtn")
+  .addEventListener("click", async () => {
     // 1️⃣ Ask for confirmation
     const confirmDelete = await Swal.fire({
-        title: "Are you sure?",
-        text: "Your account will be permanently deleted after 30 days.",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#8b0d0d",
-        cancelButtonColor: "gray",
-        confirmButtonText: "Confirm",
-        cancelButtonText: "Cancel"
+      title: "Are you sure?",
+      text: "Your account will be permanently deleted after 30 days.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#8b0d0d",
+      cancelButtonColor: "gray",
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
     });
 
     // 2️⃣ Stop if user canceled
@@ -338,35 +439,250 @@ document.getElementById("deactivateApplicantBtn").addEventListener("click", asyn
     showLoader("Deactivating account — please wait…");
 
     try {
-        // 4️⃣ Call backend
-        const res = await fetch("/applicants/deactivate", { method: "POST" });
-        const data = await res.json();
+      // 4️⃣ Call backend
+      const res = await fetch("/applicants/deactivate", { method: "POST" });
+      const data = await res.json();
 
-        if (data.success) {
-            setTimeout(() => {
-                hideLoader();
-                window.location.href = "/"; // logout/redirect
-            }, 1500);
-        } else {
-            hideLoader();
-            Swal.fire("Error", data.message, "error");
-        }
-
-    } catch (err) {
+      if (data.success) {
+        setTimeout(() => {
+          hideLoader();
+          window.location.href = "/"; // logout/redirect
+        }, 1500);
+      } else {
         hideLoader();
-        Swal.fire("Error", "Something went wrong. Please try again later.", "error");
+        Swal.fire("Error", data.message, "error");
+      }
+    } catch (err) {
+      hideLoader();
+      Swal.fire(
+        "Error",
+        "Something went wrong. Please try again later.",
+        "error"
+      );
     }
-});
+  });
 
 // ✅ Loader functions
 function showLoader(text = "Processing — please wait...") {
-    const loader = document.getElementById("ajaxLoader");
-    const loaderText = document.getElementById("ajaxLoaderText");
-    if (loaderText) loaderText.textContent = text;
-    loader.style.display = "flex";
+  const loader = document.getElementById("ajaxLoader");
+  const loaderText = document.getElementById("ajaxLoaderText");
+  if (loaderText) loaderText.textContent = text;
+  loader.style.display = "flex";
 }
 
 function hideLoader() {
-    const loader = document.getElementById("ajaxLoader");
-    loader.style.display = "none";
+  const loader = document.getElementById("ajaxLoader");
+  loader.style.display = "none";
 }
+
+// ========== RESIDENCY TYPE CHANGE HANDLER ==========
+document.addEventListener("DOMContentLoaded", () => {
+  const residencyYes = document.getElementById("residency_yes");
+  const residencyNo = document.getElementById("residency_no");
+  const recommendationContainer = document.getElementById(
+    "recommendation-upload-container"
+  );
+  const recommendationFile = document.getElementById("recommendation_file");
+  const resumeContainer = document.querySelector(
+    ".document-item:has(#resume_file)"
+  );
+  const warningBanner = document.getElementById("residency-warning-banner");
+  const bannerTitle = document.getElementById("banner-title");
+  const bannerMessage = document.getElementById("banner-message");
+  const editBtn = document.getElementById("editBtn");
+  const applicantStatus = document.getElementById("applicantStatus")?.value;
+  const cityInput = document.querySelector('input[name="city"]');
+
+  if (!residencyYes || !residencyNo || !recommendationContainer) return;
+
+  let originalIsLipeno = residencyYes.checked;
+  let originalCity = cityInput ? cityInput.value : "";
+  let isEditMode = false;
+  let isCanceling = false;
+
+  function updateResidencyRequirements() {
+    const isLipeno = residencyYes.checked;
+    const residencyChanged = isEditMode && isLipeno !== originalIsLipeno;
+
+    console.log("[v0] updateResidencyRequirements:", {
+      isEditMode,
+      isLipeno,
+      originalIsLipeno,
+      residencyChanged,
+    });
+
+    if (applicantStatus === "Reupload") {
+      if (!isLipeno) {
+        if (resumeContainer) resumeContainer.style.display = "none";
+        recommendationContainer.style.display = "block";
+        if (recommendationFile) {
+          recommendationFile.setAttribute("required", "true");
+        }
+      } else {
+        if (resumeContainer) resumeContainer.style.display = "block";
+        recommendationContainer.style.display = "none";
+        if (recommendationFile) {
+          recommendationFile.removeAttribute("required");
+        }
+      }
+
+      if (warningBanner) {
+        warningBanner.classList.add("show");
+        if (bannerTitle) bannerTitle.textContent = "Document Reupload Required";
+        if (bannerMessage)
+          bannerMessage.textContent =
+            "Please reupload the requested document(s) below. Once submitted, the admin will review your documents and update your status.";
+      }
+      return;
+    }
+
+    if (resumeContainer) resumeContainer.style.display = "block";
+
+    if (warningBanner) {
+      if (residencyChanged) {
+        warningBanner.classList.add("show");
+        if (bannerTitle) bannerTitle.textContent = "Residency Type Changed";
+
+        if (isLipeno) {
+          if (bannerMessage)
+            bannerMessage.innerHTML =
+              "<strong>Changed to Lipeño:</strong> Your recommendation letter is no longer required. Only your resume is needed. All documents must be in PDF format.";
+        } else {
+          if (bannerMessage)
+            bannerMessage.innerHTML =
+              "<strong>Changed to Non-Lipeño:</strong> You must now upload a recommendation letter from your barangay or local government unit along with your resume. All documents must be in PDF format.";
+        }
+      } else {
+        warningBanner.classList.remove("show");
+        console.log("[v0] Banner hidden - residencyChanged is false");
+      }
+    }
+
+    if (isLipeno) {
+      recommendationContainer.style.display = "none";
+      if (recommendationFile) {
+        recommendationFile.removeAttribute("required");
+        recommendationFile.value = "";
+      }
+    } else {
+      recommendationContainer.style.display = "block";
+      if (recommendationFile) {
+        recommendationFile.setAttribute("required", "true");
+      }
+    }
+  }
+
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      isEditMode = true;
+      isCanceling = false;
+      originalIsLipeno = residencyYes.checked;
+      originalCity = cityInput ? cityInput.value : "";
+      console.log("[v0] Edit mode started:", {
+        originalIsLipeno,
+        originalCity,
+      });
+    });
+  }
+
+  if (residencyYes) {
+    residencyYes.addEventListener("change", () => {
+      if (isEditMode && !isCanceling && cityInput) {
+        cityInput.value = "Lipa City";
+      }
+      updateResidencyRequirements();
+    });
+  }
+
+  if (residencyNo) {
+    residencyNo.addEventListener("change", () => {
+      if (isEditMode && !isCanceling && cityInput) {
+        if (cityInput.value === "Lipa City") {
+          cityInput.value = "";
+        }
+      }
+      updateResidencyRequirements();
+    });
+  }
+
+  if (cityInput) {
+    cityInput.addEventListener("input", () => {
+      if (!isEditMode || isCanceling) return;
+
+      const cityValue = cityInput.value.trim();
+      const isLipaCity = cityValue === "Lipa City" || cityValue === "Lipa";
+
+      if (isLipaCity) {
+        residencyYes.checked = true;
+        residencyNo.checked = false;
+      } else if (cityValue !== "" && !isLipaCity) {
+        residencyNo.checked = true;
+        residencyYes.checked = false;
+      }
+
+      updateResidencyRequirements();
+    });
+  }
+
+  updateResidencyRequirements();
+
+  window.updateResidencyRequirements = updateResidencyRequirements;
+  window.setResidencyCancelMode = (mode) => {
+    isCanceling = mode;
+    console.log("[v0] isCanceling set to:", mode);
+  };
+  window.setResidencyEditMode = (mode) => {
+    isEditMode = mode;
+    console.log("[v0] isEditMode set to:", mode);
+  };
+  window.getOriginalCity = () => originalCity;
+});
+
+function showFlash(message, category = "danger") {
+  const flashContainer = document.createElement("div");
+  flashContainer.className = `flash ${category}`;
+  flashContainer.innerHTML = `
+    ${message}
+    <button class="close" onclick="this.parentElement.remove()">×</button>
+  `;
+
+  document.body.insertBefore(flashContainer, document.body.firstChild);
+
+  setTimeout(() => {
+    if (flashContainer.parentElement) {
+      flashContainer.remove();
+    }
+  }, 5000);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const resumeInput = document.getElementById("resume_file");
+  const recommendationInput = document.getElementById("recommendation_file");
+
+  function validatePDFFile(input) {
+    if (!input) return;
+
+    input.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const fileName = file.name.toLowerCase();
+      const isPDF = fileName.endsWith(".pdf");
+
+      if (!isPDF) {
+        showFlash(
+          "Please upload a PDF file only. Other file formats are not accepted.",
+          "danger"
+        );
+        input.value = "";
+        return false;
+      }
+
+      console.log(`[v0] Valid PDF uploaded: ${file.name}`);
+      return true;
+    });
+  }
+
+  validatePDFFile(resumeInput);
+  validatePDFFile(recommendationInput);
+});
