@@ -206,9 +206,9 @@ if (typeof documentSelectionModal === "undefined" || !documentSelectionModal) {
 }
 
 function proceedWithReupload() {
-  let entityId =
+  const entityId =
     statusModal.dataset.employerId || statusModal.dataset.applicantId;
-  let recruitmentType = statusModal.dataset.recruitmentType;
+  const recruitmentType = statusModal.dataset.recruitmentType;
   let endpoint = null;
 
   if (statusModal.dataset.employerId) {
@@ -501,9 +501,9 @@ statusButtons.forEach((button) => {
       return;
     }
 
-    let entityId =
+    const entityId =
       statusModal.dataset.employerId || statusModal.dataset.applicantId;
-    let recruitmentType = statusModal.dataset.recruitmentType;
+    const recruitmentType = statusModal.dataset.recruitmentType;
     let endpoint = null;
 
     if (statusModal.dataset.employerId) {
@@ -655,9 +655,9 @@ if (confirmRejectionBtn && rejectionModal) {
     }
 
     // Proceed to call the same status update endpoint with action=rejected and reason
-    let entityId =
+    const entityId =
       statusModal.dataset.employerId || statusModal.dataset.applicantId;
-    let recruitmentType = statusModal.dataset.recruitmentType;
+    const recruitmentType = statusModal.dataset.recruitmentType;
     let endpoint = null;
 
     if (statusModal.dataset.employerId) {
@@ -728,14 +728,14 @@ function filterApplicants(filter) {
   buttons.forEach((btn) => btn.classList.remove("active"));
   event.target.classList.add("active");
 
-  applyFilters();
+  applyApplicantFilters();
 }
 
 function searchApplicants() {
-  applyFilters();
+  applyApplicantFilters();
 }
 
-function applyFilters() {
+function applyApplicantFilters() {
   const searchValue = document
     .getElementById("searchInput")
     .value.toLowerCase();
@@ -793,14 +793,14 @@ function filterEmployers(filter) {
   buttons.forEach((btn) => btn.classList.remove("active"));
   event.target.classList.add("active");
 
-  applyFilters();
+  applyEmployerFilters();
 }
 
 function searchEmployers() {
-  applyFilters();
+  applyEmployerFilters();
 }
 
-function applyFilters() {
+function applyEmployerFilters() {
   const searchValue = document
     .getElementById("searchInput")
     .value.toLowerCase();
