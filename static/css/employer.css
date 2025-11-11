@@ -687,13 +687,34 @@ body {
   cursor: pointer;
 }
 
+.edit-btn:hover {
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+  transition: ease 0.3s;
+}
+
 .cancel-btn {
-  background: #777;
+  background: #333;
   margin-right: 8px;
+}
+
+.cancel-btn:hover {
+  background: white;
+  color: #333;
+  border: 1px solid #333;
+  transition: ease 0.3s;
 }
 
 .save-btn {
   background: #b02a2a;
+}
+
+.save-btn:hover {
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+  transition: ease 0.3s;
 }
 
 /* small helper: align checkboxes inline with label */
@@ -1018,26 +1039,25 @@ body {
 
 /* === SweetAlert2 Maroon Theme === */
 div:where(.swal2-icon).swal2-warning {
-    border-color: maroon !important;
-    color: maroon !important;
+  border-color: maroon !important;
+  color: maroon !important;
 }
 
 .swal2-confirm {
-    background-color: maroon !important;
-    border: none !important;
-    color: #fff !important;
-    font-weight: 600;
-    border-radius: 6px;
+  background-color: maroon !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px;
 }
 
 .swal2-cancel {
-    background-color: #888 !important;
-    border: none !important;
-    color: #fff !important;
-    font-weight: 600;
-    border-radius: 6px;
+  background-color: #888 !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px;
 }
-
 
 /* Responsive grid columns for smaller screens */
 @media (max-width: 1024px) {

@@ -481,9 +481,9 @@ statusButtons.forEach((button) => {
     const action = this.getAttribute("data-action");
 
     if (action === "reupload") {
-      // For applicants, auto-request the endorsement letter (no selection modal)
+      // For applicants, auto-request the recommendation letter (no selection modal)
       if (statusModal.dataset.applicantId) {
-        selectedDocument = "Endorsement Letter";
+        selectedDocument = "Recommendation Letter";
         proceedWithReupload();
         return;
       }

@@ -146,6 +146,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const residencyYes = document.getElementById("residency_yes");
   const residencyNo = document.getElementById("residency_no");
   const cityInput = document.querySelector('input[name="city"]');
+  const barangayInput = document.querySelector('input[name="barangay"]');
+  const provinceInput = document.querySelector('input[name="province"]');
+  const provinceSelect = document.getElementById("applicantProvince");
+  const citySelect = document.getElementById("applicantCity");
+  const cityTextInput = document.getElementById("applicantCityText");
+  const barangaySelect = document.getElementById("applicantBarangay");
+  const barangayTextInput = document.getElementById("applicantBarangayText");
 
   function setConditionalInputsEditable(editable) {
     [pwdDetails, workDetails].forEach((section) => {
@@ -309,6 +316,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // If a dynamic barangay select exists, copy its value into the text input before submit
+      try {
+        if (typeof window.copyDynamicBarangayToInput === "function") {
+          window.copyDynamicBarangayToInput();
+        }
+      } catch (err) {}
+
       accountForm.submit();
     });
   }
@@ -318,6 +332,33 @@ document.addEventListener("DOMContentLoaded", () => {
     fileInputs.forEach((el) => (el.style.display = "block"));
   } else {
     fileInputs.forEach((el) => (el.style.display = "none"));
+  }
+
+  // Province change behavior (when not Lipeño) - show text inputs for city/barangay
+  if (provinceSelect) {
+    provinceSelect.addEventListener("change", function () {
+      if (residencyYes && residencyYes.checked) return;
+
+      if (citySelect) {
+        citySelect.style.display = "none";
+        citySelect.required = false;
+        citySelect.value = "";
+      }
+      if (cityTextInput) {
+        cityTextInput.style.display = "block";
+        cityTextInput.required = true;
+      }
+
+      if (barangaySelect) {
+        barangaySelect.style.display = "none";
+        barangaySelect.required = false;
+        barangaySelect.value = "";
+      }
+      if (barangayTextInput) {
+        barangayTextInput.style.display = "block";
+        barangayTextInput.required = true;
+      }
+    });
   }
 });
 
@@ -491,14 +532,145 @@ document.addEventListener("DOMContentLoaded", () => {
   const bannerMessage = document.getElementById("banner-message");
   const editBtn = document.getElementById("editBtn");
   const applicantStatus = document.getElementById("applicantStatus")?.value;
-  const cityInput = document.querySelector('input[name="city"]');
 
-  if (!residencyYes || !residencyNo || !recommendationContainer) return;
+  const provinceInput = document.querySelector('input[name="province"]');
+  const cityInput = document.querySelector('input[name="city"]');
+  const barangayInput = document.querySelector('input[name="barangay"]');
+
+  if (!residencyYes || !residencyNo) return;
 
   let originalIsLipeno = residencyYes.checked;
   let originalCity = cityInput ? cityInput.value : "";
+  let originalProvince = provinceInput ? provinceInput.value : "";
+  let originalBarangay = barangayInput ? barangayInput.value : "";
   let isEditMode = false;
   let isCanceling = false;
+
+  // dynamic barangay select element (created when editing Lipeño)
+  let dynamicBarangaySelect = null;
+
+  function createBarangaySelect(selectedValue) {
+    if (!barangayInput) return;
+    // If already created, reuse
+    if (dynamicBarangaySelect) return dynamicBarangaySelect;
+
+    const sel = document.createElement("select");
+    sel.id = "dynamic_barangay_select";
+    sel.className = "chip";
+    sel.innerHTML = '<option value="">Select Barangay</option>';
+    lipaBarangays.forEach((b) => {
+      const opt = document.createElement("option");
+      opt.value = b;
+      opt.textContent = b;
+      sel.appendChild(opt);
+    });
+
+    // Copy selection back into hidden text input before submit
+    sel.addEventListener("change", () => {
+      barangayInput.value = sel.value;
+    });
+
+    // insert after barangay input
+    barangayInput.style.display = "none";
+    barangayInput.parentNode.insertBefore(sel, barangayInput.nextSibling);
+    dynamicBarangaySelect = sel;
+
+    if (selectedValue) {
+      try {
+        sel.value = selectedValue;
+        barangayInput.value = selectedValue;
+      } catch (e) {}
+    }
+
+    return sel;
+  }
+
+  function removeBarangaySelect() {
+    if (!dynamicBarangaySelect) return;
+    // copy value back to text input
+    try {
+      barangayInput.value =
+        dynamicBarangaySelect.value || barangayInput.value || "";
+    } catch (e) {}
+    // remove select element and show text input
+    dynamicBarangaySelect.remove();
+    dynamicBarangaySelect = null;
+    if (barangayInput) barangayInput.style.display = "block";
+  }
+
+  // Lipa City barangays (subset used for applicant flows)
+  const lipaBarangays = [
+    "Adya",
+    "Anilao",
+    "Antipolo Del Norte",
+    "Antipolo Del Sur",
+    "Bagong Pook",
+    "Balintawak",
+    "Banaybanay",
+    "Bolbok",
+    "Bugtong Na Pulo",
+    "Bulacnin",
+    "Bulaklakan",
+    "Calamias",
+    "Cumba",
+    "Dagatan",
+    "Duhatan",
+    "Halang",
+    "Inosluban",
+    "Kayumanggi",
+    "Latag",
+    "Lodlod",
+    "Lumbang",
+    "Mabini",
+    "Malagonlong",
+    "Marawoy",
+    "Mataas Na Lupa",
+    "Munting Pulo",
+    "Pagolingin Bata",
+    "Pagolingin East",
+    "Pagolingin West",
+    "Pangao",
+    "Pinagkawitan",
+    "Pinagtongulan",
+    "Plaridel",
+    "Poblacion Barangay 1",
+    "Poblacion Barangay 2",
+    "Poblacion Barangay 3",
+    "Poblacion Barangay 4",
+    "Poblacion Barangay 5",
+    "Poblacion Barangay 6",
+    "Poblacion Barangay 7",
+    "Poblacion Barangay 8",
+    "Poblacion Barangay 9",
+    "Poblacion Barangay 9-A",
+    "Poblacion Barangay 10",
+    "Poblacion Barangay 11",
+    "Poblacion Barangay 12",
+    "Pusil",
+    "Quezon",
+    "Rizal",
+    "Sabang",
+    "Sampaguita",
+    "San Benito",
+    "San Carlos",
+    "San Celestino",
+    "San Francisco",
+    "San Guillermo",
+    "San Jose",
+    "San Lucas",
+    "San Salvador",
+    "San Sebastian",
+    "Santo Nino",
+    "Santo Toribio",
+    "Sapac",
+    "Sico",
+    "Talisay",
+    "Tambo",
+    "Tangob",
+    "Tanguay",
+    "Tibig",
+    "Tipacan",
+  ];
 
   function updateResidencyRequirements() {
     const isLipeno = residencyYes.checked;
@@ -509,18 +681,21 @@ document.addEventListener("DOMContentLoaded", () => {
       isLipeno,
       originalIsLipeno,
       residencyChanged,
+      isCanceling,
     });
 
     if (applicantStatus === "Reupload") {
       if (!isLipeno) {
         if (resumeContainer) resumeContainer.style.display = "none";
-        recommendationContainer.style.display = "block";
+        if (recommendationContainer)
+          recommendationContainer.style.display = "block";
         if (recommendationFile) {
           recommendationFile.setAttribute("required", "true");
         }
       } else {
         if (resumeContainer) resumeContainer.style.display = "block";
-        recommendationContainer.style.display = "none";
+        if (recommendationContainer)
+          recommendationContainer.style.display = "none";
         if (recommendationFile) {
           recommendationFile.removeAttribute("required");
         }
@@ -559,16 +734,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (isLipeno) {
-      recommendationContainer.style.display = "none";
+      if (recommendationContainer)
+        recommendationContainer.style.display = "none";
       if (recommendationFile) {
         recommendationFile.removeAttribute("required");
         recommendationFile.value = "";
       }
+      if (isEditMode && !isCanceling) {
+        if (provinceInput) provinceInput.value = "Batangas";
+        if (cityInput) cityInput.value = "Lipa City";
+        // create and show barangay select (keeps the original text input hidden)
+        createBarangaySelect(
+          originalBarangay || (barangayInput ? barangayInput.value : "")
+        );
+      } else {
+        // not editing - ensure any dynamic select is removed
+        removeBarangaySelect();
+      }
     } else {
-      recommendationContainer.style.display = "block";
+      if (recommendationContainer)
+        recommendationContainer.style.display = "block";
       if (recommendationFile) {
         recommendationFile.setAttribute("required", "true");
       }
+      if (isEditMode && !isCanceling) {
+        if (provinceInput) provinceInput.value = "";
+        if (cityInput) cityInput.value = "";
+        if (barangayInput) barangayInput.value = "";
+      }
+      // remove any dynamic select and ensure text inputs are visible
+      removeBarangaySelect();
     }
   }
 
@@ -578,17 +773,32 @@ document.addEventListener("DOMContentLoaded", () => {
       isCanceling = false;
       originalIsLipeno = residencyYes.checked;
       originalCity = cityInput ? cityInput.value : "";
+      originalProvince = provinceInput ? provinceInput.value : "";
+      originalBarangay = barangayInput ? barangayInput.value : "";
       console.log("[v0] Edit mode started:", {
         originalIsLipeno,
         originalCity,
+        originalProvince,
+        originalBarangay,
       });
     });
   }
 
   if (residencyYes) {
     residencyYes.addEventListener("change", () => {
-      if (isEditMode && !isCanceling && cityInput) {
-        cityInput.value = "Lipa City";
+      console.log(
+        "[v0] residencyYes changed, isEditMode:",
+        isEditMode,
+        "isCanceling:",
+        isCanceling
+      );
+      if (isEditMode && !isCanceling) {
+        if (provinceInput) provinceInput.value = "Batangas";
+        if (cityInput) cityInput.value = "Lipa City";
+        // create barangay select
+        createBarangaySelect(
+          originalBarangay || (barangayInput ? barangayInput.value : "")
+        );
       }
       updateResidencyRequirements();
     });
@@ -596,30 +806,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (residencyNo) {
     residencyNo.addEventListener("change", () => {
-      if (isEditMode && !isCanceling && cityInput) {
-        if (cityInput.value === "Lipa City") {
-          cityInput.value = "";
-        }
+      console.log(
+        "[v0] residencyNo changed, isEditMode:",
+        isEditMode,
+        "isCanceling:",
+        isCanceling
+      );
+      if (isEditMode && !isCanceling) {
+        if (provinceInput) provinceInput.value = "";
+        if (cityInput) cityInput.value = "";
+        if (barangayInput) barangayInput.value = "";
+        // remove dynamic select if present
+        removeBarangaySelect();
       }
-      updateResidencyRequirements();
-    });
-  }
-
-  if (cityInput) {
-    cityInput.addEventListener("input", () => {
-      if (!isEditMode || isCanceling) return;
-
-      const cityValue = cityInput.value.trim();
-      const isLipaCity = cityValue === "Lipa City" || cityValue === "Lipa";
-
-      if (isLipaCity) {
-        residencyYes.checked = true;
-        residencyNo.checked = false;
-      } else if (cityValue !== "" && !isLipaCity) {
-        residencyNo.checked = true;
-        residencyYes.checked = false;
-      }
-
       updateResidencyRequirements();
     });
   }
@@ -627,6 +826,13 @@ document.addEventListener("DOMContentLoaded", () => {
   updateResidencyRequirements();
 
   window.updateResidencyRequirements = updateResidencyRequirements;
+  window.copyDynamicBarangayToInput = () => {
+    try {
+      if (dynamicBarangaySelect && barangayInput) {
+        barangayInput.value = dynamicBarangaySelect.value;
+      }
+    } catch (e) {}
+  };
   window.setResidencyCancelMode = (mode) => {
     isCanceling = mode;
     console.log("[v0] isCanceling set to:", mode);
@@ -635,7 +841,32 @@ document.addEventListener("DOMContentLoaded", () => {
     isEditMode = mode;
     console.log("[v0] isEditMode set to:", mode);
   };
-  window.getOriginalCity = () => originalCity;
+
+  const cancelBtn = document.getElementById("cancelBtn");
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", (e) => {
+      // Wait a moment for setResidencyCancelMode(true) to be called first
+      setTimeout(() => {
+        // After form values are restored, reset our local state to match
+        originalIsLipeno = residencyYes.checked;
+        originalCity = cityInput ? cityInput.value : "";
+        originalProvince = provinceInput ? provinceInput.value : "";
+        originalBarangay = barangayInput ? barangayInput.value : "";
+        isEditMode = false;
+
+        console.log("[v0] Cancel clicked - restored original state:", {
+          originalIsLipeno,
+          originalCity,
+          originalProvince,
+          originalBarangay,
+        });
+
+        // Dispatch change event to update residency UI
+        const event = new Event("change", { bubbles: true });
+        residencyYes.dispatchEvent(event);
+      }, 50);
+    });
+  }
 });
 
 function showFlash(message, category = "danger") {
