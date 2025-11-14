@@ -313,6 +313,291 @@ body {
   color: #7b1113 !important;
 }
 
+/*Application_Management*/
+.tab-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 20px 60px 20px;
+  max-width: 1200px;
+  justify-content: center;
+  margin: 0 auto; /* centers the .tab-group container itself */
+}
+
+.tab-group button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-group button:hover {
+  background: #7b1e1e;
+  color: #fff;
+  border: none;
+}
+
+.tab-group button.active {
+  background: #7b1e1e;
+  color: #fff;
+  border: none;
+}
+/* Job Listings Container */
+.listing-container {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(250px, 1fr)); 
+  gap: 35px;
+  padding: 50px;
+  justify-items: center;   
+  max-width: 1200px;     
+  margin: 0 auto;         
+  background-color: #EBEBEB;
+}
+
+.listing-card {
+  width: 100%;
+  max-width: 360px; 
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Hover stays the same */
+.listing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Header */
+.listing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.listing-title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.status-chip {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ACTIVE */
+.status-active {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+/* INACTIVE */
+.status-inactive {
+  background-color: #e2e3e5;
+  color: #6c757d;
+}
+
+/* SUSPENDED */
+.status-suspended {
+  background-color: #ffe8a1;
+  color: #856404;
+}
+
+/* ARCHIVED */
+.status-archived {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+
+/* Meta Info */
+.listing-meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.meta-counts {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.meta-item i {
+  margin-right: 4px;
+}
+
+/* Actions */
+.listing-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-edit,
+.action-archive,
+.action-delete {
+  background-color: #7b1e1e;
+  color: #fff;
+  text-align: center;
+}
+
+.action-edit:hover,
+.action-archive:hover,
+.action-delete:hover {
+  background-color: #9c1f1f;
+}
+
+/* Inactive/Archived visual */
+.listing-card.inactive-listing {
+  opacity: 0.6;
+}
+/* Modal overlay + base */
+.ej-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right:0; bottom:0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 20px;
+}
+
+/* Content look */
+.ej-job-edit-modal {
+    width: 900px;
+    max-width: 98%;
+    background: #fff;
+    border-radius: 10px;
+    padding: 28px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    position: fixed;          
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    font-family: inherit;
+    z-index: 9999;
+}
+
+
+.ej-job-edit-modal h2 { 
+  color:#8b1515; 
+  margin: 0 0 16px 0; 
+}
+
+/* Close button */
+.ej-close-modal {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  align-items: center;
+}
+
+/* Layout rows */
+.ej-form-row { 
+  display: flex; 
+  gap: 14px; 
+  margin-bottom: 12px; 
+}
+
+.ej-form-row.ej-three-col .ej-form-group { 
+  flex: 1; 
+}
+
+/* Form group */
+.ej-form-group { 
+  flex: 1; 
+  display:flex; 
+  flex-direction: column; 
+}
+
+.ej-form-group label { 
+  font-weight: 600; 
+  margin-bottom:6px; 
+  color:#222; 
+  font-size:0.95rem; 
+}
+
+.ej-form-group input,
+.ej-form-group textarea,
+.ej-form-group select {
+  background: #f2f2f2;
+  border: 1px solid #e6e6e6;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+/* Make Job Position + Schedule visually like screenshot */
+.ej-form-row > .ej-form-group:first-child { flex: 2; } 
+.ej-form-row > .ej-form-group:last-child { flex: 1; }
+
+/* Actions */
+.ej-modal-actions { 
+  display:flex; 
+  justify-content:space-between; 
+  margin-top:18px; 
+  align-items:center; 
+}
+
+.ej-btn-edit-status {
+  background:#8b1515; 
+  color:#fff; 
+  border:none; 
+  padding:10px 16px; 
+  border-radius:8px; 
+  cursor:pointer;
+}
+
+.ej-btn-save {
+  background:#006943; 
+  color:#fff; 
+  border:none; 
+  padding:10px 18px; 
+  border-radius:8px; 
+  cursor:pointer;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .ej-form-row { flex-direction: column; }
+  .ej-job-edit-modal { padding:18px; }
+}
+
 /* Footer */
 .footer {
   background: #e9ecef;

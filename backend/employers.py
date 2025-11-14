@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
 from datetime import datetime
 import os
 import json
@@ -788,4 +788,248 @@ def reactivate_employer_account():
 
     finally:
         cursor.close()
+        conn.close()
+
+# ===== Job Posting Route =====
+@employers_bp.route("/create_job", methods=["POST"])
+def create_job():
+    if "employer_id" not in session:
+        return jsonify({"success": False, "message": "You must be logged in to create a job post."}), 401
+
+    employer_id = session["employer_id"]
+
+    job_position = request.form.get("jobPosition", "").strip()
+    work_schedule = request.form.get("workSchedule", "").strip()
+    num_vacancy = request.form.get("numVacancy", "0").strip()
+    min_salary = request.form.get("minSalary", "0").strip()
+    max_salary = request.form.get("maxSalary", "0").strip()
+    job_description = request.form.get("jobDescription", "").strip()
+    qualifications = request.form.get("qualifications", "").strip()
+
+    try:
+        num_vacancy = int(num_vacancy)
+        min_salary = float(min_salary)
+        max_salary = float(max_salary)
+    except ValueError:
+        return jsonify({"success": False, "message": "Vacancy and salary must be valid numbers."})
+
+    if not job_position or not work_schedule or num_vacancy < 1 or min_salary < 0 or max_salary < min_salary or not job_description or not qualifications:
+        return jsonify({"success": False, "message": "Please fill in all fields correctly."})
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed."})
+
+    try:
+        cursor = conn.cursor()
+        query = """
+            INSERT INTO jobs
+            (employer_id, job_position, work_schedule, num_vacancy, 
+            min_salary, max_salary, job_description, qualifications, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'active')
+        """
+        cursor.execute(query, (
+            employer_id, job_position, work_schedule, num_vacancy,
+            min_salary, max_salary, job_description, qualifications
+        ))
+        conn.commit()
+        return jsonify({"success": True, "message": "Job post successfully created!"})
+    except Exception as e:
+        print("Error inserting job:", e)
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to create job post."})
+    finally:
+        conn.close()
+
+@employers_bp.route("/application_management")
+def application_management():
+    if "employer_id" not in session:
+        return redirect(url_for("login"))
+
+    employer_id = session["employer_id"]
+    conn = create_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM jobs WHERE employer_id = %s AND status != 'deleted'", (employer_id,))
+    jobs = cursor.fetchall()
+    conn.close()
+    
+    return render_template("Employer/application_management.html", jobs=jobs)
+
+
+@employers_bp.route("/update_job_status/<int:job_id>/<new_status>", methods=["POST"])
+def update_job_status_route(job_id, new_status):
+    valid_statuses = ["active", "inactive", "archived", "deleted"]
+    if new_status not in valid_statuses:
+        return jsonify({"success": False, "message": "Invalid status."})
+    return update_job_status(job_id, new_status)
+
+
+def update_job_status(job_id, new_status):
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed."})
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE jobs SET status = %s WHERE job_id = %s", (new_status, job_id))
+        conn.commit()
+        return jsonify({"success": True, "message": f"Job status updated to {new_status}."})
+    except Exception as e:
+        print("Error updating job status:", e)
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to update job status."})
+    finally:
+        conn.close()
+
+@employers_bp.route("/auto_deactivate_jobs")
+def auto_deactivate_jobs():
+    conn = create_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE jobs
+        SET status = 'inactive'
+        WHERE job_expiration_date < NOW() AND status = 'active'
+    """)
+    conn.commit()
+    conn.close()
+    return "Auto deactivation complete."
+
+# -------------------------
+# Return job JSON for modal
+# -------------------------
+@employers_bp.route("/job/<int:job_id>/json")
+def get_job_json(job_id):
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "DB connection failed."}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT job_id,
+                   job_position,
+                   job_description,
+                   status,
+                   work_schedule,
+                   num_vacancy AS vacancy,  -- alias to match your JS
+                   min_salary,
+                   max_salary,
+                   qualifications
+            FROM jobs
+            WHERE job_id = %s
+        """, (job_id,))
+        job = cursor.fetchone()
+        cursor.close()
+
+        if not job:
+            return jsonify({"success": False, "message": "Job not found."}), 404
+
+        return jsonify({"success": True, "job": job})
+
+    except Exception as e:
+        current_app.logger.exception(f"Failed to fetch job JSON for job_id={job_id}: {e}")
+        return jsonify({"success": False, "message": f"Failed to load job: {str(e)}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+# -------------------------
+# Update job via modal POST
+# -------------------------
+@employers_bp.route("/job/<int:job_id>/update", methods=["POST"])
+def update_job(job_id):
+    if "employer_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "DB connection failed."}), 500
+
+    try:
+        form = request.form
+        job_position = (form.get("ej_job_position") or "").strip()
+        job_description = (form.get("ej_job_description") or "").strip()
+        status = (form.get("ej_status") or "").strip()
+        work_schedule = (form.get("ej_work_schedule") or "").strip()
+        num_vacancy = int(form.get("ej_vacancy") or 1)
+        min_salary = float(form.get("ej_min_salary") or 0)
+        max_salary = float(form.get("ej_max_salary") or 0)
+        qualifications = (form.get("ej_qualifications") or "").strip()
+
+        if not job_position:
+            return jsonify({"success": False, "message": "Job position is required."}), 400
+
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE jobs
+            SET job_position=%s,
+                job_description=%s,
+                status=%s,
+                work_schedule=%s,
+                num_vacancy=%s,
+                min_salary=%s,
+                max_salary=%s,
+                qualifications=%s
+            WHERE job_id=%s
+        """, (
+            job_position,
+            job_description,
+            status,
+            work_schedule,
+            num_vacancy,
+            min_salary,
+            max_salary,
+            qualifications,
+            job_id
+        ))
+        conn.commit()
+        cursor.close()
+
+        return jsonify({"success": True, "message": "Job updated successfully."})
+
+    except Exception as e:
+        current_app.logger.exception(f"Failed to update job_id={job_id}: {e}")
+        return jsonify({"success": False, "message": f"Update failed: {str(e)}"}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@employers_bp.route("/job/archive/<int:job_id>", methods=["POST"])
+def archive_job(job_id):
+    if "employer_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "DB connection failed"}), 500
+
+    try:
+        run_query(conn, "UPDATE jobs SET status='archived' WHERE job_id=%s", (job_id,))
+        conn.commit()
+        return jsonify({"success": True, "message": "Job post archived successfully."})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Error: {e}"})
+    finally:
+        conn.close()
+
+
+@employers_bp.route("/job/delete/<int:job_id>", methods=["POST"])
+def delete_job(job_id):
+    if "employer_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "DB connection failed"}), 500
+
+    try:
+        run_query(conn, "DELETE FROM jobs WHERE job_id=%s", (job_id,))
+        conn.commit()
+        return jsonify({"success": True, "message": "Job post deleted successfully."})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Error: {e}"})
+    finally:
         conn.close()
