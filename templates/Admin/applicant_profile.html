@@ -227,6 +227,24 @@
         </ul>
       </div>
 
+      <!--Document Statistics-->
+      {% if documents %}
+      <div class="section document-stats">
+        <h3>Document Statistics</h3>
+        <div class="document-cards">
+          {% for doc in documents %}
+          <div class="doc-card">
+            <h4>{{ doc.name }}</h4>
+            <p>
+              <strong>Last Updated:</strong> {{ doc.last_updated or 'N/A' }}
+            </p>
+            <p><strong>Expires At:</strong> {{ doc.expires_at or 'N/A' }}</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
       <!--System Info-->
       <div class="section">
         <h3>System Info</h3>
@@ -254,7 +272,6 @@
       </div>
       {% endif %}
 
-      <!-- Removed inline styles - using CSS classes instead -->
       <!-- Loader modal for async operations -->
       {% include 'partials/loader.html' %}
 

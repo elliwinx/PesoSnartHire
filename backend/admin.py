@@ -4,6 +4,7 @@ from db_connection import create_connection, run_query
 from .notifications import get_notifications, mark_notification_read, get_unread_count
 from extensions import mail
 from flask_mail import Message
+from datetime import datetime
 import secrets
 import json
 
@@ -541,7 +542,8 @@ def view_applicant(applicant_id):
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute(
-        "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,))
+        "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,)
+    )
     applicant = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -549,6 +551,15 @@ def view_applicant(applicant_id):
     if not applicant:
         flash("Applicant not found", "danger")
         return redirect(url_for("admin.applicants_management"))
+
+    # Only prepare documents if applicant is non-Lipeño
+    documents = []
+    if not applicant.get("is_from_lipa") and applicant.get("recommendation_letter_path"):
+        documents.append({
+            "name": "Recommendation Letter",
+            "last_updated": applicant.get("recommendation_letter_updated_at") or applicant.get("updated_at"),
+            "expires_at": applicant.get("recommendation_letter_expiry")
+        })
 
     referrer = request.referrer
     from_notifications = False
@@ -558,7 +569,8 @@ def view_applicant(applicant_id):
     return render_template(
         "Admin/applicant_profile.html",
         applicant=applicant,
-        from_notifications=from_notifications
+        from_notifications=from_notifications,
+        documents=documents
     )
 
 
@@ -632,12 +644,39 @@ def view_employer(employer_id):
         flash("Employer not found", "danger")
         return redirect(url_for("admin.employers_management"))
 
+    # Define which document fields have expiry dates
+    UPLOAD_TO_EXPIRY = {
+        "business_permit_path": "business_permit_expiry",
+        "philiobnet_registration_path": "philiobnet_registration_expiry",
+        "job_orders_of_client_path": "job_orders_expiry",
+        "dole_no_pending_case_path": "dole_no_pending_case_expiry",
+        "dole_authority_to_recruit_path": "dole_authority_expiry",
+        # If dmw documents exist:
+        "dmw_no_pending_case_path": "dmw_no_pending_case_expiry",
+        "license_to_recruit_path": "license_to_recruit_expiry",
+    }
+
+    # Prepare document statistics
+    documents = []
+    for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
+        if employer.get(file_field):
+            documents.append({
+                "name": file_field.replace("_path", "").replace("_", " ").title(),
+                "last_updated": employer.get("updated_at"),
+                "expires_at": employer.get(expiry_field)
+            })
+
     referrer = request.referrer
     from_notifications = False
     if referrer and "/admin/notifications" in referrer:
         from_notifications = True
 
-    return render_template("Admin/employer_profile.html", employer=employer, from_notifications=from_notifications)
+    return render_template(
+        "Admin/employer_profile.html",
+        employer=employer,
+        documents=documents,
+        from_notifications=from_notifications
+    )
 
 
 # ==========================

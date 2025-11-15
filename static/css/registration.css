@@ -108,15 +108,15 @@ body {
 
 .checkbox-group {
   display: flex;
-  align-items: center; /* label beside checkbox */
+  align-items: center;
   gap: 8px;
   padding: 0 15px;
 }
 
 .checkbox-group label {
   display: flex;
-  align-items: center; /* vertically center checkbox + text */
-  gap: 8px; /* space between checkbox and label text */
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
 }
 
@@ -304,8 +304,8 @@ input[type="file"]::file-selector-button:hover {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: inline-block; /* don’t force block centering */
-  margin-top: 0; /* just space above */
+  display: inline-block;
+  margin-top: 0;
   min-width: 150px;
 }
 

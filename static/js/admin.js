@@ -127,10 +127,10 @@ const documentSelectionModal = document.getElementById(
   "documentSelectionModal"
 );
 const confirmDocumentBtn = document.getElementById("confirmDocumentBtn");
-const documentSelect = null; // deprecated - using checkbox list instead
+const documentSelect = null;
 const documentCheckboxList = document.getElementById("documentCheckboxList");
-let selectedDocument = null; // legacy single-selection
-let selectedDocuments = []; // hold array from checkboxes
+let selectedDocument = null;
+let selectedDocuments = [];
 
 // Open status modal when clicking any edit-status button (employer or applicant)
 document.querySelectorAll(".edit-status-btn, #editStatusBtn").forEach((btn) => {
@@ -651,7 +651,7 @@ if (confirmRejectionBtn && rejectionModal) {
         </div>
       `;
       document.body.appendChild(quick);
-      void quick.offsetHeight; // force reflow
+      void quick.offsetHeight;
     }
 
     // Proceed to call the same status update endpoint with action=rejected and reason
@@ -721,7 +721,7 @@ if (confirmRejectionBtn && rejectionModal) {
 let currentFilter = "all";
 
 function filterApplicants(filter) {
-  currentFilter = filter; // Store the current filter
+  currentFilter = filter;
   const rows = document.querySelectorAll("#applicantsTable tbody tr");
   const buttons = document.querySelectorAll(".filter-btn");
 
@@ -786,7 +786,7 @@ function applyApplicantFilters() {
 }
 
 function filterEmployers(filter) {
-  currentFilter = filter; // Store the current filter
+  currentFilter = filter;
   const rows = document.querySelectorAll("#employersTable tbody tr");
   const buttons = document.querySelectorAll(".filter-btn");
 

@@ -1,7 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
-from datetime import datetime
-import os
-import json
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from db_connection import create_connection, run_query
@@ -10,8 +8,184 @@ from extensions import mail
 from .notifications import create_notification
 from .recaptcha import verify_recaptcha
 from .recruitment_change_handler import handle_recruitment_type_change
+from dateutil.relativedelta import relativedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+import os
+import json
 
 employers_bp = Blueprint("employers", __name__)
+
+DOCUMENT_VALIDITY = {
+    "business_permit": 12,
+    "job_order": 6,
+    "dole_recruit_authority": 36,
+    "dmw_recruit_authority": 48,
+    "dole_no_pending_case": 6,
+    "dmw_no_pending_case": 6,
+    "philjobnet": 60,
+}
+
+UPLOAD_TO_EXPIRY = {
+    "business_permit_path": "business_permit_expiry",
+    "philiobnet_registration_path": "philiobnet_registration_expiry",
+    "job_orders_of_client_path": "job_orders_expiry",
+    "dole_no_pending_case_path": "dole_no_pending_case_expiry",
+    "dole_authority_to_recruit_path": "dole_authority_expiry",
+    # If dmw documents exist:
+    "dmw_no_pending_case_path": "dmw_no_pending_case_expiry",
+    "license_to_recruit_path": "license_to_recruit_expiry",
+}
+
+
+doc_key_map = {
+    "business_permit_path": "business_permit",
+    "philiobnet_registration_path": "philjobnet",
+    "job_orders_path": "job_order",
+    "dole_no_pending_path": "dole_no_pending_case",
+    "dole_authority_path": "dole_recruit_authority",
+    "dmw_no_pending_path": "dmw_no_pending_case",
+    "license_to_recruit_path": "dmw_recruit_authority",
+}
+
+
+def get_expiry_date(months_valid):
+    """Return expiry date based on number of months from now"""
+    return datetime.now() + relativedelta(months=+months_valid)
+
+
+def is_document_expired(expiry_date):
+    """
+    Check if a document is already expired.
+    :param expiry_date: datetime or date object
+    :return: True if expired, False otherwise
+    """
+    if not expiry_date:
+        return False  # no expiry date set
+    # Normalize to date for safe comparison
+    expiry_date = expiry_date.date() if hasattr(
+        expiry_date, "date") else expiry_date
+    return datetime.now().date() > expiry_date
+
+
+def will_expire_in_7_days(expiry_date):
+    """
+    Check if a document will expire within the next 7 days.
+    :param expiry_date: datetime or date object
+    :return: True if expiring in 7 days, False otherwise
+    """
+    if not expiry_date:
+        return False
+    # Normalize to date for safe comparison
+    expiry_date = expiry_date.date() if hasattr(
+        expiry_date, "date") else expiry_date
+    today = datetime.now().date()
+    return today <= expiry_date <= today + timedelta(days=7)
+
+
+def check_expired_employer_documents():
+    conn = create_connection()
+    if not conn:
+        print("[v0] DB connection failed")
+        return
+
+    try:
+        # Fetch employers and their document expiries
+        employers = run_query(
+            conn,
+            """
+            SELECT employer_id, employer_name, email, status, is_active,
+                   business_permit_expiry, philiobnet_registration_expiry,
+                   job_orders_expiry, dole_no_pending_case_expiry,
+                   dole_authority_expiry, dmw_no_pending_case_expiry,
+                   license_to_recruit_expiry,
+                   business_permit_warning_sent, philiobnet_warning_sent,
+                   job_orders_warning_sent, dole_no_pending_case_warning_sent,
+                   dole_authority_warning_sent, dmw_no_pending_case_warning_sent,
+                   license_to_recruit_warning_sent
+            FROM employers
+            """,
+            fetch="all"
+        )
+
+        for emp in employers:
+            doc_fields = [
+                ("business_permit_expiry", "business_permit_warning_sent"),
+                ("philiobnet_registration_expiry", "philiobnet_warning_sent"),
+                ("job_orders_expiry", "job_orders_warning_sent"),
+                ("dole_no_pending_case_expiry",
+                 "dole_no_pending_case_warning_sent"),
+                ("dole_authority_expiry", "dole_authority_warning_sent"),
+                ("dmw_no_pending_case_expiry", "dmw_no_pending_case_warning_sent"),
+                ("license_to_recruit_expiry", "license_to_recruit_warning_sent")
+            ]
+
+            for expiry_field, warning_field in doc_fields:
+                expiry_date = emp.get(expiry_field)
+                warning_sent = emp.get(warning_field)
+
+                if not expiry_date:
+                    continue
+
+                # --- 1. Pre-expiry warning (7 days before) ---
+                if will_expire_in_7_days(expiry_date) and warning_sent != 1:
+                    subject = "PESO SmartHire - Document Expiry Warning"
+                    body = f"""
+                    <p>Hi {emp['employer_name']},</p>
+                    <p>The following document will expire soon: <b>{expiry_field}</b>.</p>
+                    <p>Please update it to avoid any disruption in your account status.</p>
+                    """
+
+                    try:
+                        msg = Message(subject=subject, recipients=[
+                                      emp["email"]], html=body)
+                        mail.send(msg)
+
+                        # Mark warning as sent
+                        run_query(
+                            conn,
+                            f"UPDATE employers SET {warning_field} = 1 WHERE employer_id=%s",
+                            (emp["employer_id"],)
+                        )
+                        conn.commit()
+                        print(
+                            f"[Pre-expiry warning] Sent to {emp['email']} for {expiry_field}")
+                    except Exception as e:
+                        print(
+                            f"[Error] Failed to send pre-expiry warning to {emp['email']}: {e}")
+
+                # --- 2. Expired documents ---
+                if is_document_expired(expiry_date):
+                    # Update status to "Reupload" and deactivate account if not already
+                    if emp.get("status") != "Reupload":
+                        run_query(
+                            conn,
+                            "UPDATE employers SET status=%s, is_active=%s WHERE employer_id=%s",
+                            ("Reupload", 0, emp["employer_id"])
+                        )
+                        conn.commit()
+
+                        # Send expired document email only when status changes to Reupload
+                        subject = "PESO SmartHire - Document Expired"
+                        body = f"""
+                        <p>Hi {emp['employer_name']},</p>
+                        <p>Your document <b>{expiry_field}</b> has expired. Please re-upload it immediately to maintain your account's active status.</p>
+                        """
+
+                        try:
+                            msg = Message(subject=subject, recipients=[
+                                          emp["email"]], html=body)
+                            mail.send(msg)
+                            print(
+                                f"[Expired email] Sent to {emp['email']} for {expiry_field}")
+                        except Exception as e:
+                            print(
+                                f"[Error] Failed to send expired email to {emp['email']}: {e}")
+
+    except Exception as e:
+        print(f"[v0] Error checking expired employer documents: {e}")
+    finally:
+        conn.close()
+
 
 UPLOAD_FOLDER = "static/uploads"
 # Ensure the base upload folder exists
@@ -135,6 +309,24 @@ def register_employer(form_data, files):
         if not dmw_no_pending_path or not license_to_recruit_path:
             return False, "Please upload all required DMW documents for International recruitment."
 
+    # --- Now calculate expiry dates ---
+    business_permit_expiry = get_expiry_date(
+        DOCUMENT_VALIDITY["business_permit"]) if business_permit_path else None
+    philiobnet_expiry = get_expiry_date(
+        DOCUMENT_VALIDITY["philjobnet"]) if philiobnet_path else None
+    job_orders_expiry = get_expiry_date(
+        DOCUMENT_VALIDITY["job_order"]) if job_orders_path else None
+
+    dole_no_pending_expiry = get_expiry_date(
+        DOCUMENT_VALIDITY["dole_no_pending_case"]) if dole_no_pending_path else None
+    dole_authority_expiry = get_expiry_date(
+        DOCUMENT_VALIDITY["dole_recruit_authority"]) if dole_authority_path else None
+    dmw_no_pending_expiry = get_expiry_date(
+        DOCUMENT_VALIDITY["dmw_no_pending_case"]) if dmw_no_pending_path else None
+    license_to_recruit_expiry = get_expiry_date(
+        DOCUMENT_VALIDITY["dmw_recruit_authority"]) if license_to_recruit_path else None
+    print("[v0] Document expiry dates calculated")
+
     # Validate base files
     if not all([company_logo_path, business_permit_path, philiobnet_path, job_orders_path]):
         return False, "Please upload all required base documents."
@@ -153,13 +345,13 @@ def register_employer(form_data, files):
         INSERT INTO employers (
             employer_name, industry, recruitment_type, contact_person, phone, email,
             street, barangay, city, province,
-            company_logo_path, business_permit_path, philiobnet_registration_path, job_orders_of_client_path,
-            dole_no_pending_case_path, dole_authority_to_recruit_path,
-            dmw_no_pending_case_path, license_to_recruit_path,
+            company_logo_path, business_permit_path, business_permit_expiry, philiobnet_registration_path, philiobnet_registration_expiry, job_orders_of_client_path, job_orders_expiry,
+            dole_no_pending_case_path, dole_no_pending_case_expiry, dole_authority_to_recruit_path, dole_authority_expiry,
+            dmw_no_pending_case_path, dmw_no_pending_case_expiry, license_to_recruit_path, license_to_recruit_expiry,
             password_hash, temp_password, status, is_active,
             accepted_terms, accepted_terms_at
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, 1, NOW()
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, NOW()
         )
     """
 
@@ -167,9 +359,9 @@ def register_employer(form_data, files):
         employer_data["employer_name"], employer_data["industry"], employer_data["recruitment_type"],
         employer_data["contact_person"], employer_data["phone"], employer_data["email"],
         employer_data["street"], employer_data["barangay"], employer_data["city"], employer_data["province"],
-        company_logo_path, business_permit_path, philiobnet_path, job_orders_path,
-        dole_no_pending_path, dole_authority_path,
-        dmw_no_pending_path, license_to_recruit_path,
+        company_logo_path, business_permit_path, business_permit_expiry, philiobnet_path, philiobnet_expiry, job_orders_path, job_orders_expiry,
+        dole_no_pending_path, dole_no_pending_expiry, dole_authority_path, dole_authority_expiry,
+        dmw_no_pending_path, dmw_no_pending_expiry, license_to_recruit_path, license_to_recruit_expiry,
         password_hash, None, 'Pending', 0
     )
 
@@ -381,7 +573,7 @@ def account_security():
             city = request.form.get("city", "")
             province = request.form.get("province", "")
 
-            # ✅ STEP 1: Handle file uploads FIRST (before recruitment type validation)
+            # STEP 1: Handle file uploads FIRST (before recruitment type validation)
             company_logo_file = request.files.get("company_logo")
             business_permit_file = request.files.get("business_permit")
             philiobnet_registration_file = request.files.get(
@@ -431,6 +623,33 @@ def account_security():
             license_to_recruit_path = handle_upload(
                 license_to_recruit_file, employer["license_to_recruit_path"], "dmw_documents")
 
+            # Example after all handle_upload() calls
+            expiry_updates = {}
+            warning_reset_updates = {}
+
+            for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
+                file_path = locals().get(file_field)  # e.g., business_permit_path
+                old_expiry = employer.get(expiry_field)
+
+                # new file uploaded
+                if file_path != employer.get(file_field) and file_path:
+                    # Determine document key in DOCUMENT_VALIDITY
+                    months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
+                    expiry_updates[expiry_field] = get_expiry_date(
+                        months_valid)
+
+                    # --- Reset pre-expiry warning for this document ---
+                    warning_field = expiry_field.replace(
+                        "_expiry", "_warning_sent")
+                    warning_reset_updates[warning_field] = 0
+                else:
+                    # keep existing expiry
+                    expiry_updates[expiry_field] = old_expiry
+                    warning_field = expiry_field.replace(
+                        "_expiry", "_warning_sent")
+                    warning_reset_updates[warning_field] = employer.get(
+                        warning_field)
+
             documents_to_reupload_list = request.form.getlist(
                 "documents_to_reupload")
             documents_to_reupload_json = json.dumps(
@@ -456,6 +675,20 @@ def account_security():
                     dole_authority_to_recruit_path=%s,
                     dmw_no_pending_case_path=%s,
                     license_to_recruit_path=%s,
+                    business_permit_expiry=%s,
+                    philiobnet_registration_expiry=%s,
+                    job_orders_expiry=%s,
+                    dole_no_pending_case_expiry=%s,
+                    dole_authority_expiry=%s,
+                    dmw_no_pending_case_expiry=%s,
+                    license_to_recruit_expiry=%s,
+                    business_permit_warning_sent=%s,
+                    philiobnet_registration_warning_sent=%s,
+                    job_orders_warning_sent=%s,
+                    dole_no_pending_case_warning_sent=%s,
+                    dole_authority_warning_sent=%s,
+                    dmw_no_pending_case_warning_sent=%s,
+                    license_to_recruit_warning_sent=%s,
                     documents_to_reupload=%s,
                     status=%s,
                     is_active=%s
@@ -468,6 +701,20 @@ def account_security():
                 company_logo_path, business_permit_path, philiobnet_registration_path,
                 job_orders_path, dole_no_pending_path, dole_authority_path,
                 dmw_no_pending_path, license_to_recruit_path,
+                expiry_updates["business_permit_expiry"],
+                expiry_updates["philiobnet_registration_expiry"],
+                expiry_updates["job_orders_expiry"],
+                expiry_updates["dole_no_pending_case_expiry"],
+                expiry_updates["dole_authority_expiry"],
+                expiry_updates["dmw_no_pending_case_expiry"],
+                expiry_updates["license_to_recruit_expiry"],
+                warning_reset_updates["business_permit_warning_sent"],
+                warning_reset_updates["philiobnet_warning_sent"],
+                warning_reset_updates["job_orders_warning_sent"],
+                warning_reset_updates["dole_no_pending_case_warning_sent"],
+                warning_reset_updates["dole_authority_warning_sent"],
+                warning_reset_updates["dmw_no_pending_case_warning_sent"],
+                warning_reset_updates["license_to_recruit_warning_sent"],
                 documents_to_reupload_json,
                 employer["status"], employer["is_active"],
                 employer_id
@@ -476,7 +723,7 @@ def account_security():
             run_query(conn, update_query, data)
             conn.commit()
 
-            # ✅ STEP 2: Now handle recruitment type change (after files are saved to DB)
+            # STEP 2: Now handle recruitment type change (after files are saved to DB)
             recruitment_type_changed = request.form.get(
                 "recruitment_type_changed")
 
@@ -556,7 +803,7 @@ def submit_reupload():
     files_to_upload = {k: v for k,
                        v in request.files.items() if v and v.filename}
 
-    # <CHANGE> DEBUG: Print what files were actually received
+    # Print what files were actually received
     print(
         f"[submit_reupload] Files received from form: {list(files_to_upload.keys())}")
     print(
@@ -642,6 +889,27 @@ def submit_reupload():
         for field in required_fields:
             update_data[field] = new_files.get(
                 field) or employer_data.get(field)
+
+        # Calculate expiry and reset warnings (AFTER update_data exists)
+        expiry_updates = {}
+        warning_reset_updates = {}
+        for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
+            file_path = update_data[file_field]
+            old_path = employer_data.get(file_field)
+            old_expiry = employer_data.get(expiry_field)
+
+            if file_path != old_path and file_path:  # new file uploaded
+                months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
+                expiry_updates[expiry_field] = get_expiry_date(months_valid)
+                warning_reset_updates[expiry_field.replace(
+                    "_expiry", "_warning_sent")] = 0
+            else:
+                expiry_updates[expiry_field] = old_expiry
+                warning_reset_updates[expiry_field.replace("_expiry", "_warning_sent")] = employer_data.get(
+                    expiry_field.replace("_expiry", "_warning_sent"))
+
+        update_data.update(expiry_updates)
+        update_data.update(warning_reset_updates)
 
         # Reset status to Pending for re-review
         update_data["status"] = "Pending"

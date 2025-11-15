@@ -301,7 +301,7 @@ def get_notifications(notification_type=None, is_read=None, limit=50):
                            else (str(r.get("updated_at")) if r.get("updated_at") else None))
         }
 
-        # 🔑 Inject redirect_url dynamically
+        # Inject redirect_url dynamically
         notif_obj["redirect_url"] = build_redirect_url(notif_obj)
 
         normalized.append(notif_obj)

@@ -22,8 +22,8 @@ body {
 
 /* Header */
 .header {
-  background: rgba(255, 255, 255, 0.03); /* very faint white */
-  backdrop-filter: blur(3px); /* softer blur */
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(3px);
   background: transparent;
   position: fixed;
   top: 0;
@@ -274,16 +274,16 @@ body {
 }
 
 .footer-note {
-  display: block; /* makes it behave like a <p> */
+  display: block;
   font-size: 0.9rem;
   margin-top: 20px !important;
-  color: #666; /* match footer text */
-  text-decoration: none; /* remove underline */
-  transition: color 0.3s ease; /* smooth hover effect */
+  color: #666;
+  text-decoration: none;
+  transition: color 0.3s ease;
 }
 
 .footer-note:hover {
-  color: #7b1113; /* darker on hover */
+  color: #7b1113;
 }
 
 .copyright {
@@ -326,26 +326,26 @@ body {
 /*Modal Styles*/
 /* Modal background (hidden by default) */
 .modal {
-  display: none; /* hidden until triggered */
+  display: none;
   position: fixed;
-  z-index: 1000; /* sit above everything */
+  z-index: 1000;
   left: 0;
   top: 0;
   width: 100%;
   height: 100%;
-  overflow: auto; /* enable scroll if content too big */
-  background-color: rgba(0, 0, 0, 0.5); /* dark overlay */
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.8s ease-in-out;
 }
 
 /* Modal box */
 .modal-content {
   background-color: #fff;
-  margin: 10% auto; /* center vertically + horizontally */
+  margin: 10% auto;
   padding: 30px;
   border-radius: 10px;
   width: 500px;
-  max-width: 90%; /* responsive for small screens */
+  max-width: 90%;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   animation: slideIn 0.8s ease-in-out;
   position: relative;
@@ -387,7 +387,7 @@ body {
 
 .modal-content ::placeholder {
   color: #999;
-  opacity: 1; /* Firefox */
+  opacity: 1;
 }
 
 .modal-content input {
@@ -461,14 +461,14 @@ body {
   padding: 10px 15px;
   margin: 10px;
   border-radius: 5px;
-  position: fixed; /* fixed so it stays on top */
-  top: 20px; /* distance from top of screen */
-  left: 50%; /* center horizontally */
+  position: fixed;
+  top: 20px;
+  left: 50%;
   transform: translateX(-50%);
   font-weight: bold;
-  z-index: 9999; /* make sure it's above everything */
-  min-width: 300px; /* optional, ensures decent width */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* optional, nice shadow */
+  z-index: 9999;
+  min-width: 300px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   text-align: center;
 }
 
@@ -499,7 +499,7 @@ body {
 
 .password-wrapper input {
   width: 100%;
-  padding-right: 60px; /* space for the toggle text */
+  padding-right: 60px;
   box-sizing: border-box;
 }
 
@@ -712,7 +712,7 @@ body {
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr; /* make FAQs and any content span full width */
+  grid-template-columns: 1fr;
   gap: 30px;
   align-items: start;
 }
@@ -723,7 +723,7 @@ body {
   vertical-align: top;
   width: calc(50% - 10px);
   box-sizing: border-box;
-  padding: 0; /* cards inside provide their own padding */
+  padding: 0;
 }
 
 /* Ensure the nested .office-info inside .left-side looks like a card */
@@ -774,7 +774,7 @@ body {
 }
 
 .faqs-title {
-  font-size: 1.75rem; /* larger and more visible */
+  font-size: 1.75rem;
   font-weight: 700;
   margin-bottom: 18px;
   color: #333;
@@ -911,7 +911,7 @@ body {
 }
 
 #ajaxLoader .modal-content {
-  margin: 0 !important; /* Remove the 10% auto margin */
+  margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -928,7 +928,7 @@ body {
 
 .recaptcha-container {
   margin-top: 15px;
-  text-align: center; /* centers inline elements like .g-recaptcha */
+  text-align: center;
   box-sizing: border-box;
 }
 
@@ -944,7 +944,7 @@ body {
   }
 
   .info-section > .container {
-    grid-template-columns: 1fr; /* single column */
+    grid-template-columns: 1fr;
     gap: 20px;
   }
 
@@ -1042,15 +1042,15 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%; /* <-- fill hero height */
-    opacity: 0.3; /* use decimal instead of % */
+    height: 100%;
+    opacity: 0.3;
     z-index: -2;
   }
 
   .hero-background img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* ensures full cover without distortion */
+    object-fit: cover;
   }
 
   .about-title,
@@ -1092,15 +1092,15 @@ body {
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%; /* <-- fill hero height */
-    opacity: 0.3; /* use decimal instead of % */
+    height: 100%;
+    opacity: 0.3;
     z-index: -2;
   }
 
   .hero-background img {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* ensures full cover without distortion */
+    object-fit: cover;
   }
 }
 

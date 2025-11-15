@@ -83,10 +83,10 @@ body {
   background-color: #d9d9d9;
   padding: 10px;
   border-radius: 10px;
-  display: flex; /* Use flexbox for layout */
-  justify-content: center; /* Center buttons horizontally */
-  gap: 10px; /* Space between buttons */
-  width: 100%; /* Full width of the container */
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
 }
 
 .tab-btn {
@@ -96,9 +96,9 @@ body {
   cursor: pointer;
   font-weight: bold;
   transition: 0.8s;
-  width: 50%; /* Occupy half the space of the button container */
-  box-sizing: border-box; /* Ensure padding is included in width */
-  flex: 1; /* Ensure buttons are equal width */
+  width: 50%;
+  box-sizing: border-box;
+  flex: 1;
   font-size: 1rem;
 }
 
@@ -109,7 +109,7 @@ body {
 }
 
 .tab-btn.active {
-  background: white; /* highlight */
+  background: white;
   color: #7b1113;
   border-radius: 5px;
 }
@@ -119,7 +119,7 @@ body {
   background: #efefef;
   padding: 20px;
   border-radius: 10px;
-  min-height: 300px; /* Ensure a minimum height for content area */
+  min-height: 300px;
 }
 
 .content-container h3 {
@@ -163,7 +163,7 @@ body {
   transform: scale(1.5);
   margin-right: 10px;
   cursor: pointer;
-  accent-color: white; /* makes the checkmark white */
+  accent-color: white;
 }
 
 .agreement label {

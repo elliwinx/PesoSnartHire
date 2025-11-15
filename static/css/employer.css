@@ -21,8 +21,8 @@ body {
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.03); /* very faint white */
-  backdrop-filter: blur(3px); /* softer blur */
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(3px);
   background: transparent;
   position: fixed;
   top: 0;
@@ -247,9 +247,9 @@ body {
 /* Form Actions */
 .form-actions {
   display: flex;
-  justify-content: space-between; /* from flex-start → space-between */
+  justify-content: space-between;
   align-items: center;
-  margin-top: 1.5rem; /* para may konting spacing mula sa form */
+  margin-top: 1.5rem;
 }
 
 .btn {
@@ -340,16 +340,16 @@ body {
 }
 
 .footer-note {
-  display: block; /* makes it behave like a <p> */
+  display: block;
   font-size: 0.9rem;
   margin-top: 20px !important;
-  color: #666; /* match footer text */
-  text-decoration: none; /* remove underline */
-  transition: color 0.3s ease; /* smooth hover effect */
+  color: #666;
+  text-decoration: none;
+  transition: color 0.3s ease;
 }
 
 .footer-note:hover {
-  color: #7b1113; /* darker on hover */
+  color: #7b1113;
 }
 
 .copyright {
@@ -471,9 +471,9 @@ body {
 }
 
 .dropdown-menu {
-  display: none; /* hidden by default */
+  display: none;
   position: absolute;
-  right: 0; /* aligns under the bars icon */
+  right: 0;
   top: 30px;
   background: #ebebeb;
   border: 1px solid #ddd;
@@ -509,10 +509,10 @@ body {
   background-color: #d9d9d9;
   padding: 10px;
   border-radius: 10px;
-  display: flex; /* Use flexbox for layout */
-  justify-content: center; /* Center buttons horizontally */
-  gap: 10px; /* Space between buttons */
-  width: 100%; /* Full width of the container */
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
 }
 
 .tab-btn {
@@ -522,9 +522,9 @@ body {
   cursor: pointer;
   font-weight: bold;
   transition: 0.8s;
-  width: 50%; /* Occupy half the space of the button container */
-  box-sizing: border-box; /* Ensure padding is included in width */
-  flex: 1; /* Ensure buttons are equal width */
+  width: 50%;
+  box-sizing: border-box;
+  flex: 1;
   font-size: 1rem;
 }
 
@@ -535,7 +535,7 @@ body {
 }
 
 .tab-btn.active {
-  background: white; /* highlight */
+  background: white;
   color: #7b1113;
   border-radius: 5px;
 }
@@ -554,14 +554,14 @@ body {
 /* top profile block */
 .profile-top {
   display: flex;
-  flex-direction: column; /* stack vertically */
-  align-items: center; /* center horizontally */
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 30px;
 }
 
 .profile-top .avatar {
-  width: 110px; /* bigger */
-  height: 110px; /* bigger */
+  width: 110px;
+  height: 110px;
   border-radius: 10px;
   background: #f4f4f4;
   display: inline-flex;
@@ -570,15 +570,15 @@ body {
   font-size: 50px;
   color: #222;
   margin-bottom: 5px;
-  position: relative; /* for file input overlay */
+  position: relative;
   overflow: hidden;
   transition: border 0.3s, opacity 0.3s;
 }
 
 .profile-top .avatar img {
-  width: 100%; /* fill the avatar container width */
-  height: 100%; /* fill the avatar container height */
-  object-fit: cover; /* maintain aspect ratio, crop if needed */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: inherit;
   transition: opacity 0.3s, border 0.3s;
 }
@@ -742,7 +742,7 @@ body {
 
 .info-row .info-item {
   flex: 1 1 0;
-  min-width: 180px; /* prevent items from shrinking too small */
+  min-width: 180px;
   display: flex;
   flex-direction: column;
 }
@@ -757,15 +757,15 @@ body {
 .radio-row {
   display: flex;
   align-items: center;
-  gap: 20px; /* space between Yes and No options */
-  margin-top: 6px; /* small gap from the question label */
-  flex-wrap: wrap; /* so it doesn’t overflow on smaller screens */
+  gap: 20px;
+  margin-top: 6px;
+  flex-wrap: wrap;
 }
 
 .radio-inline {
   display: flex;
   align-items: center;
-  gap: 6px; /* space between the circle and label text */
+  gap: 6px;
   font-size: 14px;
   color: #222;
   cursor: pointer;
@@ -774,12 +774,12 @@ body {
 /* Make sure the inputs align well vertically */
 .radio-inline input[type="radio"] {
   margin: 0;
-  transform: translateY(1px); /* slight adjustment for perfect alignment */
+  transform: translateY(1px);
 }
 
 /* put this near the bottom of your CSS file */
 .info-grid .radio-row .radio-inline {
-  display: inline-flex; /* inline-flex so circle + text are inline */
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   margin: 0;
@@ -809,7 +809,7 @@ body {
   border: 1px solid #e5e5e5;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   transition: background 0.3s;
-  margin: 0; /* Remove any margin that might cause spacing issues */
+  margin: 0;
 }
 
 .document-item:hover {
@@ -849,7 +849,7 @@ body {
 /* File upload field */
 .file-input {
   margin-top: 10px;
-  display: none; /* hidden until Edit */
+  display: none;
   background: #fff;
   border: 1px dashed #ccc;
   border-radius: 8px;
@@ -895,9 +895,9 @@ body {
 }
 
 .select-readonly {
-  pointer-events: none; /* Prevent changing */
-  background: #ebebeb !important; /* Light gray */
-  color: #333; /* Text color */
+  pointer-events: none;
+  background: #ebebeb !important;
+  color: #333;
 }
 
 /* Only show hover overlay when in edit mode */
@@ -926,11 +926,11 @@ body {
   height: 100%;
   opacity: 0;
   cursor: pointer;
-  pointer-events: none; /* default: cannot click */
+  pointer-events: none;
 }
 
 .profile-top.edit-mode .avatar input[type="file"] {
-  pointer-events: auto; /* only clickable in edit mode */
+  pointer-events: auto;
 }
 
 .profile-top.edit-mode .avatar:hover::after {
@@ -969,7 +969,7 @@ body {
 .recruitment-docs.dmw-docs {
   display: flex;
   flex-direction: column;
-  gap: 16px; /* same spacing as other .document-item */
+  gap: 16px;
 }
 
 .recruitment-docs.hidden {
@@ -1005,14 +1005,14 @@ body {
   padding: 10px 15px;
   margin: 10px;
   border-radius: 5px;
-  position: fixed; /* fixed so it stays on top */
-  top: 20px; /* distance from top of screen */
-  left: 50%; /* center horizontally */
+  position: fixed;
+  top: 20px;
+  left: 50%;
   transform: translateX(-50%);
   font-weight: bold;
-  z-index: 9999; /* make sure it's above everything */
-  min-width: 300px; /* optional, ensures decent width */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* optional, nice shadow */
+  z-index: 9999;
+  min-width: 300px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   text-align: center;
 }
 

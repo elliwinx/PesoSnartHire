@@ -21,8 +21,8 @@ body {
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.03); /* very faint white */
-  backdrop-filter: blur(3px); /* softer blur */
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(3px);
   background: transparent;
   position: fixed;
   top: 0;
@@ -146,11 +146,11 @@ body {
   display: flex;
   gap: 20px;
   padding: 15px;
-  align-items: flex-start; /* align inputs at the top */
+  align-items: flex-start;
 }
 
 .two-columns .form-group {
-  flex: 1; /* each takes equal space */
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -194,8 +194,8 @@ input[type="email"] {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  display: inline-block; /* don’t force block centering */
-  margin-top: 10px; /* just space above */
+  display: inline-block;
+  margin-top: 10px;
 }
 
 .buttons button:hover {
@@ -240,9 +240,9 @@ input[type="email"] {
 }
 
 .dropdown-menu {
-  display: none; /* hidden by default */
+  display: none;
   position: absolute;
-  right: 0; /* aligns under the bars icon */
+  right: 0;
   top: 30px;
   background: #ebebeb;
   border: 1px solid #ddd;
@@ -267,8 +267,8 @@ input[type="email"] {
 }
 
 .notif-badge {
-  background: #ffc107; /* yellow */
-  color: #ffc107; /* show yellow dot */
+  background: #ffc107;
+  color: #ffc107;
   font-size: 18px;
   border-radius: 50%;
   width: 18px;
@@ -362,7 +362,7 @@ input[type="email"] {
   padding: 0 20px 60px 20px;
   max-width: 1200px;
   justify-content: center;
-  margin: 0 auto; /* centers the .tab-group container itself */
+  margin: 0 auto;
 }
 
 .tab-group button {
@@ -400,10 +400,10 @@ input[type="email"] {
   max-width: 1200px;
 }
 
-/* 🔹 Individual Notification Card */
+/* Individual Notification Card */
 .card {
   display: flex;
-  justify-content: space-between; /* left details + right button */
+  justify-content: space-between;
   align-items: center;
   background: #f5f5f5;
   border-radius: 8px;
@@ -421,7 +421,7 @@ input[type="email"] {
 
 /* Unread highlight (optional left border) */
 .card.unread {
-  border-left: 4px solid #ffc107; /* yellow for new/unread */
+  border-left: 4px solid #ffc107;
 }
 
 /* Text styles */
@@ -441,7 +441,7 @@ input[type="email"] {
   color: #777;
 }
 
-/* 🔹 Right side button and badge */
+/* Right side button and badge */
 .card-actions {
   display: flex;
   flex-direction: column;
@@ -450,7 +450,7 @@ input[type="email"] {
 }
 
 .card-actions .badge {
-  background: #ffc107; /* yellow badge */
+  background: #ffc107;
   color: #000;
   font-size: 12px;
   font-weight: bold;
@@ -513,16 +513,16 @@ input[type="email"] {
 }
 
 .footer-note {
-  display: block; /* makes it behave like a <p> */
+  display: block;
   font-size: 0.9rem;
   margin-top: 20px !important;
-  color: #666; /* match footer text */
-  text-decoration: none; /* remove underline */
-  transition: color 0.3s ease; /* smooth hover effect */
+  color: #666;
+  text-decoration: none;
+  transition: color 0.3s ease;
 }
 
 .footer-note:hover {
-  color: #7b1113; /* darker on hover */
+  color: #7b1113;
 }
 
 .copyright {
@@ -566,14 +566,14 @@ input[type="email"] {
   padding: 10px 15px;
   margin: 10px;
   border-radius: 5px;
-  position: fixed; /* fixed so it stays on top */
-  top: 20px; /* distance from top of screen */
-  left: 50%; /* center horizontally */
+  position: fixed;
+  top: 20px;
+  left: 50%;
   transform: translateX(-50%);
   font-weight: bold;
-  z-index: 130000; /* ensure flash appears above loader overlays */
-  min-width: 300px; /* optional, ensures decent width */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* optional, nice shadow */
+  z-index: 130000;
+  min-width: 300px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   text-align: center;
 }
 
@@ -879,14 +879,14 @@ input[type="email"] {
 .modal-content h5 {
   margin: 0 0 24px 0;
   font-size: 18px;
-  font-weight: 700; /* make header explicitly bold */
+  font-weight: 700;
   color: #2d3748;
   letter-spacing: -0.3px;
 }
 
 /* Rejection modal specific styling */
 #rejectionModal .modal-content {
-  max-width: 560px; /* slightly wider for comfortable form fields */
+  max-width: 560px;
   width: 90%;
   padding: 22px 24px;
   text-align: left;
@@ -933,7 +933,7 @@ input[type="email"] {
 /* Make modal content feel lighter on mobile: stack buttons */
 @media (max-width: 480px) {
   #rejectionModal .rejection-actions {
-    flex-direction: column-reverse; /* confirm on bottom for mobile thumb reach */
+    flex-direction: column-reverse;
     align-items: stretch;
   }
   #rejectionModal .rejection-actions .status-btn {
@@ -988,9 +988,9 @@ input[type="email"] {
   border: none;
   border-radius: 6px;
   font-size: 13px;
-  font-weight: 400; /* changed to normal weight */
-  letter-spacing: 0.2px; /* reduce letter spacing to soften uppercase */
-  text-transform: none; /* use normal case to match applicant style */
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  text-transform: none;
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
@@ -1123,7 +1123,7 @@ input[type="email"] {
 #documentCheckboxList .document-checkbox-item {
   display: flex;
   align-items: center;
-  gap: 8px; /* spacing between checkbox and label */
+  gap: 8px;
 }
 
 .table-container {
@@ -1293,6 +1293,42 @@ tbody tr:hover {
   top: 50%;
   transform: translateY(-50%);
   color: #999;
+}
+
+/* Cards container */
+.document-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+/* Individual card */
+.doc-card {
+  flex: 1 1 200px; /* auto width, min 200px */
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.doc-card h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  color: #7b1113; /* blue-ish */
+  font-size: 1.1rem;
+}
+
+.doc-card p {
+  margin: 4px 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.doc-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Added responsive design for mobile devices */

@@ -10,13 +10,124 @@ from flask_mail import Message
 from .notifications import create_notification
 from .recaptcha import verify_recaptcha
 from flask import request
+from dateutil.relativedelta import relativedelta
+from apscheduler.schedulers.background import BackgroundScheduler
+
 
 applicants_bp = Blueprint("applicants", __name__)
 
+DOCUMENT_VALIDITY_MONTHS = 12  # 1 year
+
+
+def is_document_expired(expiry_date):
+    if not expiry_date:
+        return False
+    return datetime.now() > expiry_date
+
+
+def will_expire_in_7_days(expiry_date):
+    if not expiry_date:
+        return False
+    today = datetime.now()
+    return 0 < (expiry_date - today).days <= 7
+
+
+def check_expired_recommendations():
+    conn = create_connection()
+    if not conn:
+        print("[v0] DB connection failed")
+        return
+
+    try:
+        # Fetch applicants whose recommendation_letter_expiry is in the past and not already flagged
+        applicants = run_query(
+            conn,
+            """
+            SELECT applicant_id, first_name, last_name, email, recommendation_letter_expiry, status, recommendation_warning_sent
+            FROM applicants
+            WHERE recommendation_letter_expiry IS NOT NULL
+            """,
+            fetch="all"
+        )
+
+        for applicant in applicants:
+            expiry_date = applicant["recommendation_letter_expiry"]
+
+            # --- 1. Send pre-expiry warning (7 days before) ---
+            # Send a pre-expiry warning if it hasn't been sent yet (treat anything != 1 as not sent)
+            if will_expire_in_7_days(expiry_date) and applicant.get("recommendation_warning_sent") != 1:
+                warning_subject = "Your Recommendation Letter Will Expire Soon"
+                warning_body = f"""
+                <p>Hi {applicant['first_name']},</p>
+                <p>This is a reminder that your recommendation letter will expire in less than 7 days.</p>
+                <p>Please prepare a new copy to avoid any interruption in your application.</p>
+                """
+
+                try:
+                    msg = Message(subject=warning_subject,
+                                  recipients=[applicant["email"]],
+                                  html=warning_body)
+                    mail.send(msg)
+
+                    # Mark as warning sent
+                    run_query(
+                        conn,
+                        "UPDATE applicants SET recommendation_warning_sent = 1 WHERE applicant_id=%s",
+                        (applicant["applicant_id"],)
+                    )
+                    conn.commit()
+
+                    print(f"Warning email sent to {applicant['email']}")
+                except Exception as e:
+                    print(
+                        f"Failed to send warning email to {applicant['email']}: {e}")
+
+            # --- 2. Send expired email ---
+            if is_document_expired(expiry_date):
+                # Standardize on "Reupload" (no hyphen) and mark as inactive
+                if applicant.get("status") != "Reupload":
+                    # Update status to Reupload and deactivate account until reupload
+                    run_query(
+                        conn,
+                        "UPDATE applicants SET status=%s, is_active=%s WHERE applicant_id=%s",
+                        ("Reupload", 0, applicant["applicant_id"])
+                    )
+                    conn.commit()
+
+                    # Email for expired document
+                    subject = "Recommendation Letter Expired - Action Required"
+                    body = f"""
+                    <p>Hi {applicant['first_name']},</p>
+                    <p>Your recommendation letter has expired. Please upload a new recommendation letter to continue your application.</p>
+                    """
+
+                    try:
+                        msg = Message(subject=subject, recipients=[
+                            applicant["email"]], html=body)
+                        mail.send(msg)
+                        print(f"Expired email sent to {applicant['email']}")
+                    except Exception as e:
+                        print(
+                            f"Failed to send expired email to {applicant['email']}: {e}")
+
+    except Exception as e:
+        print(f"[v0] Error checking expired recommendations: {e}")
+    finally:
+        conn.close()
+
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=check_expired_recommendations,
+                  trigger="interval", hours=24)
+scheduler.start()
+
+print("Background scheduler started: expired recommendations will be checked daily")
+
 UPLOAD_FOLDER = "static/uploads"
 
-
 # ==== APPLICANT REGISTRATION ====
+
+
 def save_file(file, subfolder):
     if not file:
         return None
@@ -65,9 +176,15 @@ def register_applicant(form, files):
             files.get("applicantProfilePic"), "profile_pics")
         resume_path = save_file(files.get("applicantResume"), "resumes")
         recommendation_path = None
+        recommendation_expiry = None
         if not is_from_lipa:
             recommendation_path = save_file(
                 files.get("applicantRecommendationLetter"), "recommendations")
+
+            # Set expiry date to 1 year from upload
+            upload_date = datetime.now()
+            recommendation_expiry = upload_date + \
+                relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
 
         if is_from_lipa:
             city = form.get("applicantCity")
@@ -91,14 +208,14 @@ def register_applicant(form, files):
             last_name, first_name, middle_name, age, sex,
             phone, email, is_from_lipa, province, city, barangay, education,
             is_pwd, pwd_type, has_work_exp, years_experience, registration_reason,
-            profile_pic_path, resume_path, recommendation_letter_path,
+            profile_pic_path, resume_path, recommendation_letter_path, recommendation_letter_expiry, recommendation_warning_sent,
             accepted_terms, accepted_terms_at, status, is_active,
             password_hash, temp_password
         ) VALUES (
             %(last_name)s, %(first_name)s, %(middle_name)s, %(age)s, %(sex)s,
             %(phone)s, %(email)s, %(is_from_lipa)s, %(province)s, %(city)s, %(barangay)s, %(education)s,
             %(is_pwd)s, %(pwd_type)s, %(has_work_exp)s, %(years_experience)s, %(registration_reason)s,
-            %(profile_pic_path)s, %(resume_path)s, %(recommendation_letter_path)s,
+            %(profile_pic_path)s, %(resume_path)s, %(recommendation_letter_path)s, %(recommendation_letter_expiry)s, %(recommendation_warning_sent)s,
             %(accepted_terms)s, %(accepted_terms_at)s, %(status)s, %(is_active)s,
             %(password_hash)s, %(temp_password)s
         )
@@ -124,6 +241,8 @@ def register_applicant(form, files):
             "profile_pic_path": profile_path,
             "resume_path": resume_path,
             "recommendation_letter_path": recommendation_path,
+            "recommendation_letter_expiry": recommendation_expiry,
+            "recommendation_warning_sent": 0,
             "accepted_terms": accepted_terms,
             "accepted_terms_at": accepted_terms_at,
             "status": status,
@@ -344,9 +463,13 @@ def applications():
         flash("Please complete your document reupload first.", "info")
         return redirect(url_for("applicants.account_security"))
 
-    return render_template("Applicant/application.html")
-
     # --- FETCH APPLICANT FIRST ---
+    applicant_id = session.get("applicant_id")
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
     try:
         applicant = run_query(
             conn,
@@ -356,27 +479,29 @@ def applications():
         )
     except Exception as e:
         flash(f"Error fetching applicant data: {e}", "danger")
+        conn.close()
         return redirect(url_for("applicants.applicant_home"))
 
     if not applicant:
         flash("Applicant not found.", "danger")
+        conn.close()
         return redirect(url_for("applicants.applicant_home"))
 
     if request.method == "POST":
         try:
-            # 🔹 Your form data
+            # Your form data
             is_pwd = int(request.form.get("is_pwd", 0))
             pwd_type = request.form.get("disability_type") if is_pwd else None
             has_work_exp = int(request.form.get("has_work_exp", 0))
             years_exp = request.form.get(
                 "work_duration") if has_work_exp else None
 
-            # 🔹 Files
+            # Files
             profile_file = request.files.get("profile_pic")
             resume_file = request.files.get("resume_file")
             recommendation_file = request.files.get("recommendation_file")
 
-            # 🔹 Handle uploaded files
+            # Handle uploaded files
             if profile_file and profile_file.filename:
                 if applicant["profile_pic_path"]:
                     old_path = os.path.join(
@@ -396,6 +521,14 @@ def applications():
             else:
                 resume_path = applicant["resume_path"]
 
+            recommendation_path = applicant["recommendation_letter_path"]
+            recommendation_expiry = applicant.get(
+                "recommendation_letter_expiry")
+            recommendation_warning_sent = applicant.get(
+                "recommendation_warning_sent", 0)
+            status = applicant["status"]
+            is_active = applicant.get("is_active", 1)
+
             if recommendation_file and recommendation_file.filename:
                 if applicant["recommendation_letter_path"]:
                     old_path = os.path.join(
@@ -404,10 +537,14 @@ def applications():
                         os.remove(old_path)
                 recommendation_path = save_file(
                     recommendation_file, "recommendations")
-            else:
-                recommendation_path = applicant["recommendation_letter_path"]
+                # Update expiry date because a new recommendation was uploaded
+                recommendation_expiry = datetime.now() + relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
+                # Reset warning flag for new upload
+                recommendation_warning_sent = 0
+                status = "Pending"
+                is_active = 0
 
-            # 🔹 Update DB
+            # Update DB
             update_query = """
                 UPDATE applicants SET
                     first_name=%s,
@@ -428,7 +565,11 @@ def applications():
                     registration_reason=%s,
                     profile_pic_path=%s,
                     resume_path=%s,
-                    recommendation_letter_path=%s
+                    recommendation_letter_path=%s,
+                    recommendation_letter_expiry=%s,
+                    recommendation_warning_sent=%s,
+                    status=%s,
+                    is_active=%s
                 WHERE applicant_id=%s
             """
             data = (
@@ -452,18 +593,46 @@ def applications():
                 profile_path,
                 resume_path,
                 recommendation_path,
+                recommendation_expiry,
+                recommendation_warning_sent,
+                status,
+                is_active,
                 applicant_id
             )
 
             run_query(conn, update_query, data)
             conn.commit()
-            flash(
-                "Your account details and files have been updated successfully.", "success")
+
+            if recommendation_file and recommendation_file.filename:
+                applicant_name = f"{request.form.get('first_name', '')} {request.form.get('last_name', '')}"
+                residency_type = "Lipeno" if applicant.get(
+                    "is_from_lipa") else "Non-Lipeno"
+
+                update_notification_query = """
+                UPDATE notifications
+                SET title = %s, message = %s, is_read = 0, updated_at = NOW()
+                WHERE applicant_id = %s AND notification_type = 'applicant_approval'
+                """
+                notification_params = (
+                    "Applicant Document Reuploaded - Verification Required",
+                    f"Applicant {applicant_name} has reuploaded their recommendation letter and is pending verification.",
+                    applicant_id
+                )
+                run_query(conn, update_notification_query, notification_params)
+                conn.commit()
+
+                flash(
+                    "Your recommendation letter has been reuploaded successfully. Your account is now suspended pending admin verification. You will be notified once your document has been reviewed.", "info")
+                session["applicant_status"] = "Pending"
+            else:
+                flash(
+                    "Your account details and files have been updated successfully.", "success")
+
         except Exception as e:
             conn.rollback()
             flash(f"Error updating information: {e}", "danger")
 
-    # 🔹 Re-fetch applicant after POST
+    # Re-fetch applicant after POST
     try:
         applicant = run_query(
             conn,
@@ -474,7 +643,7 @@ def applications():
     finally:
         conn.close()
 
-    return render_template("Applicant/acc&secu.html", applicant=applicant)
+    return render_template("Applicant/application.html", applicant=applicant)
 
 
 @applicants_bp.route("/submit-reupload", methods=["POST"])
@@ -483,7 +652,7 @@ def submit_reupload():
         return jsonify({"success": False, "message": "Not authenticated"}), 401
 
     applicant_id = session["applicant_id"]
-    file = request.files.get("recommendation_file")  # ✅ match HTML input name
+    file = request.files.get("recommendation_file")
 
     if not file:
         return jsonify({"success": False, "message": "No file provided"}), 400
@@ -493,7 +662,7 @@ def submit_reupload():
         return jsonify({"success": False, "message": "DB connection failed"}), 500
 
     try:
-        # 🔹 Fetch applicant data (for residency_type and old file cleanup)
+        # Fetch applicant data (for residency_type and old file cleanup)
         applicant_data = run_query(
             conn,
             "SELECT recommendation_letter_path, is_from_lipa FROM applicants WHERE applicant_id = %s",
@@ -501,7 +670,7 @@ def submit_reupload():
             fetch="one"
         )
 
-        # 🧹 Delete old file if exists
+        # Delete old file if exists
         if applicant_data and applicant_data["recommendation_letter_path"]:
             old_path = os.path.join(
                 "static", applicant_data["recommendation_letter_path"])
@@ -509,22 +678,27 @@ def submit_reupload():
                 os.remove(old_path)
                 print(f"Old file removed: {old_path}")
 
-        # 💾 Save new file
+        # Save new file
         new_path = save_file(file, "recommendations")
 
-        # 🏷 Determine residency type
+        # Calculate new expiry date (1 year from upload)
+        upload_date = datetime.now()
+        recommendation_expiry = upload_date + \
+            relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
+
+        # Determine residency type
         residency_type = "Lipeno" if applicant_data and applicant_data.get(
             "is_from_lipa") else "Non-Lipeno"
 
-        # 🗂 Update applicant record
+        # Update applicant record
         run_query(
             conn,
             """
             UPDATE applicants 
-            SET recommendation_letter_path = %s, status = 'Pending', is_active = 0
+            SET recommendation_letter_path = %s, recommendation_letter_expiry = %s, recommendation_warning_sent = %s, status = 'Pending', is_active = 0
             WHERE applicant_id = %s
             """,
-            (new_path, applicant_id)
+            (new_path, recommendation_expiry, 0, applicant_id)
         )
         conn.commit()
 
@@ -839,6 +1013,36 @@ def account_security():
                     )
                     run_query(conn, update_query, params)
 
+            # Determine recommendation expiry to store:
+            # - If there's a recommendation file now and it's newly uploaded, set expiry 1 year from now
+            # - If the path was unchanged, keep existing expiry from the fetched applicant
+            # - If no recommendation, set expiry to None
+            try:
+                original_reco_path = applicant.get(
+                    "recommendation_letter_path")
+            except Exception:
+                original_reco_path = None
+
+            # preserve previous warning flag if present
+            try:
+                original_warning_sent = applicant.get(
+                    "recommendation_warning_sent")
+            except Exception:
+                original_warning_sent = None
+
+            if reco_path:
+                if reco_path != original_reco_path:
+                    recommendation_expiry = datetime.now() + relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
+                    # New file uploaded -> reset warning flag
+                    recommendation_warning_sent = 0
+                else:
+                    recommendation_expiry = applicant.get(
+                        "recommendation_letter_expiry")
+                    recommendation_warning_sent = original_warning_sent
+            else:
+                recommendation_expiry = None
+                recommendation_warning_sent = original_warning_sent
+
             run_query(
                 conn,
                 """
@@ -850,7 +1054,7 @@ def account_security():
                     education=%s,
                     is_pwd=%s, pwd_type=%s, has_work_exp=%s, years_experience=%s,
                     registration_reason=%s,
-                    profile_pic_path=%s, resume_path=%s, recommendation_letter_path=%s,
+                    profile_pic_path=%s, resume_path=%s, recommendation_letter_path=%s, recommendation_letter_expiry=%s, recommendation_warning_sent=%s,
                     is_from_lipa=%s, status=%s, is_active=%s, updated_at=NOW()
                 WHERE applicant_id=%s
                 """,
@@ -863,6 +1067,7 @@ def account_security():
                     is_pwd, pwd_type, has_work, years_exp,
                     reg_reason,
                     profile_path, resume_path, reco_path,
+                    recommendation_expiry, recommendation_warning_sent,
                     is_from_lipa_new, status, is_active,
                     applicant_id,
                 ),

@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 1️⃣ TAB SWITCHING LOGIC
+// TAB SWITCHING LOGIC
 document.addEventListener("DOMContentLoaded", () => {
   const buttons = document.querySelectorAll(".tab-btn");
   const contents = document.querySelectorAll(".content");
@@ -119,7 +119,7 @@ if (tab === "documents") {
   }
 }
 
-// 2️⃣ EDIT / SAVE / CANCEL LOGIC
+// EDIT / SAVE / CANCEL LOGIC
 document.addEventListener("DOMContentLoaded", () => {
   const editBtn = document.getElementById("editBtn");
   const saveBtn = document.getElementById("saveBtn");
@@ -383,7 +383,7 @@ if (phoneInput) {
   });
 }
 
-// 3️⃣ CONDITIONAL FIELDS OBSERVER (PWD / WORK)
+// CONDITIONAL FIELDS OBSERVER (PWD / WORK)
 (() => {
   const el = (sel) => document.querySelector(sel);
   const els = (sel) => Array.from(document.querySelectorAll(sel));
@@ -426,24 +426,24 @@ document.addEventListener("DOMContentLoaded", () => {
   const pwdDetails = document.getElementById("pwd_details");
 
   if (pwdYes && pwdYes.checked) {
-    pwdDetails.style.display = "block"; // show the dropdown
+    pwdDetails.style.display = "block";
   }
 
   const expYes = document.getElementById("exp_yes");
   const workDetails = document.getElementById("work_details");
 
   if (expYes && expYes.checked) {
-    workDetails.style.display = "block"; // show the work dropdown
+    workDetails.style.display = "block";
   }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
   const avatar = document.querySelector(".avatar");
-  if (!avatar) return; // safety check
+  if (!avatar) return;
 
   const input = avatar.querySelector("input[type='file']");
   const img = document.getElementById("profilePicPreview");
-  if (!input || !img) return; // safety check
+  if (!input || !img) return;
 
   // Live preview
   input.addEventListener("change", () => {
@@ -461,7 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
 document
   .getElementById("deactivateApplicantBtn")
   .addEventListener("click", async () => {
-    // 1️⃣ Ask for confirmation
+    //  Ask for confirmation
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "Your account will be permanently deleted after 30 days.",
@@ -473,21 +473,21 @@ document
       cancelButtonText: "Cancel",
     });
 
-    // 2️⃣ Stop if user canceled
+    // Stop if user canceled
     if (!confirmDelete.isConfirmed) return;
 
-    // 3️⃣ Show loader
+    // Show loader
     showLoader("Deactivating account — please wait…");
 
     try {
-      // 4️⃣ Call backend
+      // Call backend
       const res = await fetch("/applicants/deactivate", { method: "POST" });
       const data = await res.json();
 
       if (data.success) {
         setTimeout(() => {
           hideLoader();
-          window.location.href = "/"; // logout/redirect
+          window.location.href = "/";
         }, 1500);
       } else {
         hideLoader();
@@ -503,7 +503,7 @@ document
     }
   });
 
-// ✅ Loader functions
+// Loader functions
 function showLoader(text = "Processing — please wait...") {
   const loader = document.getElementById("ajaxLoader");
   const loaderText = document.getElementById("ajaxLoaderText");

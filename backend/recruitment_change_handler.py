@@ -27,7 +27,7 @@ def handle_recruitment_type_change(employer_id, db, old_type, new_type):
         if not employer:
             return {"success": False, "message": "Employer not found"}
 
-        # ⚡️ --- Pre-check required documents before changing recruitment type ---
+        # Pre-check required documents before changing recruitment type
         missing_docs = []
         if new_type == "Local":
             if not employer["dole_no_pending_case_path"]:
@@ -46,7 +46,7 @@ def handle_recruitment_type_change(employer_id, db, old_type, new_type):
                 "message": f"Cannot change recruitment type to {new_type}. Missing required documents: {', '.join(missing_docs)}."
             }
 
-        # --- Delete old docs depending on old_type ---
+        # Delete old docs depending on old_type
         files_to_delete, paths_to_clear = [], []
         if old_type == "Local":
             for col in ["dole_no_pending_case_path", "dole_authority_to_recruit_path"]:
@@ -69,7 +69,7 @@ def handle_recruitment_type_change(employer_id, db, old_type, new_type):
             except Exception as e:
                 logger.warning(f"[v0] Failed to delete file {file_path}: {e}")
 
-        # --- Build update for employers table ---
+        # Build update for employers table
         set_clause_str = ", ".join(
             [f"{p}=NULL" for p in paths_to_clear]) if paths_to_clear else ""
         if set_clause_str:
@@ -93,7 +93,7 @@ def handle_recruitment_type_change(employer_id, db, old_type, new_type):
         logger.info(
             f"[v0] Updated employer {employer_id}: {old_type} → {new_type}")
 
-        # --- 📨 Update or create notification (reuse employer_approval) ---
+        # Update or create notification (reuse employer_approval)
         notif_update = """
             UPDATE notifications
             SET title = %s,
