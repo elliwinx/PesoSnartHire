@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from db_connection import create_connection, run_query
@@ -57,19 +57,58 @@ DOCUMENT_NAMES = {
 }
 
 
+def to_date(value):
+    """Convert various date formats to a date object."""
+    if not value:
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        try:
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except ValueError:
+            return None
+    return None
+
+
 def get_expiry_date(months_valid):
     """Return expiry date based on number of months from now"""
     return datetime.now() + relativedelta(months=+months_valid)
 
 
 def check_expired_employer_documents():
-    """Check for expired employer documents and send warning emails."""
+    """Check for expired employer documents and send warning emails (daily reminders)."""
     conn = create_connection()
     if not conn:
         print("[v0] ✗ DB connection failed in check_expired_employer_documents")
         return
 
     try:
+        # <CHANGE> Reset warning flags daily for non-expired docs (like applicants.py)
+        run_query(
+            conn,
+            """
+            UPDATE employers 
+            SET business_permit_warning_sent = 0,
+                philiobnet_registration_warning_sent = 0,
+                job_orders_warning_sent = 0,
+                dole_no_pending_case_warning_sent = 0,
+                dole_authority_warning_sent = 0,
+                dmw_no_pending_case_warning_sent = 0,
+                license_to_recruit_warning_sent = 0
+            WHERE (business_permit_expiry > NOW() OR business_permit_expiry IS NULL)
+              AND (philiobnet_registration_expiry > NOW() OR philiobnet_registration_expiry IS NULL)
+              AND (job_orders_expiry > NOW() OR job_orders_expiry IS NULL)
+              AND (dole_no_pending_case_expiry > NOW() OR dole_no_pending_case_expiry IS NULL)
+              AND (dole_authority_expiry > NOW() OR dole_authority_expiry IS NULL)
+              AND (dmw_no_pending_case_expiry > NOW() OR dmw_no_pending_case_expiry IS NULL)
+              AND (license_to_recruit_expiry > NOW() OR license_to_recruit_expiry IS NULL)
+            """
+        )
+        conn.commit()
+
         employers = run_query(
             conn,
             """
@@ -81,7 +120,11 @@ def check_expired_employer_documents():
                    business_permit_warning_sent, philiobnet_registration_warning_sent,
                    job_orders_warning_sent, dole_no_pending_case_warning_sent,
                    dole_authority_warning_sent, dmw_no_pending_case_warning_sent,
-                   license_to_recruit_warning_sent
+                   license_to_recruit_warning_sent,
+                   business_permit_warning_date, philiobnet_registration_warning_date,
+                   job_orders_warning_date, dole_no_pending_case_warning_date,
+                   dole_authority_warning_date, dmw_no_pending_case_warning_date,
+                   license_to_recruit_warning_date
             FROM employers
             WHERE is_active = 1
             """,
@@ -95,68 +138,83 @@ def check_expired_employer_documents():
         print(
             f"[v0] Checking expired documents for {len(employers)} employers")
 
+        today = datetime.now().date()
+
         for emp in employers:
+            # <CHANGE> Define document fields with expiry, warning flag, and warning date
             doc_fields = [
-                ("business_permit_expiry", "business_permit_warning_sent"),
-                ("philiobnet_registration_expiry",
-                 "philiobnet_registration_warning_sent"),
-                ("job_orders_expiry", "job_orders_warning_sent"),
-                ("dole_no_pending_case_expiry",
-                 "dole_no_pending_case_warning_sent"),
-                ("dole_authority_expiry", "dole_authority_warning_sent"),
-                ("dmw_no_pending_case_expiry", "dmw_no_pending_case_warning_sent"),
-                ("license_to_recruit_expiry", "license_to_recruit_warning_sent")
+                ("business_permit_expiry", "business_permit_warning_sent",
+                 "business_permit_warning_date"),
+                ("philiobnet_registration_expiry", "philiobnet_registration_warning_sent",
+                 "philiobnet_registration_warning_date"),
+                ("job_orders_expiry", "job_orders_warning_sent",
+                 "job_orders_warning_date"),
+                ("dole_no_pending_case_expiry", "dole_no_pending_case_warning_sent",
+                 "dole_no_pending_case_warning_date"),
+                ("dole_authority_expiry", "dole_authority_warning_sent",
+                 "dole_authority_warning_date"),
+                ("dmw_no_pending_case_expiry", "dmw_no_pending_case_warning_sent",
+                 "dmw_no_pending_case_warning_date"),
+                ("license_to_recruit_expiry", "license_to_recruit_warning_sent",
+                 "license_to_recruit_warning_date")
             ]
 
-            for expiry_field, warning_field in doc_fields:
+            for expiry_field, warning_field, warning_date_field in doc_fields:
                 expiry_date = emp.get(expiry_field)
                 warning_sent = emp.get(warning_field)
+                last_warning_date = emp.get(warning_date_field)
+
+                # <CHANGE> Normalize warning_date to date object
+                if last_warning_date:
+                    last_warning_date = to_date(last_warning_date)
 
                 if not expiry_date:
                     continue
 
                 print(
-                    f"[v0] Employer {emp['employer_id']}: Checking {expiry_field} (expires: {expiry_date}, warning_sent: {warning_sent})")
+                    f"[v0] Employer {emp['employer_id']}: Checking {expiry_field} (expires: {expiry_date}, warning_sent: {warning_sent}, last_warning_date: {last_warning_date})")
 
                 doc_friendly_name = DOCUMENT_NAMES.get(
                     expiry_field, expiry_field)
 
-                # --- 1. Pre-expiry warning (7 days before) ---
+                # --- 1. Pre-expiry warning (7 days before, once per day) ---
                 if will_expire_in_7_days(expiry_date) and warning_sent != 1:
-                    subject = "PESO SmartHire - Document Expiry Warning"
-                    body = f"""
-                    <p>Hi {emp['employer_name']},</p>
-                    <p>The following document will expire soon: <b>{doc_friendly_name}</b>.</p>
-                    <p>Please update it to avoid any disruption in your account status.</p>
-                    <p>Expiry Date: <b>{expiry_date.strftime('%Y-%m-%d')}</b></p>
-                    <p>Best regards,<br/>PESO SmartHire Team</p>
-                    """
+                    # <CHANGE> Only send once per day (like applicants.py)
+                    if last_warning_date != today:
+                        subject = "PESO SmartHire - Document Expiry Warning"
+                        body = f"""
+                        <p>Hi {emp['employer_name']},</p>
+                        <p>The following document will expire soon: <b>{doc_friendly_name}</b>.</p>
+                        <p>Please update it to avoid any disruption in your account status.</p>
+                        <p>Expiry Date: <b>{expiry_date.strftime('%Y-%m-%d')}</b></p>
+                        <p>Best regards,<br/>PESO SmartHire Team</p>
+                        """
 
-                    try:
-                        from extensions import mail
-                        msg = Message(
-                            subject=subject,
-                            recipients=[emp["email"]],
-                            html=body
-                        )
-                        mail.send(msg)
+                        try:
+                            from extensions import mail
+                            msg = Message(
+                                subject=subject,
+                                recipients=[emp["email"]],
+                                html=body
+                            )
+                            mail.send(msg)
 
-                        # Mark warning as sent
-                        run_query(
-                            conn,
-                            f"UPDATE employers SET {warning_field} = 1 WHERE employer_id=%s",
-                            (emp["employer_id"],)
-                        )
-                        conn.commit()
-                        print(
-                            f"[v0] ✓ Pre-expiry warning sent to {emp['email']} for {expiry_field}")
-                    except Exception as e:
-                        print(
-                            f"[v0] ✗ Failed to send pre-expiry warning to {emp['email']}: {e}")
-                        import traceback
-                        traceback.print_exc()
+                            # <CHANGE> Mark warning as sent and record today's date
+                            run_query(
+                                conn,
+                                f"UPDATE employers SET {warning_field} = 1, {warning_date_field} = %s WHERE employer_id=%s",
+                                (today, emp["employer_id"],)
+                            )
+                            conn.commit()
+                            print(
+                                f"[v0] ✓ Pre-expiry warning sent to {emp['email']} for {expiry_field}")
+                        except Exception as e:
+                            print(
+                                f"[v0] ✗ Failed to send pre-expiry warning to {emp['email']}: {e}")
+                            import traceback
+                            traceback.print_exc()
 
-                # --- 2. Expired documents ---
+                # --- 2. Expired documents (send on expiry date) ---
                 if is_document_expired(expiry_date):
                     if emp.get("status") != "Reupload":
                         run_query(

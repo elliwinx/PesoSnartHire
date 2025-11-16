@@ -57,54 +57,71 @@ def check_expired_recommendations():
         return
 
     try:
-        # Fetch applicants whose recommendation_letter_expiry is in the past and not already flagged
+        # --- 0. Reset warning flags daily for non-expired docs ---
+        run_query(
+            conn,
+            "UPDATE applicants SET recommendation_warning_sent = 0 WHERE recommendation_letter_expiry > NOW()"
+        )
+        conn.commit()
+
+        # Fetch all applicants with a recommendation letter expiry
         applicants = run_query(
             conn,
             """
-            SELECT applicant_id, first_name, last_name, email, recommendation_letter_expiry, status, recommendation_warning_sent
+            SELECT applicant_id, first_name, last_name, email, recommendation_letter_expiry, status,
+                   recommendation_warning_sent, recommendation_warning_date
             FROM applicants
             WHERE recommendation_letter_expiry IS NOT NULL
             """,
             fetch="all"
         )
 
+        today = datetime.now().date()
+
         for applicant in applicants:
-            expiry_date = applicant["recommendation_letter_expiry"]
+            expiry_date = to_date(applicant["recommendation_letter_expiry"])
+            last_warning_date = applicant.get("recommendation_warning_date")
+            if last_warning_date:
+                last_warning_date = to_date(last_warning_date)
 
             # --- 1. Send pre-expiry warning (7 days before) ---
-            # Send a pre-expiry warning if it hasn't been sent yet (treat anything != 1 as not sent)
             if will_expire_in_7_days(expiry_date) and applicant.get("recommendation_warning_sent") != 1:
-                warning_subject = "Your Recommendation Letter Will Expire Soon"
-                warning_body = f"""
-                <p>Hi {applicant['first_name']},</p>
-                <p>This is a reminder that your recommendation letter will expire in less than 7 days.</p>
-                <p>Please prepare a new copy to avoid any interruption in your application.</p>
-                """
+                # Only send once per day
+                if last_warning_date != today:
+                    warning_subject = "Your Recommendation Letter Will Expire Soon"
+                    warning_body = f"""
+                    <p>Hi {applicant['first_name']},</p>
+                    <p>This is a reminder that your recommendation letter will expire in less than 7 days.</p>
+                    <p>Please prepare a new copy to avoid any interruption in your application.</p>
+                    """
+                    try:
+                        msg = Message(subject=warning_subject,
+                                      recipients=[applicant["email"]],
+                                      html=warning_body)
+                        mail.send(msg)
 
-                try:
-                    msg = Message(subject=warning_subject,
-                                  recipients=[applicant["email"]],
-                                  html=warning_body)
-                    mail.send(msg)
+                        # Mark as warning sent
+                        run_query(
+                            conn,
+                            """
+                            UPDATE applicants
+                            SET recommendation_warning_sent = 1,
+                                recommendation_warning_date = %s
+                            WHERE applicant_id = %s
+                            """,
+                            (today, applicant["applicant_id"])
+                        )
+                        conn.commit()
 
-                    # Mark as warning sent
-                    run_query(
-                        conn,
-                        "UPDATE applicants SET recommendation_warning_sent = 1 WHERE applicant_id=%s",
-                        (applicant["applicant_id"],)
-                    )
-                    conn.commit()
-
-                    print(f"Warning email sent to {applicant['email']}")
-                except Exception as e:
-                    print(
-                        f"Failed to send warning email to {applicant['email']}: {e}")
+                        print(f"Warning email sent to {applicant['email']}")
+                    except Exception as e:
+                        print(
+                            f"Failed to send warning email to {applicant['email']}: {e}")
 
             # --- 2. Send expired email ---
             if is_document_expired(expiry_date):
-                # Standardize on "Reupload" (no hyphen) and mark as inactive
                 if applicant.get("status") != "Reupload":
-                    # Update status to Reupload and deactivate account until reupload
+                    # Update status and deactivate
                     run_query(
                         conn,
                         "UPDATE applicants SET status=%s, is_active=%s WHERE applicant_id=%s",
@@ -118,10 +135,10 @@ def check_expired_recommendations():
                     <p>Hi {applicant['first_name']},</p>
                     <p>Your recommendation letter has expired. Please upload a new recommendation letter to continue your application.</p>
                     """
-
                     try:
-                        msg = Message(subject=subject, recipients=[
-                            applicant["email"]], html=body)
+                        msg = Message(subject=subject,
+                                      recipients=[applicant["email"]],
+                                      html=body)
                         mail.send(msg)
                         print(f"Expired email sent to {applicant['email']}")
                     except Exception as e:
