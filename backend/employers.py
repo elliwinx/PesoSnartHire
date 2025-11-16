@@ -46,49 +46,30 @@ doc_key_map = {
     "license_to_recruit_path": "dmw_recruit_authority",
 }
 
+DOCUMENT_NAMES = {
+    "business_permit_expiry": "Business Permit",
+    "philiobnet_registration_expiry": "PhilJobNet Registration",
+    "job_orders_expiry": "Job Orders",
+    "dole_no_pending_case_expiry": "DOLE No Pending Case",
+    "dole_authority_expiry": "DOLE Authority",
+    "dmw_no_pending_case_expiry": "DMW No Pending Case",
+    "license_to_recruit_expiry": "License to Recruit"
+}
+
 
 def get_expiry_date(months_valid):
     """Return expiry date based on number of months from now"""
     return datetime.now() + relativedelta(months=+months_valid)
 
 
-def is_document_expired(expiry_date):
-    """
-    Check if a document is already expired.
-    :param expiry_date: datetime or date object
-    :return: True if expired, False otherwise
-    """
-    if not expiry_date:
-        return False  # no expiry date set
-    # Normalize to date for safe comparison
-    expiry_date = expiry_date.date() if hasattr(
-        expiry_date, "date") else expiry_date
-    return datetime.now().date() > expiry_date
-
-
-def will_expire_in_7_days(expiry_date):
-    """
-    Check if a document will expire within the next 7 days.
-    :param expiry_date: datetime or date object
-    :return: True if expiring in 7 days, False otherwise
-    """
-    if not expiry_date:
-        return False
-    # Normalize to date for safe comparison
-    expiry_date = expiry_date.date() if hasattr(
-        expiry_date, "date") else expiry_date
-    today = datetime.now().date()
-    return today <= expiry_date <= today + timedelta(days=7)
-
-
 def check_expired_employer_documents():
+    """Check for expired employer documents and send warning emails."""
     conn = create_connection()
     if not conn:
-        print("[v0] DB connection failed")
+        print("[v0] ✗ DB connection failed in check_expired_employer_documents")
         return
 
     try:
-        # Fetch employers and their document expiries
         employers = run_query(
             conn,
             """
@@ -102,14 +83,23 @@ def check_expired_employer_documents():
                    dole_authority_warning_sent, dmw_no_pending_case_warning_sent,
                    license_to_recruit_warning_sent
             FROM employers
+            WHERE is_active = 1
             """,
             fetch="all"
         )
 
+        if not employers:
+            print("[v0] No active employers to check")
+            return
+
+        print(
+            f"[v0] Checking expired documents for {len(employers)} employers")
+
         for emp in employers:
             doc_fields = [
                 ("business_permit_expiry", "business_permit_warning_sent"),
-                ("philiobnet_registration_expiry", "philiobnet_warning_sent"),
+                ("philiobnet_registration_expiry",
+                 "philiobnet_registration_warning_sent"),
                 ("job_orders_expiry", "job_orders_warning_sent"),
                 ("dole_no_pending_case_expiry",
                  "dole_no_pending_case_warning_sent"),
@@ -125,18 +115,30 @@ def check_expired_employer_documents():
                 if not expiry_date:
                     continue
 
+                print(
+                    f"[v0] Employer {emp['employer_id']}: Checking {expiry_field} (expires: {expiry_date}, warning_sent: {warning_sent})")
+
+                doc_friendly_name = DOCUMENT_NAMES.get(
+                    expiry_field, expiry_field)
+
                 # --- 1. Pre-expiry warning (7 days before) ---
                 if will_expire_in_7_days(expiry_date) and warning_sent != 1:
                     subject = "PESO SmartHire - Document Expiry Warning"
                     body = f"""
                     <p>Hi {emp['employer_name']},</p>
-                    <p>The following document will expire soon: <b>{expiry_field}</b>.</p>
+                    <p>The following document will expire soon: <b>{doc_friendly_name}</b>.</p>
                     <p>Please update it to avoid any disruption in your account status.</p>
+                    <p>Expiry Date: <b>{expiry_date.strftime('%Y-%m-%d')}</b></p>
+                    <p>Best regards,<br/>PESO SmartHire Team</p>
                     """
 
                     try:
-                        msg = Message(subject=subject, recipients=[
-                                      emp["email"]], html=body)
+                        from extensions import mail
+                        msg = Message(
+                            subject=subject,
+                            recipients=[emp["email"]],
+                            html=body
+                        )
                         mail.send(msg)
 
                         # Mark warning as sent
@@ -147,14 +149,15 @@ def check_expired_employer_documents():
                         )
                         conn.commit()
                         print(
-                            f"[Pre-expiry warning] Sent to {emp['email']} for {expiry_field}")
+                            f"[v0] ✓ Pre-expiry warning sent to {emp['email']} for {expiry_field}")
                     except Exception as e:
                         print(
-                            f"[Error] Failed to send pre-expiry warning to {emp['email']}: {e}")
+                            f"[v0] ✗ Failed to send pre-expiry warning to {emp['email']}: {e}")
+                        import traceback
+                        traceback.print_exc()
 
                 # --- 2. Expired documents ---
                 if is_document_expired(expiry_date):
-                    # Update status to "Reupload" and deactivate account if not already
                     if emp.get("status") != "Reupload":
                         run_query(
                             conn,
@@ -163,27 +166,65 @@ def check_expired_employer_documents():
                         )
                         conn.commit()
 
-                        # Send expired document email only when status changes to Reupload
+                        doc_friendly_name = DOCUMENT_NAMES.get(
+                            expiry_field, expiry_field)
+
                         subject = "PESO SmartHire - Document Expired"
                         body = f"""
                         <p>Hi {emp['employer_name']},</p>
-                        <p>Your document <b>{expiry_field}</b> has expired. Please re-upload it immediately to maintain your account's active status.</p>
+                        <p>Your document <b>{doc_friendly_name}</b> has expired. Please re-upload it immediately to maintain your account's active status.</p>
+                        <p>You can still enter your account to re-upload the necessary documents.</p>
+                        <p>Best regards,<br/>PESO SmartHire Team</p>
                         """
 
                         try:
-                            msg = Message(subject=subject, recipients=[
-                                          emp["email"]], html=body)
+                            from extensions import mail
+                            msg = Message(
+                                subject=subject,
+                                recipients=[emp["email"]],
+                                html=body
+                            )
                             mail.send(msg)
                             print(
-                                f"[Expired email] Sent to {emp['email']} for {expiry_field}")
+                                f"[v0] ✓ Expired email sent to {emp['email']} for {expiry_field}")
                         except Exception as e:
                             print(
-                                f"[Error] Failed to send expired email to {emp['email']}: {e}")
+                                f"[v0] ✗ Failed to send expired email to {emp['email']}: {e}")
+                            import traceback
+                            traceback.print_exc()
 
     except Exception as e:
-        print(f"[v0] Error checking expired employer documents: {e}")
+        print(f"[v0] ✗ Error checking expired employer documents: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         conn.close()
+
+
+def is_document_expired(expiry_date):
+    if not expiry_date:
+        return False
+    if isinstance(expiry_date, str):
+        expiry_date = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+    elif isinstance(expiry_date, datetime):
+        expiry_date = expiry_date.date()
+
+    return datetime.now().date() > expiry_date
+
+
+def will_expire_in_7_days(expiry_date):
+    if not expiry_date:
+        return False
+    if isinstance(expiry_date, str):
+        expiry_date = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+    elif isinstance(expiry_date, datetime):
+        expiry_date = expiry_date.date()
+
+    today = datetime.now().date()
+    days_until_expiry = (expiry_date - today).days
+    print(
+        f"[v0] Date check: today={today}, expiry={expiry_date}, days_until={days_until_expiry}")
+    return 0 < days_until_expiry <= 7
 
 
 UPLOAD_FOLDER = "static/uploads"

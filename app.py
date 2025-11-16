@@ -1,7 +1,9 @@
 from backend.forgot_password import forgot_password_bp
 from backend.admin import admin_bp
-from backend.employers import employers_bp
-from backend.applicants import applicants_bp
+from backend.employers import employers_bp, check_expired_employer_documents
+from apscheduler.schedulers.background import BackgroundScheduler
+from datetime import datetime
+from backend.applicants import applicants_bp, check_expired_recommendations
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session, flash, send_from_directory, make_response
 from db_connection import create_connection, run_query
 from backend.recaptcha import verify_recaptcha
@@ -132,6 +134,42 @@ def terms_and_conditions():
 # STEP 6 — Run App
 # =========================================================
 if __name__ == "__main__":
-    print("Loaded from:", env_path)
-    print("Key:", os.environ.get("RECAPTCHA_SITE_KEY"))
-    app.run(debug=True)
+
+    def start_scheduler():
+        """Start the background scheduler with proper error handling."""
+        try:
+            scheduler = BackgroundScheduler()
+
+            def safe_check_expired():
+                try:
+                    print("[v0] ⏱ Scheduler job STARTING at", datetime.now())
+
+                    from backend.employers import check_expired_employer_documents
+                    from backend.applicants import check_expired_recommendations
+
+                    with app.app_context():
+                        check_expired_employer_documents()
+                        check_expired_recommendations()
+
+                    print("[v0] ⏱ Scheduler job COMPLETED at", datetime.now())
+
+                except Exception as e:
+                    print(f"[v0] ✗ SCHEDULER ERROR: {e}")
+
+            scheduler.add_job(
+                safe_check_expired,
+                'interval',
+                minutes=1,   # testing
+                id='check_expired_docs',
+                replace_existing=True
+            )
+
+            scheduler.start()
+            print("[v0] ✓ Central Scheduler STARTED")
+
+        except Exception as e:
+            print(f"[v0] ✗ Failed to start scheduler: {e}")
+
+    start_scheduler()
+
+    app.run(debug=True, use_reloader=False)

@@ -1,7 +1,7 @@
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
-from datetime import datetime
+from datetime import datetime, date
 import os
 from werkzeug.utils import secure_filename
 from db_connection import create_connection, run_query
@@ -19,17 +19,35 @@ applicants_bp = Blueprint("applicants", __name__)
 DOCUMENT_VALIDITY_MONTHS = 12  # 1 year
 
 
+# Normalize datetime/date values
+def to_date(value):
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    return None
+
+
 def is_document_expired(expiry_date):
-    if not expiry_date:
+    expiry = to_date(expiry_date)
+    if not expiry:
         return False
-    return datetime.now() > expiry_date
+
+    today = datetime.now().date()
+    return today > expiry
 
 
 def will_expire_in_7_days(expiry_date):
-    if not expiry_date:
+    expiry = to_date(expiry_date)
+    if not expiry:
         return False
-    today = datetime.now()
-    return 0 < (expiry_date - today).days <= 7
+
+    today = datetime.now().date()
+    days_left = (expiry - today).days
+
+    return 1 <= days_left <= 7
 
 
 def check_expired_recommendations():
@@ -116,18 +134,10 @@ def check_expired_recommendations():
         conn.close()
 
 
-scheduler = BackgroundScheduler()
-scheduler.add_job(func=check_expired_recommendations,
-                  trigger="interval", hours=24)
-scheduler.start()
-
-print("Background scheduler started: expired recommendations will be checked daily")
-
 UPLOAD_FOLDER = "static/uploads"
 
+
 # ==== APPLICANT REGISTRATION ====
-
-
 def save_file(file, subfolder):
     if not file:
         return None
