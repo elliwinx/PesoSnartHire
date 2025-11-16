@@ -210,14 +210,14 @@ def register_applicant(form, files):
             is_pwd, pwd_type, has_work_exp, years_experience, registration_reason,
             profile_pic_path, resume_path, recommendation_letter_path, recommendation_letter_expiry, recommendation_warning_sent,
             accepted_terms, accepted_terms_at, status, is_active,
-            password_hash, temp_password
+            password_hash, temp_password, must_change_password
         ) VALUES (
             %(last_name)s, %(first_name)s, %(middle_name)s, %(age)s, %(sex)s,
             %(phone)s, %(email)s, %(is_from_lipa)s, %(province)s, %(city)s, %(barangay)s, %(education)s,
             %(is_pwd)s, %(pwd_type)s, %(has_work_exp)s, %(years_experience)s, %(registration_reason)s,
             %(profile_pic_path)s, %(resume_path)s, %(recommendation_letter_path)s, %(recommendation_letter_expiry)s, %(recommendation_warning_sent)s,
             %(accepted_terms)s, %(accepted_terms_at)s, %(status)s, %(is_active)s,
-            %(password_hash)s, %(temp_password)s
+            %(password_hash)s, %(temp_password)s, %(must_change_password)s
         )
         """
         data = {
@@ -248,7 +248,8 @@ def register_applicant(form, files):
             "status": status,
             "is_active": 1 if is_from_lipa else 0,
             "password_hash": password_hash,
-            "temp_password": temp_password_plain
+            "temp_password": temp_password_plain,
+            "must_change_password": 1
         }
 
         print("Inserting applicant into database...")
@@ -401,15 +402,79 @@ def login():
         conn.close()
         return redirect(url_for("home"))
 
-    # Successful login
     session["applicant_id"] = applicant["applicant_id"]
     session["applicant_name"] = applicant["first_name"]
     session["applicant_email"] = applicant["email"]
     session["applicant_status"] = applicant["status"]
 
+    # Force password change only for "Approved" status with must_change_password = 1
+    if applicant["status"] == "Approved" and applicant.get("must_change_password") == 1:
+        session["must_change_password"] = True
+        flash("You must change your password before accessing your account.", "warning")
+        conn.close()
+        return redirect(url_for("applicants.forced_password_change"))
+
+    session["must_change_password"] = False
     conn.close()
     flash(f"Welcome back, {applicant['first_name']}!", "success")
     return redirect(url_for("applicants.applicant_home"))
+
+
+@applicants_bp.route("/change-password-required", methods=["GET", "POST"], endpoint="forced_password_change")
+def forced_password_change():
+    """Force user to change password on first login after approval"""
+    if "applicant_id" not in session:
+        flash("Please log in first.", "warning")
+        return redirect(url_for("home"))
+
+    if request.method == "GET":
+        # Prevent visiting the page directly
+        return redirect(url_for("applicants.applicant_home"))
+
+    # POST logic starts here
+    applicant_id = session["applicant_id"]
+    new_password = request.form.get("newPassword")
+    confirm_password = request.form.get("confirmPassword")
+
+    if not new_password or not confirm_password:
+        flash("Please fill in all password fields.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    if new_password != confirm_password:
+        flash("Passwords do not match.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    if len(new_password) < 8:
+        flash("Password must be at least 8 characters long.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    try:
+        hashed_password = generate_password_hash(new_password)
+        run_query(
+            conn,
+            """UPDATE applicants 
+               SET password_hash = %s, must_change_password = 0 
+               WHERE applicant_id = %s""",
+            (hashed_password, applicant_id)
+        )
+        conn.commit()
+        conn.close()
+
+        session["must_change_password"] = False
+
+        flash("Password changed successfully! You can now access your account.", "success")
+        return redirect(url_for("applicants.applicant_home"))
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        flash(f"Error updating password: {e}", "danger")
+        return redirect(url_for("applicants.applicant_home"))
 
 
 @applicants_bp.route("/logout")
@@ -463,187 +528,7 @@ def applications():
         flash("Please complete your document reupload first.", "info")
         return redirect(url_for("applicants.account_security"))
 
-    # --- FETCH APPLICANT FIRST ---
-    applicant_id = session.get("applicant_id")
-    conn = create_connection()
-    if not conn:
-        flash("Database connection failed.", "danger")
-        return redirect(url_for("applicants.applicant_home"))
-
-    try:
-        applicant = run_query(
-            conn,
-            "SELECT * FROM applicants WHERE applicant_id = %s",
-            (applicant_id,),
-            fetch="one"
-        )
-    except Exception as e:
-        flash(f"Error fetching applicant data: {e}", "danger")
-        conn.close()
-        return redirect(url_for("applicants.applicant_home"))
-
-    if not applicant:
-        flash("Applicant not found.", "danger")
-        conn.close()
-        return redirect(url_for("applicants.applicant_home"))
-
-    if request.method == "POST":
-        try:
-            # Your form data
-            is_pwd = int(request.form.get("is_pwd", 0))
-            pwd_type = request.form.get("disability_type") if is_pwd else None
-            has_work_exp = int(request.form.get("has_work_exp", 0))
-            years_exp = request.form.get(
-                "work_duration") if has_work_exp else None
-
-            # Files
-            profile_file = request.files.get("profile_pic")
-            resume_file = request.files.get("resume_file")
-            recommendation_file = request.files.get("recommendation_file")
-
-            # Handle uploaded files
-            if profile_file and profile_file.filename:
-                if applicant["profile_pic_path"]:
-                    old_path = os.path.join(
-                        "static", applicant["profile_pic_path"])
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                profile_path = save_file(profile_file, "profile_pics")
-            else:
-                profile_path = applicant["profile_pic_path"]
-
-            if resume_file and resume_file.filename:
-                if applicant["resume_path"]:
-                    old_path = os.path.join("static", applicant["resume_path"])
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                resume_path = save_file(resume_file, "resumes")
-            else:
-                resume_path = applicant["resume_path"]
-
-            recommendation_path = applicant["recommendation_letter_path"]
-            recommendation_expiry = applicant.get(
-                "recommendation_letter_expiry")
-            recommendation_warning_sent = applicant.get(
-                "recommendation_warning_sent", 0)
-            status = applicant["status"]
-            is_active = applicant.get("is_active", 1)
-
-            if recommendation_file and recommendation_file.filename:
-                if applicant["recommendation_letter_path"]:
-                    old_path = os.path.join(
-                        "static", applicant["recommendation_letter_path"])
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-                recommendation_path = save_file(
-                    recommendation_file, "recommendations")
-                # Update expiry date because a new recommendation was uploaded
-                recommendation_expiry = datetime.now() + relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
-                # Reset warning flag for new upload
-                recommendation_warning_sent = 0
-                status = "Pending"
-                is_active = 0
-
-            # Update DB
-            update_query = """
-                UPDATE applicants SET
-                    first_name=%s,
-                    middle_name=%s,
-                    last_name=%s,
-                    age=%s,
-                    sex=%s,
-                    phone=%s,
-                    email=%s,
-                    barangay=%s,
-                    city=%s,
-                    province=%s,
-                    education=%s,
-                    is_pwd=%s,
-                    pwd_type=%s,
-                    has_work_exp=%s,
-                    years_experience=%s,
-                    registration_reason=%s,
-                    profile_pic_path=%s,
-                    resume_path=%s,
-                    recommendation_letter_path=%s,
-                    recommendation_letter_expiry=%s,
-                    recommendation_warning_sent=%s,
-                    status=%s,
-                    is_active=%s
-                WHERE applicant_id=%s
-            """
-            data = (
-                request.form.get("first_name", ""),
-                request.form.get("middle_name", ""),
-                request.form.get("last_name", ""),
-                int(request.form.get("age", 0)) if request.form.get(
-                    "age") else None,
-                request.form.get("sex", ""),
-                request.form.get("phone", ""),
-                request.form.get("email", ""),
-                request.form.get("barangay", ""),
-                request.form.get("city", ""),
-                request.form.get("province", ""),
-                request.form.get("education", ""),
-                is_pwd,
-                pwd_type,
-                has_work_exp,
-                years_exp,
-                request.form.get("registration_reason", ""),
-                profile_path,
-                resume_path,
-                recommendation_path,
-                recommendation_expiry,
-                recommendation_warning_sent,
-                status,
-                is_active,
-                applicant_id
-            )
-
-            run_query(conn, update_query, data)
-            conn.commit()
-
-            if recommendation_file and recommendation_file.filename:
-                applicant_name = f"{request.form.get('first_name', '')} {request.form.get('last_name', '')}"
-                residency_type = "Lipeno" if applicant.get(
-                    "is_from_lipa") else "Non-Lipeno"
-
-                update_notification_query = """
-                UPDATE notifications
-                SET title = %s, message = %s, is_read = 0, updated_at = NOW()
-                WHERE applicant_id = %s AND notification_type = 'applicant_approval'
-                """
-                notification_params = (
-                    "Applicant Document Reuploaded - Verification Required",
-                    f"Applicant {applicant_name} has reuploaded their recommendation letter and is pending verification.",
-                    applicant_id
-                )
-                run_query(conn, update_notification_query, notification_params)
-                conn.commit()
-
-                flash(
-                    "Your recommendation letter has been reuploaded successfully. Your account is now suspended pending admin verification. You will be notified once your document has been reviewed.", "info")
-                session["applicant_status"] = "Pending"
-            else:
-                flash(
-                    "Your account details and files have been updated successfully.", "success")
-
-        except Exception as e:
-            conn.rollback()
-            flash(f"Error updating information: {e}", "danger")
-
-    # Re-fetch applicant after POST
-    try:
-        applicant = run_query(
-            conn,
-            "SELECT * FROM applicants WHERE applicant_id = %s",
-            (applicant_id,),
-            fetch="one"
-        )
-    finally:
-        conn.close()
-
-    return render_template("Applicant/application.html", applicant=applicant)
+    return render_template("Applicant/application.html")
 
 
 @applicants_bp.route("/submit-reupload", methods=["POST"])
@@ -850,9 +735,8 @@ def reactivate_applicant_account():
         cursor.close()
         conn.close()
 
+
 # ========= ACCOUNT & SECURITY (city-based residency) =========
-
-
 @applicants_bp.route("/account-security", methods=["GET", "POST"], endpoint="account_security")
 def account_security():
     if "applicant_id" not in session:
@@ -932,6 +816,10 @@ def account_security():
             status = applicant["status"]
             is_active = applicant.get("is_active", 1)
 
+            # This flag should NEVER be reset during updates - it was set during registration
+            # Only admin approval of NEW applicants should set it to 1
+            must_change_password = applicant.get("must_change_password", 0)
+
             residency_changed = (was_lipa != is_from_lipa_new)
 
             if residency_changed and is_from_lipa_new == 0:
@@ -991,7 +879,7 @@ def account_security():
                     )
                     run_query(conn, update_query, params)
 
-                    flash("Your residency has been changed to Non-Lipeño. Your recommendation letter has been uploaded. Please wait for admin approval. You will be logged out.", "warning")
+                    flash("Your residency has been changed to Non-Lipeño. Your recommendation letter has been uploaded. Please wait for admin approval. You will be logged out.", "info")
 
             elif is_from_lipa_new == 0 and reco_file and reco_file.filename:
                 if reco_path:
@@ -1078,7 +966,6 @@ def account_security():
 
             if residency_changed and is_from_lipa_new == 0:
                 conn.close()
-                session.clear()
                 return redirect(url_for("home"))
 
             conn.close()

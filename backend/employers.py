@@ -28,10 +28,9 @@ DOCUMENT_VALIDITY = {
 UPLOAD_TO_EXPIRY = {
     "business_permit_path": "business_permit_expiry",
     "philiobnet_registration_path": "philiobnet_registration_expiry",
-    "job_orders_of_client_path": "job_orders_expiry",
+    "job_orders_of_client_path": "job_orders_expiry",  # FIXED
     "dole_no_pending_case_path": "dole_no_pending_case_expiry",
     "dole_authority_to_recruit_path": "dole_authority_expiry",
-    # If dmw documents exist:
     "dmw_no_pending_case_path": "dmw_no_pending_case_expiry",
     "license_to_recruit_path": "license_to_recruit_expiry",
 }
@@ -40,10 +39,10 @@ UPLOAD_TO_EXPIRY = {
 doc_key_map = {
     "business_permit_path": "business_permit",
     "philiobnet_registration_path": "philjobnet",
-    "job_orders_path": "job_order",
-    "dole_no_pending_path": "dole_no_pending_case",
-    "dole_authority_path": "dole_recruit_authority",
-    "dmw_no_pending_path": "dmw_no_pending_case",
+    "job_orders_of_client_path": "job_order",
+    "dole_no_pending_case_path": "dole_no_pending_case",
+    "dole_authority_to_recruit_path": "dole_recruit_authority",
+    "dmw_no_pending_case_path": "dmw_no_pending_case",
     "license_to_recruit_path": "dmw_recruit_authority",
 }
 
@@ -98,7 +97,7 @@ def check_expired_employer_documents():
                    job_orders_expiry, dole_no_pending_case_expiry,
                    dole_authority_expiry, dmw_no_pending_case_expiry,
                    license_to_recruit_expiry,
-                   business_permit_warning_sent, philiobnet_warning_sent,
+                   business_permit_warning_sent, philiobnet_registration_warning_sent,
                    job_orders_warning_sent, dole_no_pending_case_warning_sent,
                    dole_authority_warning_sent, dmw_no_pending_case_warning_sent,
                    license_to_recruit_warning_sent
@@ -349,9 +348,9 @@ def register_employer(form_data, files):
             dole_no_pending_case_path, dole_no_pending_case_expiry, dole_authority_to_recruit_path, dole_authority_expiry,
             dmw_no_pending_case_path, dmw_no_pending_case_expiry, license_to_recruit_path, license_to_recruit_expiry,
             password_hash, temp_password, status, is_active,
-            accepted_terms, accepted_terms_at
+            accepted_terms, accepted_terms_at, must_change_password
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, NOW()
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, NOW(), %s
         )
     """
 
@@ -362,7 +361,7 @@ def register_employer(form_data, files):
         company_logo_path, business_permit_path, business_permit_expiry, philiobnet_path, philiobnet_expiry, job_orders_path, job_orders_expiry,
         dole_no_pending_path, dole_no_pending_expiry, dole_authority_path, dole_authority_expiry,
         dmw_no_pending_path, dmw_no_pending_expiry, license_to_recruit_path, license_to_recruit_expiry,
-        password_hash, None, 'Pending', 0
+        password_hash, None, 'Pending', 0, 1
     )
 
     result = run_query(conn, query, params)
@@ -471,16 +470,80 @@ def login():
         conn.close()
         return redirect(url_for("home"))
 
-    # Successful login - set session variables
+    # Successful login - user already changed password once
     session["employer_id"] = employer["employer_id"]
     session["employer_name"] = employer["employer_name"]
-    session["contact_person"] = employer["contact_person"]
     session["employer_email"] = employer["email"]
     session["employer_status"] = employer["status"]
 
+    # Force password change only for "Approved" status with must_change_password = 1
+    if employer["status"] == "Approved" and employer.get("must_change_password") == 1:
+        session["must_change_password"] = True
+        flash("You must change your password before accessing your account.", "warning")
+        conn.close()
+        return redirect(url_for("employers.forced_password_change"))
+
+    session["must_change_password"] = False
     conn.close()
     flash(f"Welcome back, {employer['employer_name']}!", "success")
     return redirect(url_for("employers.employer_home"))
+
+
+@employers_bp.route("/change-password-required", methods=["GET", "POST"], endpoint="forced_password_change")
+def forced_password_change():
+    """Force user to change password on first login after approval"""
+    if "employer_id" not in session:
+        flash("Please log in first.", "warning")
+        return redirect(url_for("home"))
+
+    if request.method == "GET":
+        # Prevent visiting the page directly
+        return redirect(url_for("employers.employer_home"))
+
+    # POST logic starts here
+    employer_id = session["employer_id"]
+    new_password = request.form.get("newPassword")
+    confirm_password = request.form.get("confirmPassword")
+
+    if not new_password or not confirm_password:
+        flash("Please fill in all password fields.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    if new_password != confirm_password:
+        flash("Passwords do not match.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    if len(new_password) < 8:
+        flash("Password must be at least 8 characters long.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("applicants.applicant_home"))
+
+    try:
+        hashed_password = generate_password_hash(new_password)
+        run_query(
+            conn,
+            """UPDATE employers 
+               SET password_hash = %s, must_change_password = 0 
+               WHERE employer_id = %s""",
+            (hashed_password, employer_id)
+        )
+        conn.commit()
+        conn.close()
+
+        session["must_change_password"] = False
+
+        flash("Password changed successfully! You can now access your account.", "success")
+        return redirect(url_for("employers.employer_home"))
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        flash(f"Error updating password: {e}", "danger")
+        return redirect(url_for("employers.employer_home"))
 
 
 # ===== Routes =====
@@ -492,8 +555,6 @@ def logout():
 
 
 # ===== Helper Functions =====
-
-
 def check_reupload_restriction():
     """Redirect Reupload status employers to account-security page only."""
     if session.get("employer_status") == "Reupload":
@@ -627,6 +688,17 @@ def account_security():
             expiry_updates = {}
             warning_reset_updates = {}
 
+            recruitment_type_changed = request.form.get(
+                "recruitment_type_changed")
+
+            if recruitment_type_changed == "true":
+                warning_reset_updates.update({
+                    "dole_no_pending_case_warning_sent": 0,
+                    "dole_authority_warning_sent": 0,
+                    "dmw_no_pending_case_warning_sent": 0,
+                    "license_to_recruit_warning_sent": 0
+                })
+
             for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
                 file_path = locals().get(file_field)  # e.g., business_permit_path
                 old_expiry = employer.get(expiry_field)
@@ -709,7 +781,7 @@ def account_security():
                 expiry_updates["dmw_no_pending_case_expiry"],
                 expiry_updates["license_to_recruit_expiry"],
                 warning_reset_updates["business_permit_warning_sent"],
-                warning_reset_updates["philiobnet_warning_sent"],
+                warning_reset_updates["philiobnet_registration_warning_sent"],
                 warning_reset_updates["job_orders_warning_sent"],
                 warning_reset_updates["dole_no_pending_case_warning_sent"],
                 warning_reset_updates["dole_authority_warning_sent"],

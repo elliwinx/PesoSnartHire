@@ -27,27 +27,27 @@
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
   </head>
-  <body>
+  <body
+    data-must-change-password="{{ 'true' if session.must_change_password else 'false' }}"
+  >
     <!--Flash of Welcome Back Message-->
-    {% with messages = get_flashed_messages(with_categories=true) %} 
-      {% if messages %} 
-        {% for category, msg in messages %}
-          <div class="flash {{ 'success' if category=='success' else 'danger' }}">
-            {{ msg }}
-            <button class="close" onclick="this.parentElement.remove()">×</button>
-          </div>
-        {% endfor %}
-        <script>
-          setTimeout(() => {
-            const flashes = document.querySelectorAll(".flash");
-            flashes.forEach((f) => f.classList.add("fade-out"));
-            setTimeout(() => {
-              flashes.forEach((f) => f.remove());
-            }, 500);
-          }, 3000);
-        </script>
-      {% endif %}
-    {% endwith %}
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -74,11 +74,14 @@
             class="nav-link"
             >Account & Security</a
           >
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
 
+    {% block content %}
     <section class="hero">
       <div class="hero-background">
         <img
@@ -88,11 +91,13 @@
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome{% if session.applicant_name %}, {{ session.applicant_name }}{% endif %}!</h1>
+          <h1 class="hero-title">
+            Welcome{% if session.applicant_name %}, {{ session.applicant_name
+            }}{% endif %}!
+          </h1>
           <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
-    </section>
     </section>
 
     <!-- Job Vacancies -->
@@ -117,6 +122,7 @@
         </div>
       </div>
     </section>
+    {% endblock %}
 
     <!-- Footer -->
     <footer class="footer">
@@ -128,7 +134,9 @@
               Connecting talent with opportunity through innovative recruitment
               solutions.
             </p>
-            <a href="{{url_for('terms_and_conditions')}}" class="footer-note">Terms and Conditions</a>
+            <a href="{{url_for('terms_and_conditions')}}" class="footer-note"
+              >Terms and Conditions</a
+            >
             <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
           </div>
           <div class="footer-right">
@@ -181,6 +189,60 @@
         </div>
       </div>
     </footer>
+
+    <!-- Force Password Modal -->
+    <div id="forcePasswordModal" class="custom-modal">
+      <div class="modal-content">
+        <h5>Change Your Password</h5>
+        <p>
+          For security, you must change your password before accessing your
+          account.
+        </p>
+        <div class="passwordRequirementsCard">
+          <!-- 📋 Password Requirements Notice -->
+          <ul id="passwordRequirements">
+            <li>At least 8 characters long</li>
+            <li>Contains uppercase and lowercase letters</li>
+            <li>Includes at least one number</li>
+            <li>Has at least one special character (@, $, !, %, *, ?, &)</li>
+          </ul>
+        </div>
+        <form
+          id="forcePasswordForm"
+          method="POST"
+          action="{{ url_for('applicants.forced_password_change') }}"
+        >
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="newPassword"
+              name="newPassword"
+              placeholder="New Password"
+              required
+            />
+            <span class="toggle-password">Show</span>
+          </div>
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              required
+            />
+            <span class="toggle-password">Show</span>
+          </div>
+          <!--  Live feedback (invalid, mismatch, etc.) -->
+          <small
+            id="passwordHint"
+            style="color: #ff6666; display: block; margin-top: 5px"
+          ></small>
+          <button type="submit" id="submitBtn" class="submitBtn" disabled>
+            Change Password
+          </button>
+        </form>
+      </div>
+    </div>
 
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}

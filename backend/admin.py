@@ -219,58 +219,44 @@ def update_nonlipeno_status(applicant_id):
             conn.close()
             return jsonify({"success": False, "message": "Non-Lipeño applicant not found"}), 404
 
-        # NEW APPLICANT CHECK - Based on temporary password status
-        # An applicant is considered new if they still have their temporary password
-        # (meaning they haven't changed their initial password yet)
-        has_temp_password = applicant.get("temp_password") is not None
-        is_new_applicant = has_temp_password
+        # If must_change_password = 1, this is a NEW applicant who hasn't changed their password yet
+        # If must_change_password = 0, this is an EXISTING applicant (already changed password once)
+        is_new_applicant = applicant.get("must_change_password") == 1
 
-        print(f"[Debug] Password status for applicant {applicant_id}:")
-        print(f"- Has temp password: {has_temp_password}")
-        print(f"- Password hash: {applicant.get('password_hash', 'None')}")
+        print(f"[v0] User detection for applicant {applicant_id}:")
         print(
-            f"- Temp password value: {applicant.get('temp_password', 'None')}")
-
-        # Check if this is a residency change request
-        is_residency_change = bool(
-            applicant.get("residency_type_change_pending"))
-        old_residency = applicant.get("old_residency_type")
-
-        print(f"[Debug] Applicant {applicant_id}:")
-        print(f"- Has password: {bool(applicant.get('password_hash'))}")
-        print(f"- Is new: {is_new_applicant}")
+            f"- must_change_password: {applicant.get('must_change_password')}")
+        print(f"- Is new applicant: {is_new_applicant}")
         print(f"- Current status: {applicant.get('status')}")
-        print(f"- Residency change pending: {is_residency_change}")
-        if is_residency_change:
-            print(f"- Previous residency type: {old_residency}")
+
         temp_password_plain = None
 
         if action == "approved":
             if is_new_applicant:
                 # Only generate new credentials for first-time approval
                 print(
-                    f"[Debug] Generating new credentials for new applicant {applicant_id}")
+                    f"[v0] NEW applicant {applicant_id} - generating credentials with must_change_password=1")
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
                 cursor.execute(
-                    "UPDATE applicants SET password_hash = %s, temp_password = %s WHERE applicant_id = %s",
+                    "UPDATE applicants SET password_hash = %s, temp_password = %s, must_change_password = 1 WHERE applicant_id = %s",
                     (password_hash, temp_password_plain, applicant_id)
                 )
                 applicant["temp_password"] = temp_password_plain
             else:
-                # EXISTING applicant - keep current credentials
+                # EXISTING applicant - keep current credentials and DO NOT reset must_change_password
                 print(
-                    f"[Debug] Existing applicant {applicant_id} - keeping current credentials")
+                    f"[v0] EXISTING applicant {applicant_id} - keeping current credentials, NOT resetting must_change_password")
                 temp_password_plain = applicant.get("temp_password")
+
         elif action == "reupload":
-            # For reupload - always use existing credentials
+            # For reupload - use existing credentials
             print(
-                f"[Debug] Reupload request - using existing credentials for applicant {applicant_id}")
+                f"[v0] Reupload request - using existing credentials for applicant {applicant_id}")
             temp_password_plain = applicant.get("temp_password")
 
-        # -----------------------------
-        # DETERMINE STATUS AND EMAIL
-        # -----------------------------
+        # EXISTING users keep their must_change_password = 0 (they already changed password)
+
         if action == "approved":
             new_status = "Approved"
             subject = "PESO SmartHire - Application Approved"
@@ -331,23 +317,7 @@ def update_nonlipeno_status(applicant_id):
             document_name = data.get("document_name", "Recommendation Letter")
             subject = "PESO SmartHire - Document Reupload Required"
 
-            if is_residency_change:
-                # This is a residency type change request
-                body = f"""
-                <p>Hi {applicant['first_name']},</p>
-                <p>This is PESO SmartHire Team.</p>
-                <p>We have received your request to update your residency status. To proceed, we need you to provide your {document_name}.</p>
-                <p><strong>Required Action:</strong></p>
-                <ol>
-                    <li>Log in to your PESO SmartHire account</li>
-                    <li>Upload your {document_name}</li>
-                </ol>
-                <p>We'll review your document once it's uploaded and update your residency status accordingly.</p>
-                <p>Note: If you've forgotten your password, you can reset it using the "Forgot Password" option on the login page.</p>
-                <p>Thank you for keeping your information up to date!</p>
-                <p>— PESO SmartHire Admin</p>
-                """
-            elif is_new_applicant:
+            if is_new_applicant:
                 # NEW applicant - send welcome email with credentials and reupload instructions
                 body = f"""
                 <p>Hi {applicant['first_name']},</p>
@@ -365,13 +335,12 @@ def update_nonlipeno_status(applicant_id):
                     <li>Log in to your account using the credentials above</li>
                     <li>Upload your {document_name}</li>
                 </ol>
-                <p><strong>Important:</strong> Please change your password after your first login for security purposes.</p>
                 <p>We'll review your document once it's uploaded and notify you of any updates.</p>
                 <p>Thank you for choosing PESO SmartHire!</p>
                 <p>— PESO SmartHire Admin</p>
                 """
             else:
-                # EXISTING applicant - regular reupload
+                # EXISTING applicant - regular reupload (don't force password change)
                 body = f"""
                 <p>Hi {applicant['first_name']},</p>
                 <p>This is PESO SmartHire Team.</p>
@@ -395,9 +364,6 @@ def update_nonlipeno_status(applicant_id):
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
-        # -----------------------------
-        # UPDATE STATUS + is_active
-        # -----------------------------
         is_active_value = 1 if new_status == "Approved" else 0
 
         if reason:
@@ -413,9 +379,6 @@ def update_nonlipeno_status(applicant_id):
 
         conn.commit()
 
-        # -----------------------------
-        # SEND EMAIL
-        # -----------------------------
         msg = Message(
             subject=subject,
             recipients=[applicant["email"]],
@@ -499,9 +462,9 @@ def applicants_for_approval():
 
     # Get non-Lipeño applicants with Pending status
     cursor.execute("""
-        SELECT applicant_id, first_name, middle_name, last_name, 
+        SELECT applicant_id, first_name, middle_name, last_name,
                created_at, status, is_from_lipa
-        FROM applicants 
+        FROM applicants
         WHERE is_from_lipa = 0 AND status = 'Pending'
         ORDER BY created_at DESC
     """)
@@ -524,9 +487,9 @@ def applicants_view_all():
 
     # Get all applicants (all statuses)
     cursor.execute("""
-        SELECT applicant_id, first_name, middle_name, last_name, 
+        SELECT applicant_id, first_name, middle_name, last_name,
                created_at, status, is_from_lipa
-        FROM applicants 
+        FROM applicants
         ORDER BY created_at DESC
     """)
     applicants = cursor.fetchall()
@@ -591,9 +554,9 @@ def employers_for_approval():
 
     # Get employers with Pending status
     cursor.execute("""
-        SELECT employer_id, employer_name, recruitment_type, 
+        SELECT employer_id, employer_name, recruitment_type,
                created_at, status
-        FROM employers 
+        FROM employers
         WHERE status = 'Pending'
         ORDER BY created_at DESC
     """)
@@ -616,9 +579,9 @@ def employers_view_all():
 
     # Get all employers (all statuses)
     cursor.execute("""
-        SELECT employer_id, employer_name, recruitment_type, 
+        SELECT employer_id, employer_name, recruitment_type,
                created_at, status
-        FROM employers 
+        FROM employers
         ORDER BY created_at DESC
     """)
     employers = cursor.fetchall()
@@ -648,10 +611,9 @@ def view_employer(employer_id):
     UPLOAD_TO_EXPIRY = {
         "business_permit_path": "business_permit_expiry",
         "philiobnet_registration_path": "philiobnet_registration_expiry",
-        "job_orders_of_client_path": "job_orders_expiry",
+        "job_orders_of_client_path": "job_orders_expiry",  # FIXED
         "dole_no_pending_case_path": "dole_no_pending_case_expiry",
         "dole_authority_to_recruit_path": "dole_authority_expiry",
-        # If dmw documents exist:
         "dmw_no_pending_case_path": "dmw_no_pending_case_expiry",
         "license_to_recruit_path": "license_to_recruit_expiry",
     }
@@ -709,27 +671,23 @@ def update_local_employer_status(employer_id):
             conn.close()
             return jsonify({"success": False, "message": "Local employer not found"}), 404
 
-        # Determine if this is a NEW employer similarly to applicants:
-        # - If they have a temp_password stored, they are considered new
-        # - Or if they don't have a password_hash yet
-        has_temp_password = employer.get("temp_password") is not None
-        has_password_hash = bool(employer.get("password_hash"))
-        is_new_employer = has_temp_password or not has_password_hash
+        # NEW employer: must_change_password = 1 (hasn't changed password yet)
+        # EXISTING employer: must_change_password = 0 (already changed password once)
+        is_new_employer = employer.get("must_change_password") == 1
         temp_password_plain = None
 
         if action == "approved":
-            # Generate password only if this employer truly needs one (no temp password present and no hash)
-            if is_new_employer and not has_temp_password:
+            if is_new_employer:
+                # Only generate credentials for truly NEW employers
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
                 cursor.execute(
-                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    "UPDATE employers SET password_hash = %s, temp_password = %s, must_change_password = 1 WHERE employer_id = %s",
                     (password_hash, temp_password_plain, employer_id)
                 )
             else:
-                # Existing employer or already has temp password - keep current credentials
-                temp_password_plain = employer.get(
-                    "temp_password") if has_temp_password else None
+                # EXISTING employer - keep current credentials, DO NOT reset must_change_password
+                temp_password_plain = employer.get("temp_password")
 
             new_status = "Approved"
             subject = "PESO SmartHire - Local Recruitment Account Approved"
@@ -755,6 +713,7 @@ def update_local_employer_status(employer_id):
             <p>This is PESO SmartHire Team.</p>
             <p>Congratulations! Your local recruitment account has been reviewed and approved!</p>
             <p>You may now post job orders and access your employer dashboard to manage your recruitment activities.</p>
+            {credentials_block}
             <p>To get started, visit our platform and log in with your credentials. You can then begin posting job orders and managing your recruitment needs.</p>
             <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
             <p>Thank you for partnering with PESO SmartHire!</p>
@@ -784,17 +743,18 @@ def update_local_employer_status(employer_id):
             )
 
         elif action == "reupload":
-            # For reupload: if new and doesn't yet have a temp password, generate one;
-            # otherwise keep existing temp_password (for new) or temp_password None (for existing)
-            if is_new_employer and not has_temp_password:
+            # For reupload: use existing credentials
+            temp_password_plain = employer.get("temp_password")
+
+            # Ensure new employers have a temp password
+            if is_new_employer and not temp_password_plain:
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
                 cursor.execute(
                     "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
                     (password_hash, temp_password_plain, employer_id)
                 )
-            else:
-                temp_password_plain = employer.get("temp_password")
+                conn.commit()
 
             new_status = "Reupload"
             requested = data.get("document_name")
@@ -841,7 +801,6 @@ def update_local_employer_status(employer_id):
                     <li>Phone Number: {employer['phone']}</li>
                     <li>Password: {temp_password_plain}</li>
                 </ul>
-                <p><strong>Please change your password after logging in for security purposes.</strong></p>
                 """
             else:
                 credentials_block = """
@@ -932,27 +891,23 @@ def update_international_employer_status(employer_id):
             conn.close()
             return jsonify({"success": False, "message": "International employer not found"}), 404
 
-        # Determine if this is a NEW employer similarly to applicants:
-        # - If they have a temp_password stored, they are considered new
-        # - Or if they don't have a password_hash yet
-        has_temp_password = employer.get("temp_password") is not None
-        has_password_hash = bool(employer.get("password_hash"))
-        is_new_employer = has_temp_password or not has_password_hash
+        # NEW employer: must_change_password = 1 (hasn't changed password yet)
+        # EXISTING employer: must_change_password = 0 (already changed password once)
+        is_new_employer = employer.get("must_change_password") == 1
         temp_password_plain = None
 
         if action == "approved":
-            # Generate password only if this employer truly needs one (no temp password present and no hash)
-            if is_new_employer and not has_temp_password:
+            if is_new_employer:
+                # Only generate credentials for truly NEW employers
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
                 cursor.execute(
-                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    "UPDATE employers SET password_hash = %s, temp_password = %s, must_change_password = 1 WHERE employer_id = %s",
                     (password_hash, temp_password_plain, employer_id)
                 )
             else:
-                # Existing employer or already has temp password - keep current credentials
-                temp_password_plain = employer.get(
-                    "temp_password") if has_temp_password else None
+                # EXISTING employer - keep current credentials, DO NOT reset must_change_password
+                temp_password_plain = employer.get("temp_password")
 
             new_status = "Approved"
             subject = "PESO SmartHire - International Recruitment Account Approved"
@@ -978,6 +933,7 @@ def update_international_employer_status(employer_id):
             <p>This is PESO SmartHire Team.</p>
             <p>Congratulations! Your international recruitment account has been reviewed and approved!</p>
             <p>You may now post overseas job orders and access your employer dashboard to manage your international recruitment activities.</p>
+            {credentials_block}
             <p>To get started, visit our platform and log in with your credentials. You can then begin posting overseas job orders and managing your international recruitment needs.</p>
             <p>If you have any questions or need assistance, please contact our support team.</p>
             <p>Thank you for partnering with PESO SmartHire!</p>
@@ -1007,17 +963,18 @@ def update_international_employer_status(employer_id):
             )
 
         elif action == "reupload":
-            # For reupload: if new and doesn't yet have a temp password, generate one;
-            # otherwise keep existing temp_password (for new) or temp_password None (for existing)
-            if is_new_employer and not has_temp_password:
+            # For reupload: use existing credentials
+            temp_password_plain = employer.get("temp_password")
+
+            # Ensure new employers have a temp password
+            if is_new_employer and not temp_password_plain:
                 temp_password_plain = secrets.token_urlsafe(8)
                 password_hash = generate_password_hash(temp_password_plain)
                 cursor.execute(
                     "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
                     (password_hash, temp_password_plain, employer_id)
                 )
-            else:
-                temp_password_plain = employer.get("temp_password")
+                conn.commit()
 
             new_status = "Reupload"
             requested = data.get("document_name")
@@ -1064,7 +1021,6 @@ def update_international_employer_status(employer_id):
                     <li>Phone Number: {employer['phone']}</li>
                     <li>Password: {temp_password_plain}</li>
                 </ul>
-                <p><strong>Please change your password after logging in for security purposes.</strong></p>
                 """
             else:
                 credentials_block = """
@@ -1150,12 +1106,10 @@ def reupload_recruitment_type_change(employer_id):
             conn.close()
             return jsonify({"success": False, "message": "Employer not found"}), 404
 
-        new_recruitment_type = employer["recruitment_type"]
-        # Determine newness similar to applicants: prefer temp_password presence
-        has_temp_password = employer.get("temp_password") is not None
-        has_password_hash = bool(employer.get("password_hash"))
-        is_new_employer = has_temp_password or not has_password_hash
+        # NEW employer: must_change_password = 1 (hasn't changed password yet)
+        is_new_employer = employer.get("must_change_password") == 1
 
+        new_recruitment_type = employer["recruitment_type"]
         # Build document list based on NEW recruitment type
         if new_recruitment_type == "Local":
             documents_needed = ["dole_no_pending_case",
@@ -1171,7 +1125,7 @@ def reupload_recruitment_type_change(employer_id):
 
         # Update employer: set to Reupload status, mark as restricted to documents tab
         cursor.execute("""
-            UPDATE employers 
+            UPDATE employers
             SET status = %s,
                 is_active = 0,
                 recruitment_type_change_pending = 1,
@@ -1182,8 +1136,8 @@ def reupload_recruitment_type_change(employer_id):
         conn.commit()
 
         temp_password_plain = None
-        # If new and missing a temp password, generate one. Otherwise keep existing temp_password.
-        if is_new_employer and not has_temp_password:
+        # If new and missing temp_password, generate one. Otherwise keep existing temp_password (DO NOT reset for existing)
+        if is_new_employer and not employer.get("temp_password"):
             temp_password_plain = secrets.token_urlsafe(8)
             password_hash = generate_password_hash(temp_password_plain)
 
@@ -1206,7 +1160,6 @@ def reupload_recruitment_type_change(employer_id):
                 <li>Phone Number: {employer['phone']}</li>
                 <li>Password: {temp_password_plain}</li>
             </ul>
-            <p><strong>Important:</strong> Please change your password after logging in for security purposes.</p>
             """
         else:
             credentials_block = f"""
@@ -1320,8 +1273,8 @@ def approve_recruitment_type_change(employer_id):
 
         # Update status to Approved
         cursor.execute("""
-            UPDATE employers 
-            SET status = %s, 
+            UPDATE employers
+            SET status = %s,
                 recruitment_type_change_pending = 0,
                 is_active = 1,
                 approved_at = NOW()
@@ -1395,7 +1348,7 @@ def reject_recruitment_type_change(employer_id):
 
         # Revert back to old recruitment type
         cursor.execute("""
-            UPDATE employers 
+            UPDATE employers
             SET recruitment_type = %s,
                 recruitment_type_change_pending = 0,
                 old_recruitment_type = NULL,

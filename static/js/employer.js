@@ -2,9 +2,10 @@
 const form = document.getElementById("jobPostForm");
 const clearFormBtn = document.getElementById("clearForm");
 const addJobVacancyBtn = document.getElementById("addJobVacancy");
-const modal = document.getElementById("successModal");
+const successModal = document.getElementById("successModal");
 const closeModal = document.querySelector(".close");
 const modalOk = document.getElementById("modalOk");
+const forcePasswordModal = document.getElementById("forcePasswordModal");
 
 // Form validation functions
 function showError(fieldId, message) {
@@ -108,7 +109,7 @@ form.addEventListener("submit", (e) => {
 
   if (validateForm()) {
     // Show success modal
-    modal.style.display = "block";
+    successModal.style.display = "block";
   }
 });
 
@@ -131,11 +132,11 @@ addJobVacancyBtn.addEventListener("click", () => {
 
 // Modal event listeners
 closeModal.addEventListener("click", () => {
-  modal.style.display = "none";
+  successModal.style.display = "none";
 });
 
 modalOk.addEventListener("click", () => {
-  modal.style.display = "none";
+  successModal.style.display = "none";
   // Optionally reset the form after successful submission
   form.reset();
   document.getElementById("numVacancy").value = 1;
@@ -144,8 +145,8 @@ modalOk.addEventListener("click", () => {
 
 // Close modal when clicking outside of it
 window.addEventListener("click", (e) => {
-  if (e.target === modal) {
-    modal.style.display = "none";
+  if (e.target === successModal) {
+    successModal.style.display = "none";
   }
 });
 
@@ -187,4 +188,165 @@ document.querySelectorAll("input, select, textarea").forEach((field) => {
       clearError(this.id);
     }
   });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  // ===== FORCE PASSWORD CHANGE MODAL =====
+  const dataAttr = document.body.getAttribute("data-must-change-password");
+  console.log("[v0] data-must-change-password attribute:", dataAttr);
+
+  let mustChangePassword = false;
+  try {
+    if (dataAttr) {
+      const parsed = JSON.parse(dataAttr);
+      // Only show modal if explicitly true (not truthy)
+      mustChangePassword = parsed === true;
+    }
+  } catch (e) {
+    console.error("[v0] Error parsing must_change_password:", e);
+    mustChangePassword = false;
+  }
+
+  console.log("[v0] mustChangePassword after parsing:", mustChangePassword);
+
+  if (mustChangePassword === true) {
+    const modal = document.getElementById("forcePasswordModal");
+    if (modal) {
+      modal.style.display = "flex";
+      console.log("[v0] Password change modal shown");
+    }
+  } else {
+    const modal = document.getElementById("forcePasswordModal");
+    if (modal) {
+      modal.style.display = "none";
+      console.log("[v0] Password change modal hidden");
+    }
+  }
+
+  // ===== SHOW / HIDE PASSWORD =====
+  document.querySelectorAll(".toggle-password").forEach((toggle) => {
+    toggle.addEventListener("click", () => {
+      const input = toggle.previousElementSibling;
+      if (input.type === "password") {
+        input.type = "text";
+        toggle.textContent = "Hide";
+      } else {
+        input.type = "password";
+        toggle.textContent = "Show";
+      }
+    });
+  });
+
+  // ===== PASSWORD VALIDATION =====
+  const forcePasswordForm = document.getElementById("forcePasswordForm");
+  const newPass = document.getElementById("newPassword");
+  const confirmPass = document.getElementById("confirmPassword");
+  const submitBtn = document.getElementById("submitBtn");
+  const hint = document.getElementById("passwordHint");
+  const requirements = document.querySelectorAll("#passwordRequirements li");
+
+  if (!forcePasswordForm || !newPass || !confirmPass || !submitBtn || !hint) {
+    console.log(
+      "[v0] Force password form elements not found, skipping validation setup"
+    );
+    return;
+  }
+
+  function validatePasswords() {
+    const password = newPass.value.trim();
+    const confirm = confirmPass.value.trim();
+
+    const hasMinLength = /.{8,}/.test(password);
+    const hasUpperAndLower = /[A-Z]/.test(password) && /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[@$!%*?&]/.test(password);
+
+    const rules = [hasMinLength, hasUpperAndLower, hasNumber, hasSpecialChar];
+
+    // Update requirement checklist colors
+    requirements.forEach((li, i) => {
+      li.style.color = rules[i] ? "green" : "#ff6666";
+    });
+
+    const allRequirementsMet = rules.every(Boolean);
+
+    if (password === "" && confirm === "") {
+      // Both empty - no validation message yet
+      hint.textContent = "";
+      submitBtn.disabled = true;
+      console.log("[v0] Passwords: both empty, button disabled");
+      return false;
+    }
+
+    if (password !== "" && !allRequirementsMet) {
+      // Password entered but doesn't meet requirements
+      hint.textContent = "Password does not meet all requirements.";
+      hint.style.color = "#ff6666";
+      submitBtn.disabled = true;
+      console.log("[v0] Passwords: requirements not met, button disabled");
+      return false;
+    }
+
+    if (allRequirementsMet && password !== confirm) {
+      // Requirements met but passwords don't match
+      hint.textContent = "Passwords do not match.";
+      hint.style.color = "#ff6666";
+      submitBtn.disabled = true;
+      console.log("[v0] Passwords: mismatch, button disabled");
+      return false;
+    }
+
+    if (allRequirementsMet && password === confirm && password !== "") {
+      // All requirements met and passwords match
+      hint.textContent = "Password looks good!";
+      hint.style.color = "green";
+      submitBtn.disabled = false;
+      console.log("[v0] Passwords: valid and match, button enabled");
+      return true;
+    }
+
+    // Default: not ready to submit
+    submitBtn.disabled = true;
+    return false;
+  }
+
+  // Attach event listeners
+  newPass.addEventListener("input", validatePasswords);
+  confirmPass.addEventListener("input", validatePasswords);
+
+  forcePasswordForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const password = newPass.value.trim();
+    const confirm = confirmPass.value.trim();
+
+    const hasMinLength = /.{8,}/.test(password);
+    const hasUpperAndLower = /[A-Z]/.test(password) && /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[@$!%*?&]/.test(password);
+
+    const allRequirementsMet =
+      hasMinLength &&
+      hasUpperAndLower &&
+      hasNumber &&
+      hasSpecialChar &&
+      password === confirm &&
+      password !== "";
+
+    if (!allRequirementsMet) {
+      hint.textContent = "Please fix the errors above before submitting.";
+      hint.style.color = "#ff6666";
+      return;
+    }
+
+    // Hide the modal first
+    const modal = document.getElementById("forcePasswordModal");
+    if (modal) modal.style.display = "none";
+
+    // Then submit the form
+    forcePasswordForm.submit();
+  });
+
+  // Initial validation run
+  validatePasswords();
 });

@@ -26,7 +26,9 @@
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
   </head>
-  <body>
+  <body
+    data-must-change-password="{{ 'true' if session.must_change_password else 'false' }}"
+  >
     <!-- Added flash messages section for success/error notifications -->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
@@ -120,7 +122,7 @@
               <div class="form-group">
                 <label for="workSchedule">Work Schedule</label>
                 <select id="workSchedule" name="workSchedule" required>
-                  <option value="">Job Position</option>
+                  <option value="">Work Schedule</option>
                   <option value="full-time">Full Time</option>
                   <option value="part-time">Part Time</option>
                   <option value="contract">Contract</option>
@@ -289,6 +291,60 @@
           <p>Job post successfully created!</p>
           <button class="btn btn-primary" id="modalOk">OK</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Force Password Modal -->
+    <div id="forcePasswordModal" class="custom-modal">
+      <div class="modal-content">
+        <h5>Change Your Password</h5>
+        <p>
+          For security, you must change your password before accessing your
+          account.
+        </p>
+        <div class="passwordRequirementsCard">
+          <!-- 📋 Password Requirements Notice -->
+          <ul id="passwordRequirements">
+            <li>At least 8 characters long</li>
+            <li>Contains uppercase and lowercase letters</li>
+            <li>Includes at least one number</li>
+            <li>Has at least one special character (@, $, !, %, *, ?, &)</li>
+          </ul>
+        </div>
+        <form
+          id="forcePasswordForm"
+          method="POST"
+          action="{{ url_for('employers.forced_password_change') }}"
+        >
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="newPassword"
+              name="newPassword"
+              placeholder="New Password"
+              required
+            />
+            <span class="toggle-password">Show</span>
+          </div>
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              required
+            />
+            <span class="toggle-password">Show</span>
+          </div>
+          <!--  Live feedback (invalid, mismatch, etc.) -->
+          <small
+            id="passwordHint"
+            style="color: #ff6666; display: block; margin-top: 5px"
+          ></small>
+          <button type="submit" id="submitBtn" class="submitBtn" disabled>
+            Change Password
+          </button>
+        </form>
       </div>
     </div>
 
