@@ -35,6 +35,16 @@ UPLOAD_TO_EXPIRY = {
     "license_to_recruit_path": "license_to_recruit_expiry",
 }
 
+EXPIRY_TO_UPLOADED_AT = {
+    "business_permit_expiry": "business_permit_uploaded_at",
+    "philiobnet_registration_expiry": "philiobnet_uploaded_at",
+    "job_orders_expiry": "job_orders_uploaded_at",
+    "dole_no_pending_case_expiry": "dole_no_pending_uploaded_at",
+    "dole_authority_expiry": "dole_authority_uploaded_at",
+    "dmw_no_pending_case_expiry": "dmw_no_pending_uploaded_at",
+    "license_to_recruit_expiry": "license_to_recruit_uploaded_at",
+}
+
 
 doc_key_map = {
     "business_permit_path": "business_permit",
@@ -132,7 +142,7 @@ def check_expired_employer_documents():
         today = datetime.now().date()
 
         for emp in employers:
-            # <CHANGE> Define document fields with expiry, warning flag, and warning date
+            # Define document fields with expiry, warning flag, and warning date
             doc_fields = [
                 ("business_permit_expiry", "business_permit_warning_sent",
                  "business_permit_warning_date"),
@@ -155,7 +165,7 @@ def check_expired_employer_documents():
                 warning_sent = emp.get(warning_field)
                 last_warning_date = emp.get(warning_date_field)
 
-                # <CHANGE> Normalize warning_date to date object
+                # Normalize warning_date to date object
                 if last_warning_date:
                     last_warning_date = to_date(last_warning_date)
 
@@ -170,7 +180,7 @@ def check_expired_employer_documents():
 
                 # --- 1. Pre-expiry warning (7 days before, once per day) ---
                 if will_expire_in_7_days(expiry_date) and warning_sent != 1:
-                    # <CHANGE> Only send once per day (like applicants.py)
+                    # Only send once per day (like applicants.py)
                     if last_warning_date != today:
                         subject = "PESO SmartHire - Document Expiry Warning"
                         body = f"""
@@ -190,7 +200,7 @@ def check_expired_employer_documents():
                             )
                             mail.send(msg)
 
-                            # <CHANGE> Mark warning as sent and record today's date
+                            # Mark warning as sent and record today's date
                             run_query(
                                 conn,
                                 f"UPDATE employers SET {warning_field} = 1, {warning_date_field} = %s WHERE employer_id=%s",
@@ -368,11 +378,14 @@ def register_employer(form_data, files):
     print(
         f"[v0] Base files saved - Logo: {bool(company_logo_path)}, Permit: {bool(business_permit_path)}")
 
-    # Initialize recruitment-specific paths
     dole_no_pending_path = None
+    dole_no_pending_uploaded_at = None
     dole_authority_path = None
+    dole_authority_uploaded_at = None
     dmw_no_pending_path = None
+    dmw_no_pending_uploaded_at = None
     license_to_recruit_path = None
+    license_to_recruit_uploaded_at = None
 
     # Handle recruitment type specific files
     if employer_data["recruitment_type"] == "Local":
@@ -781,7 +794,6 @@ def account_security():
             license_to_recruit_path = handle_upload(
                 license_to_recruit_file, employer["license_to_recruit_path"], "dmw_documents")
 
-            # Example after all handle_upload() calls
             expiry_updates = {}
             warning_reset_updates = {}
             uploaded_at_updates = {}
@@ -813,10 +825,9 @@ def account_security():
                         "_expiry", "_warning_sent")
                     warning_reset_updates[warning_field] = 0
 
-                    # Update the uploaded_at
-                    uploaded_at_field = expiry_field.replace(
-                        "_expiry", "_uploaded_at")
-                    uploaded_at_updates[uploaded_at_field] = datetime.now()
+                    uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
+                    if uploaded_at_field:
+                        uploaded_at_updates[uploaded_at_field] = datetime.now()
 
                 else:
                     # keep existing expiry
@@ -825,10 +836,11 @@ def account_security():
                         "_expiry", "_warning_sent")
                     warning_reset_updates[warning_field] = employer.get(
                         warning_field)
-                    uploaded_at_field = expiry_field.replace(
-                        "_expiry", "_uploaded_at")
-                    uploaded_at_updates[uploaded_at_field] = employer.get(
-                        uploaded_at_field)
+
+                    uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
+                    if uploaded_at_field:
+                        uploaded_at_updates[uploaded_at_field] = employer.get(
+                            uploaded_at_field)
 
             documents_to_reupload_list = request.form.getlist(
                 "documents_to_reupload")
@@ -914,8 +926,19 @@ def account_security():
                 employer_id
             )
 
-            run_query(conn, update_query, data)
+            result = run_query(conn, update_query, data)
+
+            if not result or result == 0:
+                print(
+                    f"[submit_reupload] Database update failed - no rows affected for employer {employer_id}")
+                flash(
+                    "Failed to update employer record. No changes were saved.", "danger")
+                conn.rollback()
+                return redirect(url_for("employers.account_security"))
+
             conn.commit()
+            print(
+                f"[submit_reupload] Database committed successfully for employer {employer_id}")
 
             # STEP 2: Now handle recruitment type change (after files are saved to DB)
             recruitment_type_changed = request.form.get(
@@ -997,16 +1020,8 @@ def submit_reupload():
     files_to_upload = {k: v for k,
                        v in request.files.items() if v and v.filename}
 
-    # Print what files were actually received
     print(
         f"[submit_reupload] Files received from form: {list(files_to_upload.keys())}")
-    print(
-        f"[submit_reupload] ALL request.files keys: {list(request.files.keys())}")
-    for key in request.files.keys():
-        file = request.files.get(key)
-        print(
-            f"[submit_reupload]   - {key}: filename={file.filename if file else 'None'}, size={len(file.read()) if file else 0}")
-        file.seek(0)  # Reset file pointer
 
     if not files_to_upload:
         flash("No files selected for reupload.", "warning")
@@ -1029,18 +1044,15 @@ def submit_reupload():
             flash("Employer not found.", "danger")
             return redirect(url_for("employers.account_security"))
 
-        # Map form keys to DB columns and folders
         file_mapping = {
             "company_logo": ("company_logo_path", "employer_logo"),
             "business_permit": ("business_permit_path", "business_permits"),
             "philiobnet_registration": ("philiobnet_registration_path", "philiobnet_registrations"),
-            "job_orders": ("job_orders_of_client_path", "job_orders"),
             "job_orders_of_client": ("job_orders_of_client_path", "job_orders"),
-            # <CHANGE> Fixed: match exact form field names
             "dole_no_pending_case": ("dole_no_pending_case_path", "dole_documents"),
             "dole_authority_to_recruit": ("dole_authority_to_recruit_path", "dole_documents"),
             "dmw_no_pending_case": ("dmw_no_pending_case_path", "dmw_documents"),
-            "dmw_license_to_recruit": ("license_to_recruit_path", "dmw_documents"),
+            "license_to_recruit": ("license_to_recruit_path", "dmw_documents"),
         }
 
         new_files = {}  # store new file paths
@@ -1048,6 +1060,8 @@ def submit_reupload():
 
         for key, file in files_to_upload.items():
             if key not in file_mapping:
+                print(
+                    f"[submit_reupload] Warning: Unknown file key '{key}', skipping")
                 continue
 
             db_field, folder = file_mapping[key]
@@ -1090,12 +1104,20 @@ def submit_reupload():
         uploaded_at_updates = {}
 
         for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
+            if file_field not in update_data:
+                print(
+                    f"[submit_reupload] Skipping {file_field}, not in update_data")
+                continue
+
             file_path = update_data[file_field]
             old_path = employer_data.get(file_field)
             old_expiry = employer_data.get(expiry_field)
 
-            uploaded_at_field = expiry_field.replace(
-                "_expiry", "_uploaded_at")  # <-- define it here
+            uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
+            if not uploaded_at_field:
+                print(
+                    f"[submit_reupload] Warning: No uploaded_at mapping for {expiry_field}")
+                continue
 
             if file_path != old_path and file_path:  # new file uploaded
                 months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
@@ -1135,32 +1157,30 @@ def submit_reupload():
             values
         )
 
-        if result:
-            conn.commit()
+        if not result or result == 0:
             print(
-                f"[submit_reupload] Database committed successfully for employer {employer_id}")
-
-            # NOW delete old files only after successful commit
-            for db_field, old_path in files_to_delete.items():
-                try:
-                    normalized = old_path.lstrip('/\\')
-                    full_old_path = os.path.normpath(
-                        os.path.join("static", normalized))
-                    if os.path.exists(full_old_path):
-                        os.remove(full_old_path)
-                        print(
-                            f"[submit_reupload] Deleted old file after DB commit: {full_old_path}")
-                    else:
-                        print(
-                            f"[submit_reupload] Old file not found: {full_old_path}")
-                except Exception as e:
-                    print(
-                        f"[submit_reupload] Error deleting old file {old_path}: {e}")
-        else:
-            print(
-                f"[submit_reupload] Database update failed for employer {employer_id}")
+                f"[submit_reupload] Database update failed - no rows affected for employer {employer_id}")
             flash("Failed to update employer record. No changes were saved.", "danger")
+            conn.rollback()
             return redirect(url_for("employers.account_security"))
+
+        conn.commit()
+        print(
+            f"[submit_reupload] Database committed successfully for employer {employer_id}")
+
+        # NOW delete old files only after successful commit
+        for db_field, old_path in files_to_delete.items():
+            try:
+                normalized = old_path.lstrip('/\\')
+                full_old_path = os.path.normpath(
+                    os.path.join("static", normalized))
+                if os.path.exists(full_old_path):
+                    os.remove(full_old_path)
+                    print(
+                        f"[submit_reupload] Deleted old file after DB commit: {full_old_path}")
+            except Exception as e:
+                print(
+                    f"[submit_reupload] Error deleting old file {old_path}: {e}")
 
         # Update notifications for admin
         run_query(
@@ -1184,6 +1204,8 @@ def submit_reupload():
     except Exception as e:
         conn.rollback()
         print(f"[submit_reupload] Exception occurred: {e}")
+        import traceback
+        traceback.print_exc()
         flash(f"Error during reupload: {e}", "danger")
         return redirect(url_for("employers.account_security"))
 
