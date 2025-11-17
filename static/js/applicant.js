@@ -306,16 +306,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const img = document.getElementById("profilePicPreview");
   if (!input || !img) return; // safety check
 
-  // Live preview
-  input.addEventListener("change", () => {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
+// Live preview
+input.addEventListener("change", () => {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+});
   ``;
 });
 document.getElementById("deactivateApplicantBtn").addEventListener("click", async () => {
@@ -370,3 +370,72 @@ function hideLoader() {
     const loader = document.getElementById("ajaxLoader");
     loader.style.display = "none";
 }
+
+function openConfirmModal(button) {
+    if (!button || !button.dataset) return;
+    const jobId = button.dataset.jobId;
+    if (!jobId) return;
+
+    const confirmApply = confirm("Are you sure you want to apply for this job?");
+    if (!confirmApply) return;
+
+    // Correct URL: include blueprint prefix
+    fetch(`/applicants/apply/${jobId}`, { method: "POST" })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const countSpan = document.getElementById(`applicant-count-${jobId}`);
+                if (countSpan) {
+                    countSpan.innerHTML = `<i class="fa-regular fa-user"></i> ${data.applicant_count}`;
+                }
+                button.disabled = true; // prevent double apply
+                alert(data.message);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(err => console.error(err));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Tab buttons -> filter application cards
+  const tabGroup = document.querySelector('.tab-group');
+  if (!tabGroup) return;
+
+  const buttons = Array.from(tabGroup.querySelectorAll('button'));
+  const cards   = Array.from(document.querySelectorAll('.application-card'));
+
+  function setActiveButton(activeBtn) {
+    buttons.forEach(b => b.classList.toggle('active', b === activeBtn));
+  }
+
+  function filterCards(filter) {
+    cards.forEach(card => {
+      const status = card.getAttribute('data-status') || '';
+      if (filter === 'all' || filter === '' ) {
+        card.classList.remove('hidden');
+      } else {
+        if (status === filter) card.classList.remove('hidden');
+        else card.classList.add('hidden');
+      }
+    });
+  }
+
+  // Attach click handlers
+  buttons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const filter = btn.dataset.filter || 'all';
+      setActiveButton(btn);
+      filterCards(filter);
+      // for accessibility, move focus back to button
+      btn.focus();
+    });
+  });
+
+  // initialize (show all)
+  const initialBtn = buttons.find(b => b.classList.contains('active')) || buttons[0];
+  if (initialBtn) {
+    setActiveButton(initialBtn);
+    filterCards(initialBtn.dataset.filter || 'all');
+  }
+});

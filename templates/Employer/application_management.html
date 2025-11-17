@@ -79,10 +79,10 @@
             Posted {{ job['created_at'].strftime('%m/%d/%Y') }}
           </div>
           <div class="meta-counts">
-            <span class="meta-item">
-              <i class="fa-regular fa-user"></i> {{ job.applicant_count or 0 }}
-            </span>
-          </div>
+          <span id="applicant-count-{{ job.job_id }}">
+              <i class="fa-regular fa-user"></i> {{ job.applicant_count }}
+          </span>
+         </div>
         </div>
 
         <div class="listing-actions">

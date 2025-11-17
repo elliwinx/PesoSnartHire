@@ -111,8 +111,113 @@
         <div class="job-grid">
           <!-- Job Cards will be injected via script.js -->
         </div>
+
+        <div class="job-listing-container">
+          {% if jobs %}
+            {% for job in jobs %}
+              <div class="job-card">
+                <div class="job-card-top">
+                  <div class="logo-and-title">
+                    <img src="{{ url_for('static', filename=job.company_logo_path) }}" alt="Company Logo" class="company-logo"/>
+                    <div class="title-wrap">
+                      <h3 class="job-title">{{ job.job_position }}</h3>
+                      <p class="company-name">{{ job.company_name }}</p>
+                      <p class="posted-time">Posted {{ job.created_at|timeago }}</p>
+                    </div>
+                  </div>
+                  <span class="status-badge">Active</span>
+                </div>
+
+                <div class="job-details">
+                  <p class="job-location"><i class="fas fa-map-marker-alt"></i> {{ job.location if job.location else 'Location' }}</p>
+                  <p class="job-salary"><i class="fa-solid fa-sack-dollar"></i> ₱{{ "{:,.0f}".format(job.min_salary|default(0)) }} - ₱{{ "{:,.0f}".format(job.max_salary|default(0)) }}</p>
+                  <p class="job-meta"><i class="fa-regular fa-user"></i> {{ job.num_vacancy if job.num_vacancy else 1 }} Vacancies | {{ job.work_schedule if job.work_schedule else 'Full-Time' }}</p>
+                </div>
+
+                <div class="job-actions">
+                  <div class="left-buttons">
+                    <a href="#" class="btn btn-details" data-job-id="{{ job.job_id }}">Details</a>
+
+                    <form id="applyForm-{{ job.job_id }}" action="{{ url_for('applicants.apply_job', job_id=job.job_id) }}" method="POST" class="apply-form">
+                        <button type="button"
+                                class="btn btn-apply"
+                                onclick="openConfirmModal(this)"
+                                data-job-id="{{ job.job_id }}">
+                            Apply
+                        </button>
+                    </form>
+
+
+                  </div>
+
+                  <div class="right-button">
+                    <button class="btn-report" title="Report">!</button>
+                  </div>
+
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="no-jobs-msg">No job postings available at the moment.</p>
+          {% endif %}
+        </div>
       </div>
-    </section>
+
+<!-- Modal HTML (hidden initially) -->
+<div id="jobDetailsModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="custom-modal">
+  <div class="custom-modal-content">
+      <h2>Confirm Application</h2>
+      <p>Are you sure you want to apply for this job?</p>
+
+      <div class="modal-buttons">
+        <button onclick="sendApplication()" class="btn-confirm">Confirm</button>
+        <button onclick="closeConfirmModal()" class="btn-cancel">Cancel</button>
+      </div>
+  </div>
+</div>
+
+<div id="reportModal" class="modal">
+  <div class="modal-content">
+    <span class="close-report">&times;</span>
+
+    <div class="modal-job-details">
+      <div class="report-icon">!</div>
+      <h2>Report Job Post</h2>
+      <p>Please select a reason for your report.</p>
+
+      <select id="reportReason">
+        <option value="">Reason</option>
+        <option value="Spam">Spam</option>
+        <option value="Scam">Scam</option>
+        <option value="Inappropriate">Inappropriate</option>
+      </select>
+
+      <div class="modal-buttons">
+        <button id="confirmReport" class="confirm-btn">Confirm</button>
+        <button id="cancelReport" class="cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Success Modal -->
+<div id="successModal" class="custom-modal">
+  <div class="custom-modal-content">
+      <h2>APPLICATION SENT</h2>
+      <p>Thank you for applying! You can monitor the status of your application on your Applications tab.</p>
+      <button onclick="closeSuccessModal()" class="btn-confirm">Confirm</button>
+  </div>
+</div>
+
 
     <!-- Footer -->
     <footer class="footer">
@@ -183,5 +288,134 @@
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script>
+document.addEventListener("DOMContentLoaded", () => {
+  // generate a job url template using Flask url_for(job_id=0) and replace the 0 later
+  const JOB_URL_TEMPLATE = "{{ url_for('applicants.job_page', job_id=0) }}"; // e.g. "/applicants/job/0"
+
+  const modal = document.getElementById("jobDetailsModal");
+  const modalBody = document.getElementById("modal-body");
+
+  if (!modal || !modalBody) {
+    console.warn("Job modal or modal body not found in DOM — modal disabled.");
+    return;
+  }
+
+  const closeBtn = modal.querySelector(".close");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+      modalBody.innerHTML = ""; // clear content
+    });
+  }
+
+  // close on outside click
+  window.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.style.display = "none";
+      modalBody.innerHTML = "";
+    }
+  });
+
+  // event delegation: works for dynamically generated .btn-details
+  document.body.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".btn-details");
+    if (!btn) return;
+
+    e.preventDefault();
+
+    const jobId = btn.getAttribute("data-job-id") || btn.dataset.jobId;
+    if (!jobId) {
+      console.error("No data-job-id found on .btn-details");
+      return;
+    }
+
+    modalBody.innerHTML = "<p>Loading...</p>";
+    modal.style.display = "flex";
+
+    // build correct url by replacing trailing /0 from template
+    const url = JOB_URL_TEMPLATE.replace(/\/0$/, `/${jobId}`);
+
+    try {
+      const res = await fetch(url, { credentials: "same-origin" });
+
+      if (!res.ok) {
+        // read text response for readable error (server might return plain text)
+        const txt = await res.text();
+        throw new Error(txt || `Fetch failed: ${res.status}`);
+      }
+
+      const contentType = res.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        // server returned JSON { success: true, html: "<...>" }
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "Failed to load job");
+        modalBody.innerHTML = data.html || "<p>No content.</p>";
+      } else {
+        // assume HTML/text
+        const html = await res.text();
+        modalBody.innerHTML = html;
+      }
+    } catch (err) {
+      console.error("Failed to fetch job details:", err);
+      modalBody.innerHTML = `<p style="color:red;">Failed to load job details: ${err.message}</p>`;
+    }
+  });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+  const reportBtn = document.querySelector(".btn-report");
+  const reportModal = document.getElementById("reportModal");
+  const closeModal = document.querySelector(".close-report");
+  const cancelBtn = document.getElementById("cancelReport");
+  const confirmBtn = document.getElementById("confirmReport");
+
+  if (reportBtn) {
+    reportBtn.onclick = () => {
+      reportModal.style.display = "flex";
+    };
+  }
+
+  closeModal.onclick = () => {
+    reportModal.style.display = "none";
+  };
+
+  cancelBtn.onclick = () => {
+    reportModal.style.display = "none";
+  };
+
+  confirmBtn.onclick = () => {
+    const reason = document.getElementById("reportReason").value;
+
+    if (reason === "") {
+      alert("Please select a reason.");
+      return;
+    }
+
+    // Palitan ang modal content sa success message
+    reportModal.querySelector(".modal-job-details").innerHTML = `
+      <div class="report-icon">!</div>
+      <h2>Job Post Reported</h2>
+      <p>Please wait for further announcement about your report.</p>
+    `;
+
+    // Add event listener sa bagong Close button
+    const closeReportSuccess = document.getElementById("closeReportSuccess");
+    closeReportSuccess.onclick = () => {
+      reportModal.style.display = "none";
+    };
+  };
+
+  // Optional: click outside modal to close
+  window.addEventListener("click", (e) => {
+    if (e.target === reportModal) {
+      reportModal.style.display = "none";
+    }
+  });
+});
+
+</script>
+
   </body>
 </html>

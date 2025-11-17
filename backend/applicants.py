@@ -318,7 +318,117 @@ def applicant_home():
         flash("Please complete your document reupload first.", "info")
         return redirect(url_for("applicants.account_security"))
 
-    return render_template("Applicant/applicant_home.html")
+# 🔹 Fetch active jobs
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("home"))
+
+    try:
+        jobs = run_query(
+    conn,
+    """
+    SELECT 
+        jobs.job_id, 
+        jobs.job_position, 
+        jobs.work_schedule, 
+        jobs.num_vacancy,
+        jobs.min_salary, 
+        jobs.max_salary, 
+        jobs.job_description, 
+        jobs.qualifications, 
+        jobs.created_at,
+        employers.employer_name AS company_name,
+        employers.company_logo_path
+    FROM jobs
+    LEFT JOIN employers ON jobs.employer_id = employers.employer_id
+    WHERE jobs.status = 'Active'
+    ORDER BY jobs.created_at DESC
+    """,
+    fetch="all"
+)
+
+    except Exception as e:
+        flash(f"Failed to fetch jobs: {e}", "danger")
+        jobs = []
+    finally:
+        conn.close()
+
+    return render_template("Applicant/applicant_home.html", jobs=jobs)
+
+@applicants_bp.route('/apply/<int:job_id>', methods=['POST'])
+def apply_job(job_id):
+    if "applicant_id" not in session:
+        return jsonify({"success": False, "message": "You must login first."}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed."}), 500
+
+    try:
+        applicant_id = session["applicant_id"]
+
+        # Prevent duplicate applications
+        existing = run_query(
+            conn,
+            "SELECT 1 FROM applications WHERE job_id=%s AND applicant_id=%s",
+            (job_id, applicant_id),
+            fetch="one"
+        )
+        if existing:
+            return jsonify({"success": False, "message": "You have already applied to this job."}), 400
+
+        # Insert application and increment count in a transaction
+        run_query(conn, "INSERT INTO applications (job_id, applicant_id, applied_at) VALUES (%s, %s, NOW())",
+                  (job_id, applicant_id))
+        run_query(conn, "UPDATE jobs SET applicant_count = applicant_count + 1 WHERE job_id = %s", (job_id,))
+        conn.commit()
+
+        # Fetch new count
+        new_count_row = run_query(conn, "SELECT applicant_count FROM jobs WHERE job_id=%s", (job_id,), fetch="one")
+        new_count = new_count_row["applicant_count"] if new_count_row else 0
+
+        return jsonify({"success": True, "message": "Application submitted!", "applicant_count": new_count})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+@applicants_bp.route("/job/<int:job_id>")
+def job_page(job_id):
+    if "applicant_id" not in session:
+        # return plain text with 401 so fetch.ok will be false
+        return "Please log in to view job details.", 401
+
+    conn = create_connection()
+    if not conn:
+        return "Database connection failed.", 500
+
+    try:
+        job = run_query(
+            conn,
+            "SELECT j.*, e.employer_name AS company_name, e.company_logo_path "
+            "FROM jobs j "
+            "LEFT JOIN employers e ON j.employer_id = e.employer_id "
+            "WHERE j.job_id = %s",
+            (job_id,),
+            fetch="one"
+        )
+
+        if not job:
+            return "Job not found.", 404
+
+        # Return only modal fragment HTML
+        return render_template("Applicant/job_modal_content.html", job=job)
+
+    except Exception as e:
+        print(f"[job_page] Error fetching job {job_id}: {e}")
+        return "An error occurred while fetching job details.", 500
+
+    finally:
+        conn.close()
 
 
 @applicants_bp.route("/notifications")
@@ -506,7 +616,6 @@ def submit_reupload():
         return jsonify({"success": False, "message": "DB connection failed"}), 500
 
     try:
-        # 🔹 Fetch applicant data (for residency_type and old file cleanup)
         applicant_data = run_query(
             conn,
             "SELECT recommendation_letter_path, is_from_lipa FROM applicants WHERE applicant_id = %s",

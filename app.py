@@ -8,6 +8,7 @@ from backend.recaptcha import verify_recaptcha
 from dotenv import load_dotenv
 from pathlib import Path
 from extensions import mail
+from datetime import datetime
 import os
 
 # =========================================================
@@ -35,6 +36,35 @@ app.config["MAIL_PASSWORD"] = "sptkwkkzgscnsxtw"
 app.config["MAIL_DEFAULT_SENDER"] = "samonteralphmatthew@gmail.com"
 
 mail.init_app(app)
+
+# =========================================================
+# CUSTOM JINJA FILTER — "timeago"
+# =========================================================
+def time_ago(dt):
+    if not dt:
+        return "some time ago"
+
+    now = datetime.now()
+    diff = now - dt
+
+    seconds = diff.total_seconds()
+    minutes = int(seconds / 60)
+    hours = int(minutes / 60)
+    days = int(hours / 24)
+
+    if seconds < 60:
+        return "just now"
+    elif minutes < 60:
+        return f"{minutes} minute ago" if minutes == 1 else f"{minutes} minutes ago"
+    elif hours < 24:
+        return f"{hours} hour ago" if hours == 1 else f"{hours} hours ago"
+    elif days < 7:
+        return f"{days} day ago" if days == 1 else f"{days} days ago"
+    else:
+        return dt.strftime("%b %d, %Y")
+
+# Register the filter
+app.jinja_env.filters["timeago"] = time_ago
 
 # =========================================================
 # STEP 3 — Make RECAPTCHA key available in templates

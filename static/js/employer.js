@@ -90,11 +90,45 @@ if (form) {
 // ========================
 document.addEventListener("DOMContentLoaded", () => {
   const addJobVacancyBtn = document.getElementById("addJobVacancy");
-  if (addJobVacancyBtn) {
-    addJobVacancyBtn.addEventListener("click", () => {
-      alert("Add Job Vacancy functionality would be implemented here");
+  if (!addJobVacancyBtn) return;
+
+  addJobVacancyBtn.addEventListener("click", () => {
+
+    // SweetAlert popup
+    Swal.fire({
+      title: "Success!",
+      text: "New Job Vacancy section added!",
+      icon: "success",
+      confirmButtonText: "OK",
+      confirmButtonColor: "#3B82F6",
     });
-  }
+
+    const container = document.getElementById("jobFormContainer");
+    if (!container) return;
+
+    const original = container.querySelector(".job-form-section");
+    if (!original) return;
+
+    // Clone the entire form section
+    const clone = original.cloneNode(true);
+
+    // Reset all input, textarea, select fields
+    clone.querySelectorAll("input, textarea, select").forEach(field => {
+      field.value = "";
+      field.removeAttribute("id"); // remove duplicate IDs para walang conflict
+    });
+
+    // Clear all error messages
+    clone.querySelectorAll(".error-message").forEach(err => {
+      err.textContent = "";
+    });
+
+    // Add spacing between sections
+    clone.style.marginTop = "20px"; // adjust px as needed
+
+    // Append the new cloned section
+    container.appendChild(clone);
+  });
 });
 
 
@@ -408,3 +442,4 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    {% extends "base.html" %}
+{% block content %}
+<div class="apply-page container">
+  <h2>Apply for: {{ job.job_position }}</h2>
+  <p class="company">{{ job.company_name }}</p>
+  <p><strong>Location:</strong> {{ job.location }}</p>
+  <p><strong>Salary:</strong> ₱{{ job.min_salary }} - ₱{{ job.max_salary }}</p>
+  <hr>
+  <h4>Job Description</h4>
+  <p>{{ job.job_description }}</p>
+
+  <form action="{{ url_for('applicants.apply_job', job_id=job.job_id) }}" method="POST">
+    <!-- If using Flask-WTF, add CSRF token here -->
+    <button type="submit" class="btn btn-apply">Confirm Application</button>
+    <a href="{{ url_for('applicants.applicant_home') }}" class="btn btn-outline">Cancel</a>
+  </form>
+</div>
+{% endblock %}
+
+</body>
+</html>

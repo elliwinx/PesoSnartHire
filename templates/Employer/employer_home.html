@@ -98,99 +98,67 @@
         </div>
 
     <!-- Job Form Section -->
-    <section class="job-form-section">
-      <h3 class="section-title">Job Vacancy Details</h3>
-      <form id="jobPostForm" method="POST" action="{{ url_for('employers.create_job') }}">
-       <input type="hidden" name="employer_id" value="{{ current_employer_id }}">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="jobPosition">Job Position</label>
-            <input
-              type="text"
-              id="jobPosition"
-              name="jobPosition"
-              placeholder="Job Position"
-              required
-            />
-            <span class="error-message" id="jobPositionError"></span>
-          </div>
-          <div class="form-group">
-            <label for="workSchedule">Work Schedule</label>
-            <select id="workSchedule" name="workSchedule" required>
-              <option value="">Select Schedule</option>
-              <option value="full-time">Full Time</option>
-              <option value="part-time">Part Time</option>
-              <option value="contract">Contract</option>
-              <option value="freelance">Freelance</option>
-            </select>
-            <span class="error-message" id="workScheduleError"></span>
-          </div>
-        </div>
+    <!-- Job Form Container (required for duplication) -->
+<div id="jobFormContainer">
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="numVacancy">Number of Vacancy</label>
-            <input
-              type="number"
-              id="numVacancy"
-              name="numVacancy"
-              value="1"
-              min="1"
-              required
-            />
-            <span class="error-message" id="numVacancyError"></span>
-          </div>
-          <div class="form-group">
-            <label for="minSalary">Minimum Salary (₱)</label>
-            <input
-              type="number"
-              id="minSalary"
-              name="minSalary"
-              placeholder="1.00"
-              min="0"
-              step="0.01"
-              required
-            />
-            <span class="error-message" id="minSalaryError"></span>
-          </div>
-          <div class="form-group">
-            <label for="maxSalary">Maximum Salary (₱)</label>
-            <input
-              type="number"
-              id="maxSalary"
-              name="maxSalary"
-              placeholder="1.00"
-              min="0"
-              step="0.01"
-              required
-            />
-            <span class="error-message" id="maxSalaryError"></span>
-          </div>
+  <!-- Job Form Section -->
+  <section class="job-form-section">
+    <h3 class="section-title">Job Vacancy Details</h3>
+
+    <form class="jobPostForm" method="POST" action="{{ url_for('employers.create_job') }}">
+      <input type="hidden" name="employer_id" value="{{ current_employer_id }}">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="jobPosition">Job Position</label>
+          <input type="text" name="jobPosition" placeholder="Job Position" required />
+          <span class="error-message"></span>
         </div>
 
         <div class="form-group">
-          <label for="jobDescription">Job Description</label>
-          <textarea
-            id="jobDescription"
-            name="jobDescription"
-            placeholder="Description"
-            rows="4"
-            required
-          ></textarea>
-          <span class="error-message" id="jobDescriptionError"></span>
+          <label for="workSchedule">Work Schedule</label>
+          <select name="workSchedule" required>
+            <option value="">Select Schedule</option>
+            <option value="full-time">Full Time</option>
+            <option value="part-time">Part Time</option>
+            <option value="contract">Contract</option>
+            <option value="freelance">Freelance</option>
+          </select>
+          <span class="error-message"></span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="numVacancy">Number of Vacancy</label>
+          <input type="number" name="numVacancy" value="1" min="1" required />
+          <span class="error-message"></span>
         </div>
 
         <div class="form-group">
-          <label for="qualifications">Qualifications</label>
-          <textarea
-            id="qualifications"
-            name="qualifications"
-            placeholder="Qualifications"
-            rows="4"
-            required
-          ></textarea>
-          <span class="error-message" id="qualificationsError"></span>
+          <label for="minSalary">Minimum Salary (₱)</label>
+          <input type="number" name="minSalary" placeholder="1.00" min="0" step="0.01" required />
+          <span class="error-message"></span>
         </div>
+
+        <div class="form-group">
+          <label for="maxSalary">Maximum Salary (₱)</label>
+          <input type="number" name="maxSalary" placeholder="1.00" min="0" step="0.01" required />
+          <span class="error-message"></span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="jobDescription">Job Description</label>
+        <textarea name="jobDescription" placeholder="Description" rows="4" required></textarea>
+        <span class="error-message"></span>
+      </div>
+
+      <div class="form-group">
+        <label for="qualifications">Qualifications</label>
+        <textarea name="qualifications" placeholder="Qualifications" rows="4" required></textarea>
+        <span class="error-message"></span>
+      </div>
 
         <div class="form-actions">
           <button type="reset" class="btn btn-outline">Clear Form</button>
@@ -288,6 +256,7 @@
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
     <!-- Scripts -->
+     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
   </body>
