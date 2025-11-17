@@ -86,28 +86,19 @@ def check_expired_employer_documents():
         return
 
     try:
-        # <CHANGE> Reset warning flags daily for non-expired docs (like applicants.py)
-        run_query(
-            conn,
-            """
-            UPDATE employers 
-            SET business_permit_warning_sent = 0,
-                philiobnet_registration_warning_sent = 0,
-                job_orders_warning_sent = 0,
-                dole_no_pending_case_warning_sent = 0,
-                dole_authority_warning_sent = 0,
-                dmw_no_pending_case_warning_sent = 0,
-                license_to_recruit_warning_sent = 0
-            WHERE (business_permit_expiry > NOW() OR business_permit_expiry IS NULL)
-              AND (philiobnet_registration_expiry > NOW() OR philiobnet_registration_expiry IS NULL)
-              AND (job_orders_expiry > NOW() OR job_orders_expiry IS NULL)
-              AND (dole_no_pending_case_expiry > NOW() OR dole_no_pending_case_expiry IS NULL)
-              AND (dole_authority_expiry > NOW() OR dole_authority_expiry IS NULL)
-              AND (dmw_no_pending_case_expiry > NOW() OR dmw_no_pending_case_expiry IS NULL)
-              AND (license_to_recruit_expiry > NOW() OR license_to_recruit_expiry IS NULL)
-            """
-        )
-        conn.commit()
+        reset_updates = [
+            "business_permit_warning_sent = 0 WHERE business_permit_expiry > NOW()",
+            "philiobnet_registration_warning_sent = 0 WHERE philiobnet_registration_expiry > NOW()",
+            "job_orders_warning_sent = 0 WHERE job_orders_expiry > NOW()",
+            "dole_no_pending_case_warning_sent = 0 WHERE dole_no_pending_case_expiry > NOW()",
+            "dole_authority_warning_sent = 0 WHERE dole_authority_expiry > NOW()",
+            "dmw_no_pending_case_warning_sent = 0 WHERE dmw_no_pending_case_expiry > NOW()",
+            "license_to_recruit_warning_sent = 0 WHERE license_to_recruit_expiry > NOW()"
+        ]
+
+        for update in reset_updates:
+            run_query(conn, f"UPDATE employers SET {update}")
+            conn.commit()
 
         employers = run_query(
             conn,
@@ -366,10 +357,13 @@ def register_employer(form_data, files):
         files.get("employerCompanyLogo"), "employer_logo")
     business_permit_path = save_file(
         files.get("employerBusinessPermit"), "employer_permit")
+    business_permit_uploaded_at = datetime.now() if business_permit_path else None
     philiobnet_path = save_file(
         files.get("employerPhiliobnetRegistration"), "employer_philiobnet")
+    philiobnet_uploaded_at = datetime.now() if philiobnet_path else None
     job_orders_path = save_file(
         files.get("employerJobOrdersOfClient"), "employer_joborders")
+    job_orders_uploaded_at = datetime.now() if job_orders_path else None
 
     print(
         f"[v0] Base files saved - Logo: {bool(company_logo_path)}, Permit: {bool(business_permit_path)}")
@@ -385,8 +379,10 @@ def register_employer(form_data, files):
         print("[v0] Processing Local recruitment files (DOLE)")
         dole_no_pending_path = save_file(
             files.get("employerDOLENoPendingCase"), "employer_dole")
+        dole_no_pending_uploaded_at = datetime.now() if dole_no_pending_path else None
         dole_authority_path = save_file(
             files.get("employerDOLEAuthorityToRecruit"), "employer_dole")
+        dole_authority_uploaded_at = datetime.now() if dole_authority_path else None
 
         print(
             f"[v0] DOLE files - No Pending: {bool(dole_no_pending_path)}, Authority: {bool(dole_authority_path)}")
@@ -398,8 +394,10 @@ def register_employer(form_data, files):
         print("[v0] Processing International recruitment files (DMW)")
         dmw_no_pending_path = save_file(
             files.get("employerDMWNoPendingCase"), "employer_dmw")
+        dmw_no_pending_uploaded_at = datetime.now() if dmw_no_pending_path else None
         license_to_recruit_path = save_file(
             files.get("employerLicenseToRecruit"), "employer_dmw")
+        license_to_recruit_uploaded_at = datetime.now() if license_to_recruit_path else None
 
         print(
             f"[v0] DMW files - No Pending: {bool(dmw_no_pending_path)}, License: {bool(license_to_recruit_path)}")
@@ -443,13 +441,13 @@ def register_employer(form_data, files):
         INSERT INTO employers (
             employer_name, industry, recruitment_type, contact_person, phone, email,
             street, barangay, city, province,
-            company_logo_path, business_permit_path, business_permit_expiry, philiobnet_registration_path, philiobnet_registration_expiry, job_orders_of_client_path, job_orders_expiry,
-            dole_no_pending_case_path, dole_no_pending_case_expiry, dole_authority_to_recruit_path, dole_authority_expiry,
-            dmw_no_pending_case_path, dmw_no_pending_case_expiry, license_to_recruit_path, license_to_recruit_expiry,
+            company_logo_path, business_permit_path, business_permit_uploaded_at, business_permit_expiry, philiobnet_registration_path, philiobnet_uploaded_at, philiobnet_registration_expiry, job_orders_of_client_path, job_orders_uploaded_at, job_orders_expiry,
+            dole_no_pending_case_path, dole_no_pending_uploaded_at, dole_no_pending_case_expiry, dole_authority_to_recruit_path, dole_authority_uploaded_at, dole_authority_expiry,
+            dmw_no_pending_case_path, dmw_no_pending_uploaded_at, dmw_no_pending_case_expiry, license_to_recruit_path, license_to_recruit_uploaded_at, license_to_recruit_expiry,
             password_hash, temp_password, status, is_active,
             accepted_terms, accepted_terms_at, must_change_password
         ) VALUES (
-            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, NOW(), %s
+            %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, NOW(), %s
         )
     """
 
@@ -457,9 +455,9 @@ def register_employer(form_data, files):
         employer_data["employer_name"], employer_data["industry"], employer_data["recruitment_type"],
         employer_data["contact_person"], employer_data["phone"], employer_data["email"],
         employer_data["street"], employer_data["barangay"], employer_data["city"], employer_data["province"],
-        company_logo_path, business_permit_path, business_permit_expiry, philiobnet_path, philiobnet_expiry, job_orders_path, job_orders_expiry,
-        dole_no_pending_path, dole_no_pending_expiry, dole_authority_path, dole_authority_expiry,
-        dmw_no_pending_path, dmw_no_pending_expiry, license_to_recruit_path, license_to_recruit_expiry,
+        company_logo_path, business_permit_path, business_permit_uploaded_at, business_permit_expiry, philiobnet_path, philiobnet_uploaded_at, philiobnet_expiry, job_orders_path, job_orders_uploaded_at, job_orders_expiry,
+        dole_no_pending_path, dole_no_pending_uploaded_at, dole_no_pending_expiry, dole_authority_path, dole_authority_uploaded_at, dole_authority_expiry,
+        dmw_no_pending_path, dmw_no_pending_uploaded_at, dmw_no_pending_expiry, license_to_recruit_path, license_to_recruit_uploaded_at, license_to_recruit_expiry,
         password_hash, None, 'Pending', 0, 1
     )
 
@@ -786,6 +784,7 @@ def account_security():
             # Example after all handle_upload() calls
             expiry_updates = {}
             warning_reset_updates = {}
+            uploaded_at_updates = {}
 
             recruitment_type_changed = request.form.get(
                 "recruitment_type_changed")
@@ -813,6 +812,12 @@ def account_security():
                     warning_field = expiry_field.replace(
                         "_expiry", "_warning_sent")
                     warning_reset_updates[warning_field] = 0
+
+                    # Update the uploaded_at
+                    uploaded_at_field = expiry_field.replace(
+                        "_expiry", "_uploaded_at")
+                    uploaded_at_updates[uploaded_at_field] = datetime.now()
+
                 else:
                     # keep existing expiry
                     expiry_updates[expiry_field] = old_expiry
@@ -820,6 +825,10 @@ def account_security():
                         "_expiry", "_warning_sent")
                     warning_reset_updates[warning_field] = employer.get(
                         warning_field)
+                    uploaded_at_field = expiry_field.replace(
+                        "_expiry", "_uploaded_at")
+                    uploaded_at_updates[uploaded_at_field] = employer.get(
+                        uploaded_at_field)
 
             documents_to_reupload_list = request.form.getlist(
                 "documents_to_reupload")
@@ -860,6 +869,13 @@ def account_security():
                     dole_authority_warning_sent=%s,
                     dmw_no_pending_case_warning_sent=%s,
                     license_to_recruit_warning_sent=%s,
+                    business_permit_uploaded_at=%s,
+                    philiobnet_uploaded_at=%s,
+                    job_orders_uploaded_at=%s,
+                    dole_no_pending_uploaded_at=%s,
+                    dole_authority_uploaded_at=%s,
+                    dmw_no_pending_uploaded_at=%s,
+                    license_to_recruit_uploaded_at=%s,
                     documents_to_reupload=%s,
                     status=%s,
                     is_active=%s
@@ -886,6 +902,13 @@ def account_security():
                 warning_reset_updates["dole_authority_warning_sent"],
                 warning_reset_updates["dmw_no_pending_case_warning_sent"],
                 warning_reset_updates["license_to_recruit_warning_sent"],
+                uploaded_at_updates["business_permit_uploaded_at"],
+                uploaded_at_updates["philiobnet_uploaded_at"],
+                uploaded_at_updates["job_orders_uploaded_at"],
+                uploaded_at_updates["dole_no_pending_uploaded_at"],
+                uploaded_at_updates["dole_authority_uploaded_at"],
+                uploaded_at_updates["dmw_no_pending_uploaded_at"],
+                uploaded_at_updates["license_to_recruit_uploaded_at"],
                 documents_to_reupload_json,
                 employer["status"], employer["is_active"],
                 employer_id
@@ -1064,23 +1087,40 @@ def submit_reupload():
         # Calculate expiry and reset warnings (AFTER update_data exists)
         expiry_updates = {}
         warning_reset_updates = {}
+        uploaded_at_updates = {}
+
         for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
             file_path = update_data[file_field]
             old_path = employer_data.get(file_field)
             old_expiry = employer_data.get(expiry_field)
 
+            uploaded_at_field = expiry_field.replace(
+                "_expiry", "_uploaded_at")  # <-- define it here
+
             if file_path != old_path and file_path:  # new file uploaded
                 months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
                 expiry_updates[expiry_field] = get_expiry_date(months_valid)
-                warning_reset_updates[expiry_field.replace(
-                    "_expiry", "_warning_sent")] = 0
+
+                warning_field = expiry_field.replace(
+                    "_expiry", "_warning_sent")
+                warning_reset_updates[warning_field] = 0
+
+                uploaded_at_updates[uploaded_at_field] = datetime.now()
             else:
                 expiry_updates[expiry_field] = old_expiry
-                warning_reset_updates[expiry_field.replace("_expiry", "_warning_sent")] = employer_data.get(
-                    expiry_field.replace("_expiry", "_warning_sent"))
 
+                warning_field = expiry_field.replace(
+                    "_expiry", "_warning_sent")
+                warning_reset_updates[warning_field] = employer_data.get(
+                    warning_field)
+
+                uploaded_at_updates[uploaded_at_field] = employer_data.get(
+                    uploaded_at_field)
+
+        # Merge into update_data
         update_data.update(expiry_updates)
         update_data.update(warning_reset_updates)
+        update_data.update(uploaded_at_updates)
 
         # Reset status to Pending for re-review
         update_data["status"] = "Pending"

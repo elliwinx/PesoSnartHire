@@ -235,11 +235,16 @@
           {% for doc in documents %}
           <div class="doc-card">
             <h4>{{ doc.name }}</h4>
+            <strong>Last Updated:</strong>
+            {{ doc.last_updated.strftime('%b %d, %Y %I:%M %p') if
+            doc.last_updated else 'N/A' }}
             <p>
-              <strong>Last Updated:</strong> {{ doc.last_updated or 'N/A' }}
+              <strong>Expires At:</strong>
+              {{ doc.expires_at.strftime('%b %d, %Y') if doc.expires_at else
+              'N/A' }}
             </p>
-            <p><strong>Expires At:</strong> {{ doc.expires_at or 'N/A' }}</p>
           </div>
+
           {% endfor %}
         </div>
       </div>

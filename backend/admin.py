@@ -520,7 +520,7 @@ def view_applicant(applicant_id):
     if not applicant.get("is_from_lipa") and applicant.get("recommendation_letter_path"):
         documents.append({
             "name": "Recommendation Letter",
-            "last_updated": applicant.get("recommendation_letter_updated_at") or applicant.get("updated_at"),
+            "last_updated": applicant.get("recommendation_letter_uploaded_at") or applicant.get("updated_at"),
             "expires_at": applicant.get("recommendation_letter_expiry")
         })
 
@@ -622,9 +622,12 @@ def view_employer(employer_id):
     documents = []
     for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
         if employer.get(file_field):
+            # Construct uploaded_at field
+            uploaded_at_field = file_field.replace("_path", "_uploaded_at")
+
             documents.append({
                 "name": file_field.replace("_path", "").replace("_", " ").title(),
-                "last_updated": employer.get("updated_at"),
+                "last_updated": employer.get(uploaded_at_field) or employer.get("updated_at"),
                 "expires_at": employer.get(expiry_field)
             })
 

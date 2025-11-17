@@ -206,12 +206,19 @@ def register_applicant(form, files):
         recommendation_expiry = None
         if not is_from_lipa:
             recommendation_path = save_file(
-                files.get("applicantRecommendationLetter"), "recommendations")
+                files.get("applicantRecommendationLetter"), "recommendations"
+            )
 
-            # Set expiry date to 1 year from upload
-            upload_date = datetime.now()
-            recommendation_expiry = upload_date + \
+            recommendation_uploaded_at = datetime.now() if recommendation_path else None
+            recommendation_expiry = (
+                recommendation_uploaded_at +
                 relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
+                if recommendation_uploaded_at else None
+            )
+        else:
+            recommendation_path = None
+            recommendation_uploaded_at = None
+            recommendation_expiry = None
 
         if is_from_lipa:
             city = form.get("applicantCity")
@@ -235,14 +242,14 @@ def register_applicant(form, files):
             last_name, first_name, middle_name, age, sex,
             phone, email, is_from_lipa, province, city, barangay, education,
             is_pwd, pwd_type, has_work_exp, years_experience, registration_reason,
-            profile_pic_path, resume_path, recommendation_letter_path, recommendation_letter_expiry, recommendation_warning_sent,
+            profile_pic_path, resume_path, recommendation_letter_path, recommendation_letter_uploaded_at, recommendation_letter_expiry, recommendation_warning_sent,
             accepted_terms, accepted_terms_at, status, is_active,
             password_hash, temp_password, must_change_password
         ) VALUES (
             %(last_name)s, %(first_name)s, %(middle_name)s, %(age)s, %(sex)s,
             %(phone)s, %(email)s, %(is_from_lipa)s, %(province)s, %(city)s, %(barangay)s, %(education)s,
             %(is_pwd)s, %(pwd_type)s, %(has_work_exp)s, %(years_experience)s, %(registration_reason)s,
-            %(profile_pic_path)s, %(resume_path)s, %(recommendation_letter_path)s, %(recommendation_letter_expiry)s, %(recommendation_warning_sent)s,
+            %(profile_pic_path)s, %(resume_path)s, %(recommendation_letter_path)s, %(recommendation_letter_uploaded_at)s, %(recommendation_letter_expiry)s, %(recommendation_warning_sent)s,
             %(accepted_terms)s, %(accepted_terms_at)s, %(status)s, %(is_active)s,
             %(password_hash)s, %(temp_password)s, %(must_change_password)s
         )
@@ -268,6 +275,7 @@ def register_applicant(form, files):
             "profile_pic_path": profile_path,
             "resume_path": resume_path,
             "recommendation_letter_path": recommendation_path,
+            "recommendation_letter_uploaded_at": recommendation_uploaded_at,
             "recommendation_letter_expiry": recommendation_expiry,
             "recommendation_warning_sent": 0,
             "accepted_terms": accepted_terms,
@@ -607,10 +615,10 @@ def submit_reupload():
             conn,
             """
             UPDATE applicants 
-            SET recommendation_letter_path = %s, recommendation_letter_expiry = %s, recommendation_warning_sent = %s, status = 'Pending', is_active = 0
+            SET recommendation_letter_path = %s, recommendation_letter_expiry = %s, recommendation_letter_uploaded_at = %s, recommendation_warning_sent = %s, status = 'Pending', is_active = 0
             WHERE applicant_id = %s
             """,
-            (new_path, recommendation_expiry, 0, applicant_id)
+            (new_path, recommendation_expiry, upload_date, 0, applicant_id)
         )
         conn.commit()
 
@@ -945,16 +953,24 @@ def account_security():
             except Exception:
                 original_warning_sent = None
 
+            original_reco_path = applicant.get("recommendation_letter_path")
+            original_uploaded_at = applicant.get(
+                "recommendation_letter_uploaded_at")
+            original_warning_sent = applicant.get(
+                "recommendation_warning_sent")
+
             if reco_path:
-                if reco_path != original_reco_path:
+                if reco_path != original_reco_path:  # new file uploaded
+                    recommendation_uploaded_at = datetime.now()
                     recommendation_expiry = datetime.now() + relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
-                    # New file uploaded -> reset warning flag
-                    recommendation_warning_sent = 0
-                else:
+                    recommendation_warning_sent = 0  # <-- Reset flag on new upload
+                else:  # file unchanged
+                    recommendation_uploaded_at = original_uploaded_at
                     recommendation_expiry = applicant.get(
                         "recommendation_letter_expiry")
                     recommendation_warning_sent = original_warning_sent
             else:
+                recommendation_uploaded_at = None
                 recommendation_expiry = None
                 recommendation_warning_sent = original_warning_sent
 
@@ -969,7 +985,7 @@ def account_security():
                     education=%s,
                     is_pwd=%s, pwd_type=%s, has_work_exp=%s, years_experience=%s,
                     registration_reason=%s,
-                    profile_pic_path=%s, resume_path=%s, recommendation_letter_path=%s, recommendation_letter_expiry=%s, recommendation_warning_sent=%s,
+                    profile_pic_path=%s, resume_path=%s, recommendation_letter_path=%s, recommendation_letter_expiry=%s, recommendation_warning_sent=%s, recommendation_letter_uploaded_at=%s,
                     is_from_lipa=%s, status=%s, is_active=%s, updated_at=NOW()
                 WHERE applicant_id=%s
                 """,
@@ -982,7 +998,7 @@ def account_security():
                     is_pwd, pwd_type, has_work, years_exp,
                     reg_reason,
                     profile_path, resume_path, reco_path,
-                    recommendation_expiry, recommendation_warning_sent,
+                    recommendation_expiry, recommendation_warning_sent, recommendation_uploaded_at,
                     is_from_lipa_new, status, is_active,
                     applicant_id,
                 ),
