@@ -4,10 +4,6 @@ import mysql.connector
 
 
 def create_connection():
-    """
-    Create and return a database connection.
-    Update host, user, password, and database as needed.
-    """
     try:
         connection = mysql.connector.connect(
             host="localhost",
@@ -21,7 +17,7 @@ def create_connection():
             return connection
 
     except Error as e:
-        print(f"❌ Error connecting to database: {e}")
+        print(f"Error connecting to database: {e}")
         return None
 
 
@@ -52,7 +48,7 @@ def run_query(connection, query, params=None, fetch=None):
         return result
 
     except Error as e:
-        print(f"❌ Error executing query: {e}")
+        print(f"Error executing query: {e}")
         return None
     finally:
         cursor.close()

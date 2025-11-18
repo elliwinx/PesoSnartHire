@@ -2,11 +2,14 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from werkzeug.security import check_password_hash, generate_password_hash
 from db_connection import create_connection, run_query
 from .notifications import get_notifications, mark_notification_read, get_unread_count
+from .recruitment_change_handler import revert_recruitment_type_change
 from extensions import mail
 from flask_mail import Message
 from datetime import datetime
 import secrets
 import json
+import os
+
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -607,16 +610,26 @@ def view_employer(employer_id):
         flash("Employer not found", "danger")
         return redirect(url_for("admin.employers_management"))
 
-    # Define which document fields have expiry dates
-    UPLOAD_TO_EXPIRY = {
+    LOCAL_DOCUMENTS = {
         "business_permit_path": "business_permit_expiry",
         "philiobnet_registration_path": "philiobnet_registration_expiry",
-        "job_orders_of_client_path": "job_orders_expiry",  # FIXED
+        "job_orders_of_client_path": "job_orders_expiry",
         "dole_no_pending_case_path": "dole_no_pending_case_expiry",
         "dole_authority_to_recruit_path": "dole_authority_expiry",
+    }
+
+    INTERNATIONAL_DOCUMENTS = {
+        "business_permit_path": "business_permit_expiry",
+        "philiobnet_registration_path": "philiobnet_registration_expiry",
+        "job_orders_of_client_path": "job_orders_expiry",
         "dmw_no_pending_case_path": "dmw_no_pending_case_expiry",
         "license_to_recruit_path": "license_to_recruit_expiry",
     }
+
+    if employer.get("recruitment_type") == "International":
+        UPLOAD_TO_EXPIRY = INTERNATIONAL_DOCUMENTS
+    else:  # Default to Local
+        UPLOAD_TO_EXPIRY = LOCAL_DOCUMENTS
 
     # Prepare document statistics
     documents = []
@@ -1325,7 +1338,7 @@ def approve_recruitment_type_change(employer_id):
 def reject_recruitment_type_change(employer_id):
     """
     Admin rejects employer recruitment type change
-    Reverts back to old recruitment type
+    Reverts back to old recruitment type AND restores old documents
     """
     try:
         data = request.get_json()
@@ -1349,13 +1362,20 @@ def reject_recruitment_type_change(employer_id):
 
         old_type = employer["old_recruitment_type"]
 
-        # Revert back to old recruitment type
+        revert_result = revert_recruitment_type_change(employer_id, conn)
+        if not revert_result.get("success"):
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": f"Reversion failed: {revert_result.get('message')}"}), 500
+
+        # Revert back to old recruitment type and clear pending flags
         cursor.execute("""
             UPDATE employers
             SET recruitment_type = %s,
                 recruitment_type_change_pending = 0,
                 old_recruitment_type = NULL,
-                status = %s
+                status = %s,
+                is_active = 1
             WHERE employer_id = %s
         """, (old_type, "Approved", employer_id))
 
@@ -1370,6 +1390,7 @@ def reject_recruitment_type_change(employer_id):
         <p>We regret to inform you that your request to change your recruitment type has been reviewed but could not be approved at this time.</p>
         {reason_block}
         <p>Your recruitment type has been reverted back to <strong>{old_type}</strong> recruitment.</p>
+        <p>Your previous documents have been restored and you may continue your {old_type.lower()} recruitment activities.</p>
         <p>You may reapply for recruitment type change in the future once you meet all requirements.</p>
         <p>If you have any questions, please contact our support team.</p>
         <p>— PESO SmartHire Admin</p>
@@ -1382,7 +1403,7 @@ def reject_recruitment_type_change(employer_id):
         cursor.close()
         conn.close()
 
-        return jsonify({"success": True, "message": "Recruitment type change rejected successfully!"})
+        return jsonify({"success": True, "message": "Recruitment type change rejected successfully! Old documents restored."})
 
     except Exception as e:
         print(f"[v0] Error rejecting recruitment type change: {e}")

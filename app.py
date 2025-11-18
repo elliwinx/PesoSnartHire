@@ -38,11 +38,10 @@ app.config["MAIL_DEFAULT_SENDER"] = "samonteralphmatthew@gmail.com"
 
 mail.init_app(app)
 
+
 # =========================================================
 # STEP 3 — Make RECAPTCHA key available in templates
 # =========================================================
-
-
 @app.context_processor
 def inject_recaptcha_key():
     return {"RECAPTCHA_SITE_KEY": app.config.get("RECAPTCHA_SITE_KEY")}
@@ -51,18 +50,15 @@ def inject_recaptcha_key():
 # =========================================================
 # STEP 4 — Import Blueprints
 # =========================================================
-
-# Register blueprints
 app.register_blueprint(applicants_bp, url_prefix="/applicants")
 app.register_blueprint(employers_bp, url_prefix="/employers")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(forgot_password_bp, url_prefix="/forgot-password")
 
+
 # =========================================================
 # STEP 5 — Routes
 # =========================================================
-
-
 @app.route("/")
 def home():
     return render_template("Landing_Page/index.html")

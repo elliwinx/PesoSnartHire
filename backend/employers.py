@@ -636,8 +636,8 @@ def forced_password_change():
         hashed_password = generate_password_hash(new_password)
         run_query(
             conn,
-            """UPDATE employers 
-               SET password_hash = %s, must_change_password = 0 
+            """UPDATE employers
+               SET password_hash = %s, must_change_password = 0
                WHERE employer_id = %s""",
             (hashed_password, employer_id)
         )
@@ -723,11 +723,16 @@ def account_security():
             fetch="one"
         )
     except Exception as e:
+        print(f"[account_security] Error fetching employer data: {e}")
+        import traceback
+        traceback.print_exc()
         flash(f"Error fetching employer data: {e}", "danger")
+        conn.close()
         return redirect(url_for("employers.employer_home"))
 
     if not employer:
         flash("Employer not found.", "danger")
+        conn.close()
         return redirect(url_for("employers.employer_home"))
 
     if request.method == "POST":
@@ -743,6 +748,17 @@ def account_security():
             barangay = request.form.get("barangay", "")
             city = request.form.get("city", "")
             province = request.form.get("province", "")
+
+            print(
+                f"[account_security] POST received - employer_id: {employer_id}, recruitment_type: {recruitment_type}")
+
+            recruitment_type_changed = request.form.get(
+                "recruitment_type_changed") == "true"
+            if recruitment_type_changed:
+                old_type = employer["recruitment_type"]
+                new_type = recruitment_type
+                print(
+                    f"[account_security] Recruitment type change detected: {old_type} -> {new_type}")
 
             # STEP 1: Handle file uploads FIRST (before recruitment type validation)
             company_logo_file = request.files.get("company_logo")
@@ -774,6 +790,8 @@ def account_security():
                         except Exception as e:
                             print(
                                 f"[account_security] Error deleting old file {current_path}: {e}")
+                            import traceback
+                            traceback.print_exc()
                     return save_file(file, folder)
                 return current_path
 
@@ -794,20 +812,53 @@ def account_security():
             license_to_recruit_path = handle_upload(
                 license_to_recruit_file, employer["license_to_recruit_path"], "dmw_documents")
 
+            print(f"[account_security] Files processed")
+
+            if recruitment_type_changed:
+                # This ensures we check if required documents exist either in DB or newly uploaded
+                temp_data = {
+                    "dole_no_pending_case_path": dole_no_pending_path or employer.get("dole_no_pending_case_path"),
+                    "dole_authority_to_recruit_path": dole_authority_path or employer.get("dole_authority_to_recruit_path"),
+                    "dmw_no_pending_case_path": dmw_no_pending_path or employer.get("dmw_no_pending_case_path"),
+                    "license_to_recruit_path": license_to_recruit_path or employer.get("license_to_recruit_path"),
+                }
+
+                print(f"[account_security] Document paths before validation:")
+                print(
+                    f"[account_security]   DOLE No Pending: {temp_data['dole_no_pending_case_path']}")
+                print(
+                    f"[account_security]   DOLE Authority: {temp_data['dole_authority_to_recruit_path']}")
+                print(
+                    f"[account_security]   DMW No Pending: {temp_data['dmw_no_pending_case_path']}")
+                print(
+                    f"[account_security]   License to Recruit: {temp_data['license_to_recruit_path']}")
+
+                from .recruitment_change_handler import validate_recruitment_type_change
+                is_valid, missing_docs, error_msg = validate_recruitment_type_change(
+                    employer_id, conn, new_type, temp_data
+                )
+
+                if not is_valid:
+                    print(
+                        f"[account_security] ✗ Validation failed: {error_msg}")
+                    flash(error_msg, "danger")
+                    conn.close()
+                    return redirect(url_for("employers.account_security"))
+
+                print(
+                    f"[account_security] ✓ Validation passed for recruitment type change")
+
             expiry_updates = {}
             warning_reset_updates = {}
-            uploaded_at_updates = {}
-
-            recruitment_type_changed = request.form.get(
-                "recruitment_type_changed")
-
-            if recruitment_type_changed == "true":
-                warning_reset_updates.update({
-                    "dole_no_pending_case_warning_sent": 0,
-                    "dole_authority_warning_sent": 0,
-                    "dmw_no_pending_case_warning_sent": 0,
-                    "license_to_recruit_warning_sent": 0
-                })
+            uploaded_at_updates = {
+                "business_permit_uploaded_at": employer.get("business_permit_uploaded_at"),
+                "philiobnet_uploaded_at": employer.get("philiobnet_uploaded_at"),
+                "job_orders_uploaded_at": employer.get("job_orders_uploaded_at"),
+                "dole_no_pending_uploaded_at": employer.get("dole_no_pending_uploaded_at"),
+                "dole_authority_uploaded_at": employer.get("dole_authority_uploaded_at"),
+                "dmw_no_pending_uploaded_at": employer.get("dmw_no_pending_uploaded_at"),
+                "license_to_recruit_uploaded_at": employer.get("license_to_recruit_uploaded_at"),
+            }
 
             for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
                 file_path = locals().get(file_field)  # e.g., business_permit_path
@@ -837,10 +888,74 @@ def account_security():
                     warning_reset_updates[warning_field] = employer.get(
                         warning_field)
 
-                    uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
-                    if uploaded_at_field:
-                        uploaded_at_updates[uploaded_at_field] = employer.get(
-                            uploaded_at_field)
+            if recruitment_type_changed:
+                if new_type == "International":
+                    # Switching to International - clear DOLE, set/ensure DMW expiry if documents exist
+                    dole_no_pending_path = None
+                    dole_authority_path = None
+                    expiry_updates["dole_no_pending_case_expiry"] = None
+                    expiry_updates["dole_authority_expiry"] = None
+                    warning_reset_updates["dole_no_pending_case_warning_sent"] = 0
+                    warning_reset_updates["dole_authority_warning_sent"] = 0
+                    uploaded_at_updates["dole_no_pending_uploaded_at"] = None
+                    uploaded_at_updates["dole_authority_uploaded_at"] = None
+
+                    if dmw_no_pending_path or employer.get("dmw_no_pending_case_path"):
+                        expiry_updates["dmw_no_pending_case_expiry"] = get_expiry_date(
+                            DOCUMENT_VALIDITY["dmw_no_pending_case"])
+                        if dmw_no_pending_path:  # Only update timestamp if newly uploaded
+                            uploaded_at_updates["dmw_no_pending_uploaded_at"] = datetime.now(
+                            )
+                        warning_reset_updates["dmw_no_pending_case_warning_sent"] = 0
+                        print(
+                            f"[account_security] ✓ Set DMW No Pending expiry to: {expiry_updates['dmw_no_pending_case_expiry']}")
+
+                    if license_to_recruit_path or employer.get("license_to_recruit_path"):
+                        expiry_updates["license_to_recruit_expiry"] = get_expiry_date(
+                            DOCUMENT_VALIDITY["dmw_recruit_authority"])
+                        if license_to_recruit_path:  # Only update timestamp if newly uploaded
+                            uploaded_at_updates["license_to_recruit_uploaded_at"] = datetime.now(
+                            )
+                        warning_reset_updates["license_to_recruit_warning_sent"] = 0
+                        print(
+                            f"[account_security] ✓ Set License to Recruit expiry to: {expiry_updates['license_to_recruit_expiry']}")
+
+                    print(
+                        f"[account_security] Clearing DOLE columns for International recruitment")
+
+                elif new_type == "Local":
+                    # Switching to Local - clear DMW, set/ensure DOLE expiry if documents exist
+                    dmw_no_pending_path = None
+                    license_to_recruit_path = None
+                    expiry_updates["dmw_no_pending_case_expiry"] = None
+                    expiry_updates["license_to_recruit_expiry"] = None
+                    warning_reset_updates["dmw_no_pending_case_warning_sent"] = 0
+                    warning_reset_updates["license_to_recruit_warning_sent"] = 0
+                    uploaded_at_updates["dmw_no_pending_uploaded_at"] = None
+                    uploaded_at_updates["license_to_recruit_uploaded_at"] = None
+
+                    if dole_no_pending_path or employer.get("dole_no_pending_case_path"):
+                        expiry_updates["dole_no_pending_case_expiry"] = get_expiry_date(
+                            DOCUMENT_VALIDITY["dole_no_pending_case"])
+                        if dole_no_pending_path:  # Only update timestamp if newly uploaded
+                            uploaded_at_updates["dole_no_pending_uploaded_at"] = datetime.now(
+                            )
+                        warning_reset_updates["dole_no_pending_case_warning_sent"] = 0
+                        print(
+                            f"[account_security] ✓ Set DOLE No Pending expiry to: {expiry_updates['dole_no_pending_case_expiry']}")
+
+                    if dole_authority_path or employer.get("dole_authority_to_recruit_path"):
+                        expiry_updates["dole_authority_expiry"] = get_expiry_date(
+                            DOCUMENT_VALIDITY["dole_recruit_authority"])
+                        if dole_authority_path:  # Only update timestamp if newly uploaded
+                            uploaded_at_updates["dole_authority_uploaded_at"] = datetime.now(
+                            )
+                        warning_reset_updates["dole_authority_warning_sent"] = 0
+                        print(
+                            f"[account_security] ✓ Set DOLE Authority expiry to: {expiry_updates['dole_authority_expiry']}")
+
+                    print(
+                        f"[account_security] Clearing DMW columns for Local recruitment")
 
             documents_to_reupload_list = request.form.getlist(
                 "documents_to_reupload")
@@ -926,33 +1041,34 @@ def account_security():
                 employer_id
             )
 
+            print(f"[account_security] Executing UPDATE query")
             result = run_query(conn, update_query, data)
 
             if not result or result == 0:
                 print(
-                    f"[submit_reupload] Database update failed - no rows affected for employer {employer_id}")
+                    f"[account_security] ✗ Database update failed - no rows affected for employer {employer_id}")
                 flash(
                     "Failed to update employer record. No changes were saved.", "danger")
                 conn.rollback()
+                conn.close()
                 return redirect(url_for("employers.account_security"))
 
             conn.commit()
             print(
-                f"[submit_reupload] Database committed successfully for employer {employer_id}")
+                f"[account_security] ✓ Database UPDATE committed successfully")
 
             # STEP 2: Now handle recruitment type change (after files are saved to DB)
-            recruitment_type_changed = request.form.get(
-                "recruitment_type_changed")
-
-            if recruitment_type_changed == "true":
-                old_type = request.form.get("old_recruitment_type")
-                new_type = request.form.get("new_recruitment_type")
+            if recruitment_type_changed:
+                print(
+                    f"[account_security] Processing recruitment type change: {old_type} -> {new_type}")
 
                 result = handle_recruitment_type_change(
                     employer_id, conn, old_type, new_type)
 
                 if result["success"]:
                     conn.commit()
+                    print(
+                        f"[account_security] ✓ Recruitment type change handled successfully")
                     conn.close()
                     session.clear()
                     flash(
@@ -961,20 +1077,29 @@ def account_security():
                 else:
                     error_msg = result.get('message', 'Unknown error')
                     if 'error' in result:
-                        error_msg = result['error']
-                    flash(
-                        f"Error updating recruitment type: {error_msg}", "danger")
+                        error_msg += f" - {result['error']}"
+                    print(
+                        f"[account_security] ✗ Recruitment type change failed: {error_msg}")
+                    flash(error_msg, "danger")
+                    conn.rollback()
                     conn.close()
                     return redirect(url_for("employers.account_security"))
 
             flash(
                 "Your account details and files have been updated successfully.", "success")
+            conn.close()
+            return redirect(url_for("employers.account_security"))
 
         except Exception as e:
+            print(f"[account_security] ✗ Exception in POST handler: {e}")
+            import traceback
+            traceback.print_exc()
             conn.rollback()
             flash(f"Error updating information: {e}", "danger")
+            conn.close()
+            return redirect(url_for("employers.account_security"))
 
-    # --- RE-FETCH EMPLOYER AFTER UPDATE ---
+    # --- RE-FETCH EMPLOYER FOR GET REQUEST ---
     try:
         employer = run_query(
             conn,
@@ -993,8 +1118,12 @@ def account_security():
                 print(
                     f"[account_security] Invalid JSON in documents_to_reupload: {e}")
                 documents_to_reupload = []
-        else:
-            documents_to_reupload = []
+
+    except Exception as e:
+        print(f"[account_security] Error re-fetching employer: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f"Error loading employer data: {e}", "danger")
 
     finally:
         conn.close()
@@ -1003,7 +1132,7 @@ def account_security():
     return render_template(
         "Employer/acc&secu.html",
         employer=employer,
-        employer_status=employer.get("status"),
+        employer_status=employer.get("status") if employer else None,
         documents_to_reupload=documents_to_reupload
     )
 

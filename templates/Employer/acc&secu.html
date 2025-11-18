@@ -168,7 +168,7 @@
             </div>
             <div class="form-group">
               <label for="recruitment_type">Type of Recruitment</label>
-              <select id="recruitment_type" name="recruitment_type">
+              <select id="recruitment_type" name="recruitment_type" disabled>
                 <!--<option value="">Select Type</option>-->
                 <option value="Local" {% if employer.recruitment_type == 'Local' %}selected{% endif %}>Local</option>
                 <option value="International" {% if employer.recruitment_type == 'International' %}selected{% endif %}>International</option>
@@ -369,6 +369,12 @@
         </div>
 
       </form>
+
+      <div class="note-wrapper">
+        <p class="note">
+          <strong>NOTE: </strong>When changing recruitment type, please ensure to re-upload the required documents corresponding to the selected type. Failure to do so may result in incomplete application processing, otherwise, you will be subjected again for verification. 
+        </p>
+      </div>
 
       <div class="edit-controls" style="margin-top:16px;text-align:right;">
         {% if employer_status == 'Reupload' %}

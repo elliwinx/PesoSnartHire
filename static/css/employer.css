@@ -856,10 +856,22 @@ body {
   padding: 8px;
   font-size: 14px;
   cursor: pointer;
+  width: 100%;
 }
 
 .file-input:hover {
   border-color: #999;
+}
+
+.note-wrapper {
+  margin-top: 8px;
+  border: 1px solid #7b1113;
+}
+
+.note {
+  font-size: 15px;
+  font-style: italic;
+  padding: 20px;
 }
 
 /* Responsive behavior */
