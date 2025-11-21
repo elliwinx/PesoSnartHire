@@ -326,27 +326,30 @@ def applicant_home():
 
     try:
         jobs = run_query(
-    conn,
-    """
-    SELECT 
-        jobs.job_id, 
-        jobs.job_position, 
-        jobs.work_schedule, 
-        jobs.num_vacancy,
-        jobs.min_salary, 
-        jobs.max_salary, 
-        jobs.job_description, 
-        jobs.qualifications, 
-        jobs.created_at,
-        employers.employer_name AS company_name,
-        employers.company_logo_path
-    FROM jobs
-    LEFT JOIN employers ON jobs.employer_id = employers.employer_id
-    WHERE jobs.status = 'Active'
-    ORDER BY jobs.created_at DESC
-    """,
-    fetch="all"
-)
+            conn,
+            """
+            SELECT 
+                jobs.job_id, 
+                jobs.job_position, 
+                jobs.work_schedule, 
+                jobs.num_vacancy,
+                jobs.min_salary, 
+                jobs.max_salary, 
+                jobs.job_description, 
+                jobs.qualifications, 
+                jobs.created_at,
+                employers.employer_name AS company_name,
+                employers.company_logo_path,
+                employers.industry AS industry,
+                employers.recruitment_type AS type_of_recruitment,
+                employers.city AS location
+            FROM jobs
+            LEFT JOIN employers ON jobs.employer_id = employers.employer_id
+            WHERE jobs.status = 'Active'
+            ORDER BY jobs.created_at DESC
+            """,
+            fetch="all"
+        )
 
     except Exception as e:
         flash(f"Failed to fetch jobs: {e}", "danger")
@@ -368,7 +371,6 @@ def apply_job(job_id):
     try:
         applicant_id = session["applicant_id"]
 
-        # Prevent duplicate applications
         existing = run_query(
             conn,
             "SELECT 1 FROM applications WHERE job_id=%s AND applicant_id=%s",
@@ -378,22 +380,99 @@ def apply_job(job_id):
         if existing:
             return jsonify({"success": False, "message": "You have already applied to this job."}), 400
 
-        # Insert application and increment count in a transaction
-        run_query(conn, "INSERT INTO applications (job_id, applicant_id, applied_at) VALUES (%s, %s, NOW())",
-                  (job_id, applicant_id))
-        run_query(conn, "UPDATE jobs SET applicant_count = applicant_count + 1 WHERE job_id = %s", (job_id,))
+        # ✅ Insert application
+        run_query(
+            conn,
+            "INSERT INTO applications (job_id, applicant_id, applied_at) VALUES (%s, %s, NOW())",
+            (job_id, applicant_id)
+        )
+
+        # ✅ Increment job applicant count
+        run_query(
+            conn,
+            "UPDATE jobs SET applicant_count = applicant_count + 1 WHERE job_id = %s",
+            (job_id,)
+        )
+
+        # ✅ Increment employer applicant count
+        employer_row = run_query(
+            conn,
+            "SELECT employer_id FROM jobs WHERE job_id = %s",
+            (job_id,),
+            fetch="one"
+        )
+        if employer_row:
+            employer_id = employer_row["employer_id"]
+            run_query(
+                conn,
+                "UPDATE employers SET applicant_count = applicant_count + 1 WHERE employer_id = %s",
+                (employer_id,)
+            )
+
         conn.commit()
 
-        # Fetch new count
-        new_count_row = run_query(conn, "SELECT applicant_count FROM jobs WHERE job_id=%s", (job_id,), fetch="one")
+        # ✅ Fetch updated job applicant count
+        new_count_row = run_query(
+            conn,
+            "SELECT applicant_count FROM jobs WHERE job_id = %s",
+            (job_id,),
+            fetch="one"
+        )
         new_count = new_count_row["applicant_count"] if new_count_row else 0
 
-        return jsonify({"success": True, "message": "Application submitted!", "applicant_count": new_count})
+        return jsonify({
+            "success": True,
+            "message": "Application submitted successfully!",
+            "applicant_count": new_count
+        })
 
     except Exception as e:
         conn.rollback()
-        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+        return jsonify({"success": False, "message": f"Error submitting application: {str(e)}"}), 500
+
     finally:
+        conn.close()
+
+@applicants_bp.route('/report', methods=['POST'])
+def report_job():
+    if "applicant_id" not in session:
+        return jsonify({"success": False, "message": "You must log in first."}), 401
+
+    data = request.get_json()
+    job_id = data.get("job_id")
+    applicant_id = session["applicant_id"]
+    reason = data.get("reason")
+
+    if not job_id or not reason:
+        return jsonify({"success": False, "message": "Job ID and reason are required."}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed."}), 500
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id FROM job_reports WHERE job_id=%s AND applicant_id=%s",
+            (job_id, applicant_id)
+        )
+        if cursor.fetchone():
+            return jsonify({"success": False, "message": "You already reported this job."})
+
+        cursor.execute(
+            "INSERT INTO job_reports (job_id, applicant_id, reason) VALUES (%s, %s, %s)",
+            (job_id, applicant_id, reason)
+        )
+        conn.commit()
+        return jsonify({"success": True})
+
+    except Exception as e:
+        print("Report Error:", e)
+        conn.rollback()
+        return jsonify({"success": False, "message": "Failed to submit report."}), 500
+
+    finally:
+        cursor.close()
         conn.close()
 
 @applicants_bp.route("/job/<int:job_id>")
@@ -443,7 +522,6 @@ def notifications():
 
     return render_template("Applicant/notif.html")
 
-
 @applicants_bp.route("/applications")
 def applications():
     if "applicant_id" not in session:
@@ -454,7 +532,151 @@ def applications():
         flash("Please complete your document reupload first.", "info")
         return redirect(url_for("applicants.account_security"))
 
-    return render_template("Applicant/application.html")
+    applicant_id = session["applicant_id"]
+    conn = create_connection()
+
+    applied_jobs = []
+
+    try:
+        applied_jobs = run_query(
+            conn,
+            """
+            SELECT
+                a.job_id,
+                j.job_position,
+                j.work_schedule,
+                j.min_salary,
+                j.max_salary,
+                e.employer_name AS company_name,
+                e.company_logo_path,
+                e.city AS location,
+                CASE
+                    WHEN j.status IN ('Inactive', 'Suspended', 'Archived') THEN 'Closed Job'
+                    ELSE a.status
+                END AS app_status,
+                a.applied_at
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.job_id
+            JOIN employers e ON j.employer_id = e.employer_id
+            WHERE a.applicant_id = %s
+            ORDER BY a.applied_at DESC
+            """,
+            (applicant_id,),
+            fetch="all"
+        )
+    except Exception as e:
+        flash(f"Failed to fetch applied jobs: {e}", "danger")
+    finally:
+        conn.close()
+
+    return render_template("Applicant/application.html", applied_jobs=applied_jobs)
+
+@applicants_bp.route("/api/applications")
+def get_applications_alias():
+    if "applicant_id" not in session:
+        print("[v0] User not logged in")
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    applicant_id = session["applicant_id"]
+    print(f"[v0] Fetching applications for applicant_id: {applicant_id}")
+
+    conn = create_connection()
+    if not conn:
+        print("[v0] Database connection failed in /api/applications")
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        data = run_query(
+            conn,
+            """
+            SELECT
+                a.application_id AS id,
+                CASE
+                    WHEN j.status IN ('Inactive', 'Suspended', 'Archived') THEN 'Closed Job'
+                    ELSE COALESCE(a.status, 'Applied')
+                END AS status,
+                a.applied_at AS date,
+                j.job_position AS jobTitle,
+                e.employer_name AS companyName,
+                e.city AS location
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.job_id
+            JOIN employers e ON j.employer_id = e.employer_id
+            WHERE a.applicant_id = %s
+            ORDER BY a.applied_at DESC
+            """,
+            (applicant_id,),
+            fetch="all"
+        )
+        
+        print(f"[v0] Retrieved {len(data) if data else 0} applications")
+        return jsonify(data if data else [])
+
+    except Exception as e:
+        print(f"[v0] Error fetching applications: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+    finally:
+        if conn:
+            conn.close()
+
+@applicants_bp.route("/api/check-application")
+def check_application():
+    job_id = request.args.get("jobId")
+    # TODO: Palitan ng actual DB check
+    applied = False  # or True kung applied na
+    return jsonify({"applied": applied})
+
+@applicants_bp.route("/api/delete-application/<int:app_id>", methods=["DELETE"])
+def delete_application(app_id):
+    if "applicant_id" not in session:
+        return jsonify({"success": False, "message": "Not logged in"})
+
+    applicant_id = session["applicant_id"]
+
+    conn = create_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute("""
+            DELETE FROM applications 
+            WHERE application_id = %s AND applicant_id = %s
+        """, (app_id, applicant_id))
+        conn.commit()
+        success = cur.rowcount > 0
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"success": False, "message": str(e)})
+    finally:
+        cur.close()
+        conn.close()
+
+    return jsonify({"success": success})
+
+
+@applicants_bp.route("/employer/update_job_status/<int:job_id>", methods=["POST"])
+def update_job_status(job_id):
+    if "employer_id" not in session:
+        flash("Please login first.", "warning")
+        return redirect(url_for("employer.login"))
+
+    new_status = request.form.get("status")  # e.g., 'Inactive', 'Suspended', 'Archived'
+
+    conn = create_connection()
+    cur = conn.cursor()
+
+    try:
+        # Update the job status
+        cur.execute("UPDATE jobs SET status=%s WHERE job_id=%s", (new_status, job_id))
+        conn.commit()
+        flash("Job status updated successfully.", "success")
+    except Exception as e:
+        flash(f"Failed to update job status: {e}", "danger")
+    finally:
+        cur.close()
+        conn.close()
+
+    return redirect(url_for("employer.job_list"))
 
 
 @applicants_bp.route("/account-security", methods=["GET", "POST"])

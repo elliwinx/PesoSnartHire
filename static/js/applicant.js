@@ -1,5 +1,29 @@
-// ========== DROPDOWN MENU ==========
+function capitalize(str) {
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+function showFlash(message, category = 'info') {
+  const flashContainer = document.body;
+  const flashDiv = document.createElement('div');
+  flashDiv.className = `flash ${category}`;
+  flashDiv.innerHTML = `
+    ${message}
+    <button class="flash-close" onclick="this.parentElement.remove()">x</button>
+  `;
+  flashContainer.insertBefore(flashDiv, flashContainer.firstChild);
+  
+  // Auto-remove after 3 seconds
+  setTimeout(() => {
+    if (flashDiv.parentElement) {
+      flashDiv.classList.add('fade-out');
+      setTimeout(() => flashDiv.remove(), 500);
+    }
+  }, 3000);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  // ================== DROPDOWN MENU ==================
   const menuToggle = document.getElementById("menuToggle");
   const dropdownMenu = document.getElementById("dropdownMenu");
 
@@ -36,8 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 1️⃣ TAB SWITCHING LOGIC
-document.addEventListener("DOMContentLoaded", () => {
+  // ================== TAB SWITCHING ==================
   const buttons = document.querySelectorAll(".tab-btn");
   const contents = document.querySelectorAll(".content");
   const applicantStatus = document.getElementById("applicantStatus")?.value;
@@ -45,31 +68,29 @@ document.addEventListener("DOMContentLoaded", () => {
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
       contents.forEach((c) => (c.style.display = "none"));
-      const targetId = btn.getAttribute("data-target");
-      document.getElementById(targetId).style.display = "block";
+      const target = document.getElementById(btn.getAttribute("data-target"));
+      if (target) target.style.display = "block";
 
       buttons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
     });
   });
 
-  // Default tab depending on applicant status
+  const personalTab = document.getElementById("personal-information");
+  const documentsTab = document.getElementById("documents");
   if (applicantStatus === "Reupload") {
-    document.getElementById("personal-information").style.display = "none";
-    document.getElementById("documents").style.display = "block";
+    if (personalTab) personalTab.style.display = "none";
+    if (documentsTab) documentsTab.style.display = "block";
   } else {
-    document.getElementById("personal-information").style.display = "block";
-    document.getElementById("documents").style.display = "none";
+    if (personalTab) personalTab.style.display = "block";
+    if (documentsTab) documentsTab.style.display = "none";
   }
-});
 
-// 2️⃣ EDIT / SAVE / CANCEL LOGIC
-document.addEventListener("DOMContentLoaded", () => {
+  // ================== EDIT / SAVE / CANCEL ==================
   const editBtn = document.getElementById("editBtn");
   const saveBtn = document.getElementById("saveBtn");
   const cancelBtn = document.getElementById("cancelBtn");
   const accountForm = document.getElementById("accountForm");
-  const applicantStatus = document.getElementById("applicantStatus")?.value;
 
   const inputs = document.querySelectorAll(".chip");
   const selects = document.querySelectorAll("select");
@@ -87,7 +108,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const expNo = document.getElementById("exp_no");
   const workDetails = document.getElementById("work_details");
 
-  // helper: enable/disable conditional inputs
   function setConditionalInputsEditable(editable) {
     [pwdDetails, workDetails].forEach((section) => {
       if (section) {
@@ -104,38 +124,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // show/hide conditional sections
   function updateConditionals() {
-    if (pwdDetails)
+    if (pwdDetails && pwdYes)
       pwdDetails.style.display = pwdYes.checked ? "block" : "none";
-    if (workDetails)
+    if (workDetails && expYes)
       workDetails.style.display = expYes.checked ? "block" : "none";
   }
 
-  [pwdYes, pwdNo, expYes, expNo].forEach(
-    (el) => el && el.addEventListener("change", updateConditionals)
-  );
+  [pwdYes, pwdNo, expYes, expNo].forEach((el) => {
+    if (el) el.addEventListener("change", updateConditionals);
+  });
 
-  // store original values here
   let originalValues = {};
 
-  // --- EDIT BUTTON ---
   if (editBtn) {
     editBtn.addEventListener("click", (e) => {
       e.preventDefault();
-
-      // store all original field values
       originalValues = {};
       inputs.forEach((el) => (originalValues[el.name] = el.value));
       selects.forEach((el) => (originalValues[el.name] = el.value));
       radios.forEach((el) => (originalValues[el.name] = el.checked));
-
-      // ✅ store original avatar image
       const avatarImg = document.getElementById("profilePicPreview");
       if (avatarImg) originalValues["avatarSrc"] = avatarImg.src;
 
-      profileTop.classList.add("edit-mode");
-      avatar.classList.add("editable");
+      profileTop?.classList.add("edit-mode");
+      avatar?.classList.add("editable");
 
       fileInputs.forEach((el) => {
         el.style.display = "block";
@@ -157,12 +170,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // --- CANCEL BUTTON ---
   if (cancelBtn) {
     cancelBtn.addEventListener("click", (e) => {
       e.preventDefault();
-
-      // restore previous values
       inputs.forEach((el) => {
         if (originalValues.hasOwnProperty(el.name))
           el.value = originalValues[el.name];
@@ -175,20 +185,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (originalValues.hasOwnProperty(el.name))
           el.checked = originalValues[el.name];
       });
-
-      // ✅ restore avatar image
       const avatarImg = document.getElementById("profilePicPreview");
-      if (avatarImg && originalValues["avatarSrc"]) {
+      if (avatarImg && originalValues["avatarSrc"])
         avatarImg.src = originalValues["avatarSrc"];
-      }
 
-      profileTop.classList.remove("edit-mode");
-      avatar.classList.remove("editable");
+      profileTop?.classList.remove("edit-mode");
+      avatar?.classList.remove("editable");
 
       fileInputs.forEach((el) => {
         if (applicantStatus !== "Reupload") el.style.display = "none";
         el.setAttribute("disabled", true);
-        el.value = ""; // clear chosen file
+        el.value = "";
       });
       inputs.forEach((el) => el.setAttribute("readonly", true));
       selects.forEach((el) => {
@@ -202,125 +209,56 @@ document.addEventListener("DOMContentLoaded", () => {
       saveBtn.style.display = "none";
       cancelBtn.style.display = "none";
 
-      updateConditionals(); // reflect restored state
+      updateConditionals();
     });
   }
 
-  // --- SAVE BUTTON ---
-  if (saveBtn && accountForm) {
-    saveBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      accountForm.submit();
-    });
-  }
+  saveBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    accountForm?.submit();
+  });
 
-  // initial conditional visibility setup
   updateConditionals();
-  if (applicantStatus === "Reupload") {
-    fileInputs.forEach((el) => (el.style.display = "block"));
-  } else {
-    fileInputs.forEach((el) => (el.style.display = "none"));
-  }
-});
-
-// === PHONE INPUT HANDLER (+63 lock + 10-digit limit) ===
-const phoneInput = document.querySelector("input[name='phone']");
-
-if (phoneInput) {
-  phoneInput.addEventListener("focus", () => {
-    if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+  fileInputs.forEach((el) => {
+    el.style.display = applicantStatus === "Reupload" ? "block" : "none";
   });
 
-  phoneInput.addEventListener("input", () => {
-    if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
-    const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
-    phoneInput.value = "+63" + digits;
-  });
-
-  phoneInput.addEventListener("blur", () => {
-    if (phoneInput.value.trim() === "" || phoneInput.value === "+63") {
-      phoneInput.value = "+63";
-    }
-  });
-}
-
-// 3️⃣ CONDITIONAL FIELDS OBSERVER (PWD / WORK)
-(() => {
-  const el = (sel) => document.querySelector(sel);
-  const els = (sel) => Array.from(document.querySelectorAll(sel));
-
-  const pwdYes = el("#pwd_yes");
-  const pwdNo = el("#pwd_no");
-  const expYes = el("#exp_yes");
-  const expNo = el("#exp_no");
-
-  const pwdDetails = el("#pwd_details");
-  const workDetails = el("#work_details");
-
-  function updateConditionals() {
-    if (pwdDetails)
-      pwdDetails.style.display = pwdYes.checked ? "block" : "none";
-    if (workDetails)
-      workDetails.style.display = expYes.checked ? "block" : "none";
+  // ================== PHONE INPUT ==================
+  const phoneInput = document.querySelector("input[name='phone']");
+  if (phoneInput) {
+    phoneInput.addEventListener("focus", () => {
+      if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+    });
+    phoneInput.addEventListener("input", () => {
+      if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+      const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
+      phoneInput.value = "+63" + digits;
+    });
+    phoneInput.addEventListener("blur", () => {
+      if (!phoneInput.value || phoneInput.value === "+63")
+        phoneInput.value = "+63";
+    });
   }
 
-  [pwdYes, pwdNo, expYes, expNo].forEach((el) => {
-    if (el) el.addEventListener("change", updateConditionals);
-  });
-
-  document.addEventListener("DOMContentLoaded", updateConditionals);
-
-  const radiosToObserve = els("#personal-information input[type='radio']");
-  if (radiosToObserve.length) {
-    const observer = new MutationObserver(updateConditionals);
-    radiosToObserve.forEach((r) =>
-      observer.observe(r, {
-        attributes: true,
-        attributeFilter: ["disabled", "checked"],
-      })
-    );
-  }
-})();
-
-document.addEventListener("DOMContentLoaded", () => {
-  const pwdYes = document.getElementById("pwd_yes");
-  const pwdDetails = document.getElementById("pwd_details");
-
-  if (pwdYes && pwdYes.checked) {
-    pwdDetails.style.display = "block"; // show the dropdown
+  // ================== AVATAR PREVIEW ==================
+  const avatarContainer = document.querySelector(".avatar");
+  const inputFile = avatarContainer?.querySelector("input[type='file']");
+  const imgPreview = document.getElementById("profilePicPreview");
+  if (inputFile && imgPreview) {
+    inputFile.addEventListener("change", () => {
+      const file = inputFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => (imgPreview.src = e.target.result);
+      reader.readAsDataURL(file);
+    });
   }
 
-  const expYes = document.getElementById("exp_yes");
-  const workDetails = document.getElementById("work_details");
-
-  if (expYes && expYes.checked) {
-    workDetails.style.display = "block"; // show the work dropdown
-  }
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-  const avatar = document.querySelector(".avatar");
-  if (!avatar) return; // safety check
-
-  const input = avatar.querySelector("input[type='file']");
-  const img = document.getElementById("profilePicPreview");
-  if (!input || !img) return; // safety check
-
-// Live preview
-input.addEventListener("change", () => {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-});
-  ``;
-});
-document.getElementById("deactivateApplicantBtn").addEventListener("click", async () => {
-    // 1️⃣ Ask for confirmation
-    const confirmDelete = await Swal.fire({
+  // ================== DEACTIVATE APPLICANT ==================
+  const deactivateBtn = document.getElementById("deactivateApplicantBtn");
+  if (deactivateBtn) {
+    deactivateBtn.addEventListener("click", async () => {
+      const confirmDelete = await Swal.fire({
         title: "Are you sure?",
         text: "Your account will be permanently deleted after 30 days.",
         icon: "warning",
@@ -328,114 +266,511 @@ document.getElementById("deactivateApplicantBtn").addEventListener("click", asyn
         confirmButtonColor: "#8b0d0d",
         cancelButtonColor: "gray",
         confirmButtonText: "Confirm",
-        cancelButtonText: "Cancel"
-    });
+        cancelButtonText: "Cancel",
+      });
+      if (!confirmDelete.isConfirmed) return;
 
-    // 2️⃣ Stop if user canceled
-    if (!confirmDelete.isConfirmed) return;
+      const loader = document.getElementById("ajaxLoader");
+      const loaderText = document.getElementById("ajaxLoaderText");
+      if (loaderText)
+        loaderText.textContent = "Deactivating account — please wait…";
+      if (loader) loader.style.display = "flex";
 
-    // 3️⃣ Show loader
-    showLoader("Deactivating account — please wait…");
-
-    try {
-        // 4️⃣ Call backend
+      try {
         const res = await fetch("/applicants/deactivate", { method: "POST" });
         const data = await res.json();
-
         if (data.success) {
-            setTimeout(() => {
-                hideLoader();
-                window.location.href = "/"; // logout/redirect
-            }, 1500);
+          setTimeout(() => {
+            if (loader) loader.style.display = "none";
+            window.location.href = "/";
+          }, 1500);
         } else {
-            hideLoader();
-            Swal.fire("Error", data.message, "error");
+          if (loader) loader.style.display = "none";
+          showFlash(data.message, "danger");
         }
-
-    } catch (err) {
-        hideLoader();
-        Swal.fire("Error", "Something went wrong. Please try again later.", "error");
-    }
-});
-
-// ✅ Loader functions
-function showLoader(text = "Processing — please wait...") {
-    const loader = document.getElementById("ajaxLoader");
-    const loaderText = document.getElementById("ajaxLoaderText");
-    if (loaderText) loaderText.textContent = text;
-    loader.style.display = "flex";
-}
-
-function hideLoader() {
-    const loader = document.getElementById("ajaxLoader");
-    loader.style.display = "none";
-}
-
-function openConfirmModal(button) {
-    if (!button || !button.dataset) return;
-    const jobId = button.dataset.jobId;
-    if (!jobId) return;
-
-    const confirmApply = confirm("Are you sure you want to apply for this job?");
-    if (!confirmApply) return;
-
-    // Correct URL: include blueprint prefix
-    fetch(`/applicants/apply/${jobId}`, { method: "POST" })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                const countSpan = document.getElementById(`applicant-count-${jobId}`);
-                if (countSpan) {
-                    countSpan.innerHTML = `<i class="fa-regular fa-user"></i> ${data.applicant_count}`;
-                }
-                button.disabled = true; // prevent double apply
-                alert(data.message);
-            } else {
-                alert(data.message);
-            }
-        })
-        .catch(err => console.error(err));
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  // Tab buttons -> filter application cards
-  const tabGroup = document.querySelector('.tab-group');
-  if (!tabGroup) return;
-
-  const buttons = Array.from(tabGroup.querySelectorAll('button'));
-  const cards   = Array.from(document.querySelectorAll('.application-card'));
-
-  function setActiveButton(activeBtn) {
-    buttons.forEach(b => b.classList.toggle('active', b === activeBtn));
-  }
-
-  function filterCards(filter) {
-    cards.forEach(card => {
-      const status = card.getAttribute('data-status') || '';
-      if (filter === 'all' || filter === '' ) {
-        card.classList.remove('hidden');
-      } else {
-        if (status === filter) card.classList.remove('hidden');
-        else card.classList.add('hidden');
+      } catch (err) {
+        if (loader) loader.style.display = "none";
+        showFlash("Something went wrong. Please try again later.", "danger");
       }
     });
   }
 
-  // Attach click handlers
-  buttons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const filter = btn.dataset.filter || 'all';
-      setActiveButton(btn);
-      filterCards(filter);
-      // for accessibility, move focus back to button
-      btn.focus();
+  // ================== APPLICATION TAB FILTER ==================
+  const tabGroup = document.querySelector(".tab-group");
+  if (tabGroup) {
+    const tabButtons = Array.from(tabGroup.querySelectorAll("button"));
+    const cards = Array.from(document.querySelectorAll(".application-card"));
+
+    function setActiveButton(activeBtn) {
+      tabButtons.forEach((b) => b.classList.toggle("active", b === activeBtn));
+    }
+
+    function filterCards(filter) {
+      cards.forEach((card) => {
+        const status = card.getAttribute("data-status") || "";
+        if (filter === "all" || filter === "") card.classList.remove("hidden");
+        else
+          status === filter
+            ? card.classList.remove("hidden")
+            : card.classList.add("hidden");
+      });
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const filter = btn.dataset.filter || "all";
+        setActiveButton(btn);
+        filterCards(filter);
+        btn.focus();
+      });
     });
+
+    const initialBtn =
+      tabButtons.find((b) => b.classList.contains("active")) || tabButtons[0];
+    if (initialBtn) {
+      setActiveButton(initialBtn);
+      filterCards(initialBtn.dataset.filter || "all");
+    }
+  }
+
+  // ================== JOB SEARCH & FILTER ==================
+  const searchEl = document.getElementById("searchInput");
+  const industrySelect = document.getElementById("industrySelect");
+  const typeSelect = document.getElementById("typeSelect");
+  const scheduleSelect = document.getElementById("scheduleSelect");
+
+  function _normalize(str) {
+    return (str || "").toString().trim().toLowerCase();
+  }
+
+  // collect job cards and remember their default display value so we can
+  // restore it when showing the card (preserves layout like flex/grid)
+  let jobCards = Array.from(document.querySelectorAll(".job-card"));
+  jobCards.forEach((card) => {
+    const cs = window.getComputedStyle(card);
+    // if computed style is 'inline' we prefer 'inline-block' to avoid layout collapse
+    card.dataset.defaultDisplay = cs.display === "inline" ? "inline-block" : cs.display || "block";
   });
 
-  // initialize (show all)
-  const initialBtn = buttons.find(b => b.classList.contains('active')) || buttons[0];
-  if (initialBtn) {
-    setActiveButton(initialBtn);
-    filterCards(initialBtn.dataset.filter || 'all');
+  function filterJobs() {
+    const searchValue = _normalize(searchEl?.value);
+    const industryValue = _normalize(industrySelect?.value);
+    const typeValue = _normalize(typeSelect?.value);
+    const scheduleValue = _normalize(scheduleSelect?.value);
+
+    jobCards.forEach((card) => {
+      const jobTitle = _normalize(card.querySelector(".job-title")?.textContent);
+      const companyName = _normalize(card.querySelector(".company-name")?.textContent);
+      const cardIndustry = _normalize(card.querySelector(".job-industry")?.textContent);
+      const cardType = _normalize(card.querySelector(".job-type")?.textContent);
+      const cardSchedule = _normalize(card.querySelector(".job-schedule")?.textContent);
+
+      const matchesSearch =
+        !searchValue || jobTitle.includes(searchValue) || companyName.includes(searchValue);
+      const matchesIndustry = !industryValue || cardIndustry.includes(industryValue);
+      const matchesType = !typeValue || cardType.includes(typeValue);
+      const matchesSchedule = !scheduleValue || cardSchedule.includes(scheduleValue);
+
+      const show = matchesSearch && matchesIndustry && matchesType && matchesSchedule;
+
+      // Restore the original display when showing, don't force 'block'
+      card.style.display = show ? card.dataset.defaultDisplay : "none";
+      card.classList.toggle("hidden", !show);
+    });
   }
+
+  // Use 'input' for the search to get immediate updates and 'change' for selects
+  if (searchEl) searchEl.addEventListener("input", filterJobs);
+  [industrySelect, typeSelect, scheduleSelect].forEach((el) => {
+    if (el) el.addEventListener("change", filterJobs);
+  });
+
+  // Run initially to apply any default filter state
+  filterJobs();
+
+  // ================== JOB DETAILS MODAL ==================
+  const jobModal = document.getElementById("jobDetailsModalUnique");
+  const modalBody = document.getElementById("modal-body-unique");
+  const closeJobModalBtn = jobModal?.querySelector(".close-unique");
+  // backend route is /job/<id> (singular) — use that as default. You can override by
+  // setting <body data-job-url-template="/your/path/"></body>
+  const JOB_URL_TEMPLATE = document.querySelector("body")?.dataset.jobUrlTemplate || "/job/";
+  let currentJobIdFromModal = null;
+
+  if (closeJobModalBtn) {
+    closeJobModalBtn.addEventListener("click", () => {
+      jobModal.style.display = "none";
+      modalBody.innerHTML = "";
+      currentJobIdFromModal = null;
+    });
+  }
+
+  window.addEventListener("click", e => {
+    if (e.target === jobModal) {
+      jobModal.style.display = "none";
+      modalBody.innerHTML = "";
+      currentJobIdFromModal = null;
+    }
+  });
+
+  document.body.addEventListener("click", async e => {
+    const btn = e.target.closest(".btn-details");
+    if (!btn) return;
+    e.preventDefault();
+
+    const jobId = btn.dataset.jobId;
+    if (!jobId || !modalBody) return;
+    
+    currentJobIdFromModal = jobId;
+
+    modalBody.innerHTML = "<p>Loading...</p>";
+    jobModal.style.display = "flex";
+
+    try {
+      // Build URL from template; support templates like '/job/0' or '/job/'
+      let url;
+      if (JOB_URL_TEMPLATE.includes('0')) {
+        url = JOB_URL_TEMPLATE.replace(/\/0$/, `/${jobId}`);
+      } else {
+        url = JOB_URL_TEMPLATE.replace(/\/$/, '') + '/' + jobId;
+      }
+      const res = await fetch(url, { credentials: "same-origin" });
+      const contentType = res.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        modalBody.innerHTML = data.success ? data.html : "<p>No content available.</p>";
+      } else {
+        modalBody.innerHTML = await res.text();
+      }
+    } catch (err) {
+      console.error("[v0] Job details error:", err);
+      showFlash("Failed to load job details. Please try again.", "danger");
+      jobModal.style.display = "none";
+    }
+  });
+
+  const modalApplyBtn = document.getElementById("modalApplyBtn");
+  const modalCancelBtn = document.getElementById("modalCancelBtn");
+  
+  if (modalCancelBtn) {
+    modalCancelBtn.addEventListener("click", () => {
+      jobModal.style.display = "none";
+      modalBody.innerHTML = "";
+      currentJobIdFromModal = null;
+    });
+  }
+
+  if (modalApplyBtn) {
+    modalApplyBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (!currentJobIdFromModal) {
+        showFlash("No job selected.", "warning");
+        return;
+      }
+
+      // Set the global currentJobId to the modal's job
+      currentJobId = currentJobIdFromModal;
+      
+      // Show confirmation modal
+      if (confirmModal) {
+        confirmModal.style.display = "flex";
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+  const confirmModal = document.getElementById("confirmModalUnique");
+  const cancelBtn = document.getElementById("confirmCancelBtn");
+
+  cancelBtn?.addEventListener("click", () => {
+    if (confirmModal) confirmModal.style.display = "none";
+  });
 });
+
+
+  // ================== REPORT MODAL ==================
+  const reportModal = document.getElementById("reportModalUnique");
+  const closeReportBtn = reportModal?.querySelector(".close-report-unique");
+  const cancelReportBtn = document.getElementById("cancelReportUnique");
+  const confirmReportBtn = document.getElementById("confirmReportUnique");
+  const reportReasonSelect = document.getElementById("reportReasonUnique");
+  let reportingJobId = null;
+
+  document.body.addEventListener("click", e => {
+    const btn = e.target.closest(".btn-report");
+    if (!btn) return;
+    reportingJobId = btn.closest(".job-card")?.querySelector(".btn-details")?.dataset.jobId;
+    reportModal.style.display = "flex";
+  });
+
+  if (closeReportBtn) {
+    closeReportBtn.addEventListener("click", () => {
+      reportModal.style.display = "none";
+      reportReasonSelect.value = "";
+    });
+  }
+
+  if (cancelReportBtn) {
+    cancelReportBtn.addEventListener("click", () => {
+      reportModal.style.display = "none";
+      reportReasonSelect.value = "";
+    });
+  }
+
+if (confirmReportBtn) {
+  confirmReportBtn.addEventListener("click", async () => {  // <-- async here
+    const reason = reportReasonSelect?.value;
+    if (!reason) {
+      showFlash("Please select a reason for the report.", "warning");
+      return;
+    }
+
+    try {
+      const res = await fetch("/applicants/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: reportingJobId, reason }),
+        credentials: "same-origin"
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showFlash("Report submitted successfully. Thank you!", "success");
+        reportModal.style.display = "none";
+        reportReasonSelect.value = "";
+      } else {
+        showFlash(data.message || "Failed to submit report.", "danger");
+      }
+    } catch (err) {
+      console.error("[v0] Report error:", err);
+      showFlash("An error occurred while submitting your report.", "danger");
+    }
+  });
+}
+
+  window.addEventListener("click", e => {
+    if (e.target === reportModal) {
+      reportModal.style.display = "none";
+      reportReasonSelect.value = "";
+    }
+  });
+  // ================== APPLY MODAL FLOW ==================
+let selectedJobId = null;
+const confirmModal = document.getElementById("confirmModalUnique");
+const successModal = document.getElementById("successModalUnique");
+const confirmApplyBtn = confirmModal?.querySelector(".btn-confirm");
+const successConfirmBtn = successModal?.querySelector(".btn-confirm");
+
+/* ====================================================
+   CUSTOM TOAST FOR ALREADY APPLIED
+==================================================== */
+function showAlreadyAppliedToast() {
+  const toast = document.getElementById("alreadyAppliedToast");
+  if (!toast) return;
+
+  toast.style.display = "flex";
+  setTimeout(() => (toast.style.display = "none"), 3000);
+}
+
+document.getElementById("alreadyAppliedClose")?.addEventListener("click", () => {
+  document.getElementById("alreadyAppliedToast").style.display = "none";
+});
+
+/* ====================================================
+   CHECK IF USER ALREADY APPLIED (BACKEND)
+==================================================== */
+async function hasApplied(jobId) {
+  try {
+    const res = await fetch(`/api/check-application?jobId=${jobId}`);
+    const data = await res.json();
+    return data.applied; // backend should return { applied: true/false }
+  } catch (err) {
+    console.error("Error checking application:", err);
+    return false;
+  }
+}
+
+/* ====================================================
+   OPEN CONFIRM MODAL WHEN APPLY BUTTON IS CLICKED
+==================================================== */
+document.querySelectorAll(".btn-apply").forEach((button) => {
+  button.addEventListener("click", async () => {
+    selectedJobId = button.dataset.jobId;
+
+    if (await hasApplied(selectedJobId)) {
+      showAlreadyAppliedToast();
+      return;
+    }
+
+    confirmModal.style.display = "flex";
+  });
+});
+
+/* ====================================================
+   BACKEND SUBMISSION FUNCTION
+==================================================== */
+async function sendApplication(jobId) {
+  const form = document.getElementById(`applyForm-${jobId}`);
+  if (!form) return { success: false };
+
+  try {
+    const formData = new FormData(form);
+    const response = await fetch(form.action, {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+    });
+
+    return await response.json();
+  } catch {
+    return { success: false, message: "Invalid JSON" };
+  }
+}
+
+/* ====================================================
+   CONFIRM APPLY → SEND TO BACKEND
+==================================================== */
+if (confirmApplyBtn) {
+  confirmApplyBtn.addEventListener("click", async () => {
+    if (!selectedJobId) return;
+
+    const backend = await sendApplication(selectedJobId);
+
+    if (!backend.success && backend.message.includes("already")) {
+      confirmModal.style.display = "none";
+      showAlreadyAppliedToast();
+      return;
+    }
+
+    confirmModal.style.display = "none";
+    successModal.style.display = "flex";
+
+    // Optionally, re-render applications list
+    renderApplications();
+  });
+}
+
+/* ====================================================
+   SUCCESS MODAL CLOSE
+==================================================== */
+window.closeSuccessModal = () => {
+  successModal.style.display = "none";
+};
+
+successConfirmBtn?.addEventListener("click", () => {
+  successModal.style.display = "none";
+});
+
+/* ====================================================
+   CLICK OUTSIDE TO CLOSE MODALS
+==================================================== */
+window.addEventListener("click", (e) => {
+  if (e.target === confirmModal) confirmModal.style.display = "none";
+  if (e.target === successModal) successModal.style.display = "none";
+});
+// ================== APPLICATIONS LIST RENDER & TAB FILTER ==================
+async function renderApplications() {
+  const applicationsList = document.getElementById("applicationsList");
+  if (!applicationsList) return;
+
+  try {
+    const res = await fetch("/applicants/api/applications", { credentials: "same-origin" });
+    const applications = await res.json();
+
+    if (!applications || applications.length === 0) {
+      applicationsList.innerHTML = `<div class="empty-state"><p>No applications yet.</p></div>`;
+      return;
+    }
+
+    applicationsList.innerHTML = applications.map(app => `
+      <div class="application-card" data-status="${app.status?.toLowerCase() || 'pending'}">
+        <h3>${app.jobTitle || 'N/A'}</h3>
+        <p>${app.companyName || 'Company'}</p>
+        <p>Applied on: ${new Date(app.date).toLocaleDateString()}</p>
+      </div>
+    `).join("");
+
+    // ===== TAB LOGIC =====
+    const tabButtons = Array.from(document.querySelectorAll(".tab-group button"));
+    const cards = Array.from(applicationsList.querySelectorAll(".application-card"));
+
+    function filterCards(filter) {
+      cards.forEach(card => {
+        const status = card.dataset.status || "";
+        card.style.display = filter === "all" || status === filter ? "flex" : "none";
+      });
+    }
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        tabButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        filterCards(btn.dataset.filter || "all");
+      });
+    });
+
+    const initialBtn = tabButtons.find(b => b.classList.contains("active")) || tabButtons[0];
+    if (initialBtn) initialBtn.click();
+
+  } catch (err) {
+    console.error("Failed to load applications:", err);
+  }
+}
+
+// Run after DOM loads
+document.addEventListener("DOMContentLoaded", renderApplications);
+
+async function deleteApplication(appId) {
+  if (!confirm("Are you sure you want to delete this application?")) return;
+
+  try {
+    const res = await fetch(`/applicants/api/delete-application/${appId}`, {
+      method: "DELETE",
+      credentials: "same-origin"
+    });
+    const data = await res.json();
+    if (data.success) {
+      showFlash("Application deleted successfully.", "success");
+      renderApplications(); // ✅ replace loadApplications
+    } else {
+      showFlash(data.message || "Failed to delete application.", "danger");
+    }
+  } catch (err) {
+    console.error("Error deleting application:", err);
+    showFlash("Error deleting application.", "danger");
+  }
+}
+
+// Run once after DOM loaded
+document.addEventListener("DOMContentLoaded", renderApplications);
+
+  // ================== TAB FILTER ==================
+ const applicationsList = document.getElementById("applicationsList");
+ const cards = applicationsList ? Array.from(applicationsList.querySelectorAll(".application-card")) : [];
+
+
+  function filterCards(filter) {
+    cards.forEach((card) => {
+      const status = card.dataset.status || "";
+      card.style.display = filter === "all" || status === filter ? "flex" : "none";
+    });
+  }
+
+  if (tabButtons.length) {
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const filter = btn.dataset.filter || "all";
+        tabButtons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        filterCards(filter);
+      });
+    });
+
+    const initialBtn = tabButtons.find((b) => b.classList.contains("active")) || tabButtons[0];
+    if (initialBtn) initialBtn.click();
+  }
+
+document.addEventListener("DOMContentLoaded", renderApplications);

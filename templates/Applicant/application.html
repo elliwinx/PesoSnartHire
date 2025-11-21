@@ -28,13 +28,13 @@
           <a href="{{ url_for('applicants.applicant_home') }}" class="nav-link"
             >Home</a
           >
-          <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Real-Time Notifications</a
-          >
           <a
             href="{{ url_for('applicants.applications') }}"
             class="nav-link-active"
             >Applications</a
+          >
+          <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
+            >Real-Time Notifications</a
           >
           <a
             href="{{ url_for('applicants.account_security') }}"
@@ -80,46 +80,12 @@
       <button data-filter="hired">Hired</button> 
       <button data-filter="rejected">Rejected</button>
       <button data-filter="cancelled">Cancelled</button> 
+      <button data-filter="close-job">Close Job</button> 
     </div>
 
-    <!-- ========== Application Cards (paste this below the .tab-group) ========== -->
-<div class="applications-list" id="applicationsList">
-  <div class="application-card" data-status="for-interview">
-    <div class="application-info">
-      <h3>Service Crew</h3>
-      <p class="company">McDonald’s Philippines</p>
-      <p class="applied-date">Applied on March 15, 2024</p>
-    </div>
-    <span class="status for-interview">For Interview</span>
-  </div>
+  <div class="applications-list" id="applicationsList"></div>
 
-  <div class="application-card" data-status="shortlisted">
-    <div class="application-info">
-      <h3>Production Operator</h3>
-      <p class="company">Nestle Philippines</p>
-      <p class="applied-date">Applied on March 10, 2024</p>
-    </div>
-    <span class="status shortlisted">Shortlisted</span>
   </div>
-
-  <div class="application-card" data-status="pending">
-    <div class="application-info">
-      <h3>Call Center Agent</h3>
-      <p class="company">Globe Telecom</p>
-      <p class="applied-date">Applied on March 12, 2024</p>
-    </div>
-    <span class="status pending">Pending</span>
-  </div>
-
-  <div class="application-card" data-status="hired">
-    <div class="application-info">
-      <h3>Sales Associate</h3>
-      <p class="company">SM Supermalls</p>
-      <p class="applied-date">Applied on March 8, 2024</p>
-    </div>
-    <span class="status hired">Hired</span>
-  </div>
-</div>
 <br>
 
     <!-- Footer -->

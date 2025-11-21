@@ -138,28 +138,53 @@ body {
 
 .search-filter {
   display: flex;
-  flex-direction: column;
-  margin-bottom: 1.5rem;
-  position: relative;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap; /* allow items to wrap to next line */
+}
+
+.search-filter input,
+.search-filter select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  outline: none;
 }
 
 .search-filter input {
-  width: 100%;
-  padding: 0.7rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  background: url("https://cdn-icons-png.flaticon.com/512/622/622669.png")
-    no-repeat right 10px center;
-  background-size: 18px;
+  flex: 1 1 320px; /* grow, shrink, base width */
+  min-width: 160px;
+}
+
+.search-filter .filter-dropdown {
+  flex: 0 0 180px; /* fixed-ish width on wide screens */
+  min-width: 120px;
 }
 
 .search-filter select {
-  width: 50%;
-  align-self: flex-end;
-  padding: 0.7rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+/* On medium to small screens stack filters vertically */
+@media (max-width: 900px) {
+  .search-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-filter input,
+  .search-filter select {
+    width: 100%;
+    flex: none;
+  }
+  .search-filter select { margin-top: 8px; }
+}
+
+@media (max-width: 480px) {
+  .search-filter .filter-dropdown { font-size: 13px; padding: 8px; }
+  .search-filter input { font-size: 14px; padding: 8px; }
 }
 
 .job-listing-container{
@@ -172,7 +197,7 @@ body {
 .job-card{
   background:#f0f0f0;
   border-radius:10px;
-  width: 350px;
+  width: 363px;
   padding:20px;
   box-shadow:0 4px 10px rgba(0,0,0,0.06);
   display:flex;
@@ -305,14 +330,6 @@ body {
   display: flex;
 }
 
-.btn-report{
-  color: #333;
-  border: 1.5px solid black;
-  width: 36px;
-  height: 36px;
-  border-radius: 100px;
-}
-
 .company-logo {
     max-width: 80px;
     max-height: 80px;
@@ -322,37 +339,79 @@ body {
     border-radius: 8px;  /* optional */
 }
 
-.modal {
+/* General Modal Styles */
+.modal-unique {
   display: none;
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0; 
+  left: 0;
+  width: 100%;
+  height: 100vh;
   background: rgba(0,0,0,0.5);
+  display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
 }
 
-.modal-content {
+/* Modal Box */
+.modal-content-unique {
   background: #fff;
   padding: 20px;
-  border-radius: 8px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80%;
+  border-radius: 10px;
+  width: 600px;
+  max-width: 90%;
+  max-height: 80vh;
   overflow-y: auto;
   position: relative;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.modal .close {
+/* Close button (× icon) */
+.modal-content-unique .close-unique,
+.modal-content-unique .close-report-unique {
   position: absolute;
   top: 10px;
   right: 15px;
   font-size: 24px;
   cursor: pointer;
+  color: #333;
 }
 
-.custom-modal {
+/* All contents centered (used by your report modal) */
+.modal-job-details-unique {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 9px;
+}
+
+/* Centered “!” button icon */
+.btn-report {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #000;
+    background: transparent;
+    font-size: 17px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Confirm + Cancel buttons row */
+.modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  width: 100%;
+}
+
+
+/* Custom Modal Styles */
+.custom-modal-unique {
   display: none;
   position: fixed;
   inset: 0;
@@ -362,14 +421,61 @@ body {
   z-index: 9999;
 }
 
-.custom-modal-content {
+.custom-modal-content-unique {
   background: #fff;
   padding: 25px;
-  width: 350px;
+  width: 430px;
   border-radius: 10px;
   text-align: center;
-  width: 430px;
 }
+
+/* Employment Type Badge */
+.employment-badge {
+  display: inline-block;
+  background-color: #ffc107;
+  color: #000;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Modal header with badge positioning */
+.modal-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.modal-title-section h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.modal-badge-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.close-unique {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+}
+
+.close-unique:hover {
+  color: #333;
+}
+
 
 .btn-cancel {
   background: #ccc;
@@ -422,8 +528,89 @@ body {
   cursor: pointer;
 }
 
-#reportModal .modal-job-details h2 {
+/* Hide the modal by default */
+#reportModalUnique {
+  display: none; /* <-- this is the key */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  justify-content: center; /* center content horizontally */
+  align-items: center;     /* center content vertically */
+  z-index: 1000;
+}
+
+/* Target only h2 inside report modal */
+#reportModalUnique .modal-job-details-unique h2 {
     color: #7D0A0A; /* red */
+}
+
+/* Set width for the select inside the report modal */
+#reportModalUnique #reportReasonUnique {
+    width: 260px; 
+    height: 30px;
+}
+
+/* Palakihin lang ang ! button sa report modal */
+#reportModalUnique .btn-report {
+    width: 50px;       /* adjust as needed */
+    height: 50px;      /* adjust as needed */
+    font-size: 24px;   /* para malaki yung "!" */
+    border-radius: 50%; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.toast-notification {
+  display: none; /* hidden by default */
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #f8d7da; /* light red/pink */
+  color: #721c24; /* dark red text */
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  font-weight: bold;
+  z-index: 9999;
+  min-width: 250px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toast-close {
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 15px;
+}
+
+.toast-notification {
+  display: none;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  font-weight: bold;
+  z-index: 9999;
+  min-width: 250px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toast-close {
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 15px;
 }
 
 

@@ -794,7 +794,8 @@ def reactivate_employer_account():
 @employers_bp.route("/create_job", methods=["POST"])
 def create_job():
     if "employer_id" not in session:
-        return jsonify({"success": False, "message": "You must be logged in to create a job post."}), 401
+        msg = "You must be logged in to create a job post."
+        return jsonify({"success": False, "message": msg}), 401
 
     employer_id = session["employer_id"]
 
@@ -806,6 +807,7 @@ def create_job():
     job_description = request.form.get("jobDescription", "").strip()
     qualifications = request.form.get("qualifications", "").strip()
 
+    # Validate numbers
     try:
         num_vacancy = int(num_vacancy)
         min_salary = float(min_salary)
@@ -813,6 +815,7 @@ def create_job():
     except ValueError:
         return jsonify({"success": False, "message": "Vacancy and salary must be valid numbers."})
 
+    # Validate required fields
     if not job_position or not work_schedule or num_vacancy < 1 or min_salary < 0 or max_salary < min_salary or not job_description or not qualifications:
         return jsonify({"success": False, "message": "Please fill in all fields correctly."})
 
@@ -821,23 +824,37 @@ def create_job():
         return jsonify({"success": False, "message": "Database connection failed."})
 
     try:
-        cursor = conn.cursor()
-        query = """
+        cursor = conn.cursor(dictionary=True)
+
+        # === DUPLICATE CHECK ===
+        cursor.execute("""
+            SELECT job_id 
+            FROM jobs 
+            WHERE employer_id=%s AND job_position=%s AND work_schedule=%s AND status != 'deleted'
+        """, (employer_id, job_position, work_schedule))
+        duplicate = cursor.fetchone()
+        if duplicate:
+            return jsonify({"success": False, "message": "You have already created this job post with the same position and schedule."})
+
+        # Insert new job
+        cursor.execute("""
             INSERT INTO jobs
             (employer_id, job_position, work_schedule, num_vacancy, 
-            min_salary, max_salary, job_description, qualifications, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'active')
-        """
-        cursor.execute(query, (
+             min_salary, max_salary, job_description, qualifications, status, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'active', NOW())
+        """, (
             employer_id, job_position, work_schedule, num_vacancy,
             min_salary, max_salary, job_description, qualifications
         ))
         conn.commit()
+
         return jsonify({"success": True, "message": "Job post successfully created!"})
+
     except Exception as e:
-        print("Error inserting job:", e)
         conn.rollback()
+        print("Error inserting job:", e)
         return jsonify({"success": False, "message": "Failed to create job post."})
+
     finally:
         conn.close()
 
@@ -849,7 +866,12 @@ def application_management():
     employer_id = session["employer_id"]
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM jobs WHERE employer_id = %s AND status != 'deleted'", (employer_id,))
+    cursor.execute("""
+        SELECT j.*,
+            (SELECT COUNT(*) FROM applications a WHERE a.job_id = j.job_id) AS applicant_count
+        FROM jobs j
+        WHERE j.employer_id = %s AND j.status != 'deleted'
+    """, (employer_id,))
     jobs = cursor.fetchall()
     conn.close()
     

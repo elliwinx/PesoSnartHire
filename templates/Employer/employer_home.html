@@ -105,7 +105,7 @@
   <section class="job-form-section">
     <h3 class="section-title">Job Vacancy Details</h3>
 
-    <form class="jobPostForm" method="POST" action="{{ url_for('employers.create_job') }}">
+      <form id="createJobForm" class="jobPostForm" method="POST" action="{{ url_for('employers.create_job') }}">
       <input type="hidden" name="employer_id" value="{{ current_employer_id }}">
 
       <div class="form-row">

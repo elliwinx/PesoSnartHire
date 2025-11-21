@@ -2,7 +2,8 @@
 
   <div class="job-title-row">
     <h2>{{ job.job_position }}</h2>
-    <span class="job-type-badge">{{ job.employment_type }}</span>
+    {# show work schedule (e.g. 'Full Time') — jobs use work_schedule enum like 'full-time' #}
+    <span class="job-type-badge">{{ job.work_schedule|replace('-', ' ')|title if job.work_schedule else '' }}</span>
   </div>
 
   <h3>Company</h3>
@@ -24,6 +25,18 @@
 
 
 <style>
+/* Ensure modal content leaves room for the external close button */
+.modal-content-unique {
+  /* leave space on the right so badges or header content don't collide with the close button */
+  padding-right: 64px !important;
+  box-sizing: border-box;
+}
+
+/* Make sure the close button sits above other elements */
+.close-unique {
+  z-index: 50;
+}
+
 /* Overlay */
 .job-title-row {
   display: flex;
@@ -34,18 +47,23 @@
 
 .job-title-row h2 {
   margin: 0;
+  margin-right: 12px;
+  flex: 1 1 auto;
 }
 
 .job-type-badge {
   background-color: #FFC107;
-  padding: 5px 15px;
+  padding: 5px 12px;
   border-radius: 20px;
   font-size: 14px;
   font-weight: 600;
   color: black;
+  white-space: nowrap;
+  /* keep badge away from the absolute close button */
+  margin-left: 8px;
 }
 
-
+/* Modal container (fragment styles are applied globally) */
 .modal {
   position: fixed;
   z-index: 1000;
@@ -148,6 +166,8 @@
   .modal-job-meta div {
     flex: 1 1 100%;
   }
+  /* On small screens reduce right padding so content fits */
+  .modal-content-unique { padding-right: 40px !important; }
 }
 
 /* Animations */

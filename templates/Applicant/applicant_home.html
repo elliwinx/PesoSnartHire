@@ -23,27 +23,30 @@
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
   </head>
-  <body>
-    <!--Flash of Welcome Back Message-->
-    {% with messages = get_flashed_messages(with_categories=true) %} 
-      {% if messages %} 
-        {% for category, msg in messages %}
-          <div class="flash {{ 'success' if category=='success' else 'danger' }}">
-            {{ msg }}
-            <button class="close" onclick="this.parentElement.remove()">×</button>
-          </div>
-        {% endfor %}
-        <script>
-          setTimeout(() => {
-            const flashes = document.querySelectorAll(".flash");
-            flashes.forEach((f) => f.classList.add("fade-out"));
-            setTimeout(() => {
-              flashes.forEach((f) => f.remove());
-            }, 500);
-          }, 3000);
-        </script>
-      {% endif %}
-    {% endwith %}
+  <body data-job-url-template="{{ url_for('applicants.job_page', job_id=0) }}">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="flash-close" onclick="this.parentElement.remove()">
+        ×
+      </button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        document
+          .querySelectorAll(".flash")
+          .forEach((f) => f.classList.add("fade-out"));
+        setTimeout(
+          () => document.querySelectorAll(".flash").forEach((f) => f.remove()),
+          500
+        );
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
+
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -59,141 +62,285 @@
             class="nav-link-active"
             >Home</a
           >
+          <a
+            href="{{ url_for('applicants.applications') }}"
+            class="nav-link"
+            >Applications</a
+          >
           <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
             >Real-Time Notifications</a
-          >
-          <a href="{{ url_for('applicants.applications') }}" class="nav-link"
-            >Applications</a
           >
           <a
             href="{{ url_for('applicants.account_security') }}"
             class="nav-link"
             >Account & Security</a
           >
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
+          <a href="{{ url_for('logout') }}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
 
+    <!-- Hero Section -->
     <section class="hero">
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
+          alt="New City Hall of Lipa City"
         />
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome{% if session.applicant_name %}, {{ session.applicant_name }}{% endif %}!</h1>
+          <h1 class="hero-title">
+            Welcome{% if session.applicant_name %}, {{ session.applicant_name
+            }}{% endif %}!
+          </h1>
           <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
-    </section>
 
-    <!-- Job Vacancies -->
+    <!-- Job Vacancies Section -->
     <section class="job-vacancy">
       <div class="container">
         <h2>Available Job Vacancies</h2>
         <p>
           Bringing Applicants and Employers with Trust – Find opportunities
-          <br />
           perfect for fresh graduates and experienced hires.
         </p>
 
+        <!-- Search & Filters -->
         <div class="search-filter">
-          <input type="text" placeholder="Search a job" />
-          <select>
-            <option>Filter</option>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search a job or company"
+          />
+          <select id="industrySelect" class="filter-dropdown">
+            <option value="">Select Industry</option>
+            <option value="Technology & IT">Technology & IT</option>
+            <option value="Finance & Insurance">Finance & Insurance</option>
+            <option value="Healthcare & Pharmaceuticals">
+              Healthcare & Pharmaceuticals
+            </option>
+            <option value="Education">Education</option>
+            <option value="Manufacturing & Industry">
+              Manufacturing & Industry
+            </option>
+            <option value="Retail & E-commerce">Retail & E-commerce</option>
+            <option value="Media & Entertainment">Media & Entertainment</option>
+            <option value="Real Estate & Construction">
+              Real Estate & Construction
+            </option>
+            <option value="Transportation & Logistics">
+              Transportation & Logistics
+            </option>
+            <option value="Energy & Utilities">Energy & Utilities</option>
+            <option value="Government & Nonprofit">
+              Government & Nonprofit
+            </option>
+            <option value="Professional Services">Professional Services</option>
+            <option value="Hospitality, Food & Travel">
+              Hospitality, Food & Travel
+            </option>
+          </select>
+
+          <select id="typeSelect" class="filter-dropdown">
+            <option value="">All Types</option>
+            <option value="Local">Local</option>
+            <option value="International">International</option>
+          </select>
+
+          <select id="scheduleSelect" class="filter-dropdown">
+            <option value="">All Schedules</option>
+            <option value="Full-Time">Full-Time</option>
+            <option value="Part-Time">Part-Time</option>
+            <option value="Contract">Contract</option>
+            <option value="Freelance">Freelance</option>
           </select>
         </div>
 
-        <div class="job-grid">
-          <!-- Job Cards will be injected via script.js -->
-        </div>
-
+        <!-- Job Cards -->
         <div class="job-listing-container">
-          {% if jobs %}
-            {% for job in jobs %}
-              <div class="job-card">
-                <div class="job-card-top">
-                  <div class="logo-and-title">
-                    <img src="{{ url_for('static', filename=job.company_logo_path) }}" alt="Company Logo" class="company-logo"/>
-                    <div class="title-wrap">
-                      <h3 class="job-title">{{ job.job_position }}</h3>
-                      <p class="company-name">{{ job.company_name }}</p>
-                      <p class="posted-time">Posted {{ job.created_at|timeago }}</p>
-                    </div>
-                  </div>
-                  <span class="status-badge">Active</span>
-                </div>
-
-                <div class="job-details">
-                  <p class="job-location"><i class="fas fa-map-marker-alt"></i> {{ job.location if job.location else 'Location' }}</p>
-                  <p class="job-salary"><i class="fa-solid fa-sack-dollar"></i> ₱{{ "{:,.0f}".format(job.min_salary|default(0)) }} - ₱{{ "{:,.0f}".format(job.max_salary|default(0)) }}</p>
-                  <p class="job-meta"><i class="fa-regular fa-user"></i> {{ job.num_vacancy if job.num_vacancy else 1 }} Vacancies | {{ job.work_schedule if job.work_schedule else 'Full-Time' }}</p>
-                </div>
-
-                <div class="job-actions">
-                  <div class="left-buttons">
-                    <a href="#" class="btn btn-details" data-job-id="{{ job.job_id }}">Details</a>
-
-                    <form id="applyForm-{{ job.job_id }}" action="{{ url_for('applicants.apply_job', job_id=job.job_id) }}" method="POST" class="apply-form">
-                        <button type="button"
-                                class="btn btn-apply"
-                                onclick="openConfirmModal(this)"
-                                data-job-id="{{ job.job_id }}">
-                            Apply
-                        </button>
-                    </form>
-
-
-                  </div>
-
-                  <div class="right-button">
-                    <button class="btn-report" title="Report">!</button>
-                  </div>
-
+          {% if jobs %} {% for job in jobs %}
+          <div class="job-card" data-industry="{{ job.industry|default('') }}" data-type="{{ job.type_of_recruitment|default('') }}" data-schedule="{{ job.work_schedule|default('') }}" data-title="{{ job.job_position|default('') }}" data-company="{{ job.company_name|default('') }}">
+            <div class="job-card-top">
+              <div class="logo-and-title">
+                <img
+                  src="{{ url_for('static', filename=job.company_logo_path) }}"
+                  alt="Company Logo"
+                  class="company-logo"
+                />
+                <div class="title-wrap">
+                  <h3 class="job-title">{{ job.job_position }}</h3>
+                  <p class="company-name">{{ job.company_name }}</p>
+                  <p class="posted-time">Posted {{ job.created_at|timeago }}</p>
                 </div>
               </div>
-            {% endfor %}
-          {% else %}
-            <p class="no-jobs-msg">No job postings available at the moment.</p>
+              <span class="status-badge">Active</span>
+            </div>
+
+            <div class="job-details">
+              <p class="job-location">
+                <i class="fas fa-map-marker-alt"></i> {{ job.location or
+                'Location' }}
+              </p>
+              <p class="job-salary">
+                <i class="fa-solid fa-sack-dollar"></i> ₱{{
+                "{:,.0f}".format(job.min_salary|default(0)) }} - ₱{{
+                "{:,.0f}".format(job.max_salary|default(0)) }}
+              </p>
+              <p class="job-meta">
+                <i class="fa-regular fa-user"></i> {{ job.num_vacancy or 1 }}
+                Vacancies | {{ job.work_schedule or 'Full-Time' }}
+              </p>
+
+              <!-- Visible industry and recruitment type for users -->
+              <p class="job-industry-visible"><i class="fa-solid fa-building"></i> {{ job.industry or 'N/A' }}</p>
+              <p class="job-type-visible"><i class="fa-solid fa-briefcase"></i> {{ job.type_of_recruitment or 'Local' }}</p>
+            </div>
+
+            <!-- Hidden spans for filtering -->
+            <span class="job-industry" style="display: none"
+              >{{ job.industry }}</span
+            >
+            <span class="job-type" style="display: none"
+              >{{ job.type_of_recruitment }}</span
+            >
+            <span class="job-schedule" style="display: none"
+              >{{ job.work_schedule }}</span
+            >
+
+            <div class="job-actions">
+              <div class="left-buttons">
+                <a
+                  href="#"
+                  class="btn btn-details"
+                  data-job-id="{{ job.job_id }}"
+                  >Details</a
+                >
+                <form
+                  id="applyForm-{{ job.job_id }}"
+                  action="{{ url_for('applicants.apply_job', job_id=job.job_id) }}"
+                  method="POST"
+                  class="apply-form"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-apply"
+                    data-job-id="{{ job.job_id }}"
+                  >
+                    Apply
+                  </button>
+                </form>
+              </div>
+              <div class="right-button">
+                <button class="btn-report" title="Report">!</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %} {% else %}
+          <p class="no-jobs-msg">No job postings available at the moment.</p>
           {% endif %}
         </div>
       </div>
-
-<!-- Modal HTML (hidden initially) -->
-<div id="jobDetailsModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <span class="close">&times;</span>
-    <div id="modal-body"></div>
-  </div>
-</div>
-
-<!-- Confirmation Modal -->
-<div id="confirmModal" class="custom-modal">
-  <div class="custom-modal-content">
-      <h2>Confirm Application</h2>
-      <p>Are you sure you want to apply for this job?</p>
-
-      <div class="modal-buttons">
-        <button onclick="sendApplication()" class="btn-confirm">Confirm</button>
-        <button onclick="closeConfirmModal()" class="btn-cancel">Cancel</button>
+    </section>
+    <!-- Unique Modals -->
+    <!-- Job Details Modal -->
+    <div id="jobDetailsModalUnique" class="modal-unique" style="display: none">
+      <div class="modal-content-unique">
+        <span
+          class="close-unique"
+          style="
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+          "
+          >&times;</span
+        >
+        <!-- Added employment badge container in modal header -->
+        <div id="modal-body-unique" style="padding-bottom: 80px">
+          <!-- Badge will be injected here by JavaScript -->
+        </div>
+        <!-- Updated button layout to match design - Apply and Close buttons at bottom -->
+        <div
+          class="modal-action-buttons"
+          style="
+            display: flex;
+            gap: 12px;
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            width: calc(100% - 40px);
+          "
+        >
+          <button
+            id="modalApplyBtn"
+            class="btn-apply-now" 
+            onclick="sendApplication()"
+            style="
+              cursor: pointer;
+              flex: 1;
+              padding: 12px;
+              background-color: #1b5e20;
+              color: white;
+              border: none;
+              border-radius: 4px;
+              font-weight: 600;
+            "
+          >
+            Apply Now
+          </button>
+          
+          <button
+            id="modalCancelBtn"
+            class="btn btn-cancel"
+            style="
+              cursor: pointer;
+              flex: 1;
+              padding: 12px;
+              background-color: white;
+              color: #333;
+              border: 2px solid #333;
+              border-radius: 4px;
+              font-weight: 600;
+            "
+          >
+            Close
+          </button>
+        </div>
       </div>
-  </div>
-</div>
+    </div>
 
-<div id="reportModal" class="modal">
-  <div class="modal-content">
-    <span class="close-report">&times;</span>
+    <!-- Confirmation Modal -->
+    <div id="confirmModalUnique" class="custom-modal-unique">
+      <div class="custom-modal-content-unique">
+        <h2>Confirm Application</h2>
+        <p>Are you sure you want to apply for this job?</p>
+        <div class="modal-buttons">
+          <button onclick="sendApplication()" class="btn-confirm"> Confirm </button>
+          <button id="confirmCancelBtn" class="btn-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
 
-    <div class="modal-job-details">
-      <div class="report-icon">!</div>
+<!-- Report Modal -->
+<div id="reportModalUnique" class="modal-unique">
+  <div class="modal-content-unique">
+    <span class="close-report-unique">&times;</span>
+
+    <div class="modal-job-details-unique">
+
+      <button class="btn-report">!</button>
+
       <h2>Report Job Post</h2>
       <p>Please select a reason for your report.</p>
 
-      <select id="reportReason">
+      <select id="reportReasonUnique">
         <option value="">Reason</option>
         <option value="Spam">Spam</option>
         <option value="Scam">Scam</option>
@@ -201,23 +348,58 @@
       </select>
 
       <div class="modal-buttons">
-        <button id="confirmReport" class="confirm-btn">Confirm</button>
-        <button id="cancelReport" class="cancel-btn">Cancel</button>
+        <button id="confirmReportUnique" class="confirm-btn">Confirm</button>
+        <button id="cancelReportUnique" class="cancel-btn">Cancel</button>
       </div>
     </div>
   </div>
 </div>
 
-
-<!-- Success Modal -->
-<div id="successModal" class="custom-modal">
-  <div class="custom-modal-content">
-      <h2>APPLICATION SENT</h2>
-      <p>Thank you for applying! You can monitor the status of your application on your Applications tab.</p>
-      <button onclick="closeSuccessModal()" class="btn-confirm">Confirm</button>
-  </div>
+<div id="alreadyAppliedToast" 
+     style="
+        display:none; 
+        position:fixed; 
+        top:20px; 
+        left:50%;
+        transform:translateX(-50%);
+        background:#e8babe; 
+        color:#721c24; 
+        padding:12px 20px; 
+        border-radius:6px; 
+        font-weight:600;
+        font-size:16px;
+        box-shadow:0 2px 6px rgba(0,0,0,0.15);
+        z-index:10000;
+     ">
+  You have already applied to this job.
+  <button id="alreadyAppliedClose" 
+          style="
+            margin-left:15px;
+            background:none;
+            border:none;
+            font-weight:700;
+            cursor:pointer;
+            color:#721c24;
+            font-size:16px;
+          ">
+    ✕
+  </button>
 </div>
 
+
+    <!-- Success Modal -->
+    <div id="successModalUnique" class="custom-modal-unique">
+      <div class="custom-modal-content-unique">
+        <h2>APPLICATION SENT</h2>
+        <p>
+          Thank you for applying! You can monitor the status of your application
+          on your Applications tab.
+        </p>
+        <button onclick="closeSuccessModal()" class="btn-confirm">
+          Confirm
+        </button>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -229,7 +411,9 @@
               Connecting talent with opportunity through innovative recruitment
               solutions.
             </p>
-            <a href="{{url_for('terms_and_conditions')}}" class="footer-note">Terms and Conditions</a>
+            <a href="{{ url_for('terms_and_conditions') }}" class="footer-note"
+              >Terms and Conditions</a
+            >
             <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
           </div>
           <div class="footer-right">
@@ -241,7 +425,7 @@
                   ><i class="devicon-github-plain"></i
                 ></a>
                 <a href="#"><i class="devicon-facebook-plain"></i></a>
-                <a href="mailto: ruffaanoya2005@gmail.com" target="_blank"
+                <a href="mailto:ruffaanoya2005@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -257,7 +441,7 @@
                   target="_blank"
                   ><i class="devicon-facebook-plain"></i
                 ></a>
-                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -285,137 +469,9 @@
 
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
+
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script>
-document.addEventListener("DOMContentLoaded", () => {
-  // generate a job url template using Flask url_for(job_id=0) and replace the 0 later
-  const JOB_URL_TEMPLATE = "{{ url_for('applicants.job_page', job_id=0) }}"; // e.g. "/applicants/job/0"
-
-  const modal = document.getElementById("jobDetailsModal");
-  const modalBody = document.getElementById("modal-body");
-
-  if (!modal || !modalBody) {
-    console.warn("Job modal or modal body not found in DOM — modal disabled.");
-    return;
-  }
-
-  const closeBtn = modal.querySelector(".close");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      modal.style.display = "none";
-      modalBody.innerHTML = ""; // clear content
-    });
-  }
-
-  // close on outside click
-  window.addEventListener("click", (e) => {
-    if (e.target === modal) {
-      modal.style.display = "none";
-      modalBody.innerHTML = "";
-    }
-  });
-
-  // event delegation: works for dynamically generated .btn-details
-  document.body.addEventListener("click", async (e) => {
-    const btn = e.target.closest(".btn-details");
-    if (!btn) return;
-
-    e.preventDefault();
-
-    const jobId = btn.getAttribute("data-job-id") || btn.dataset.jobId;
-    if (!jobId) {
-      console.error("No data-job-id found on .btn-details");
-      return;
-    }
-
-    modalBody.innerHTML = "<p>Loading...</p>";
-    modal.style.display = "flex";
-
-    // build correct url by replacing trailing /0 from template
-    const url = JOB_URL_TEMPLATE.replace(/\/0$/, `/${jobId}`);
-
-    try {
-      const res = await fetch(url, { credentials: "same-origin" });
-
-      if (!res.ok) {
-        // read text response for readable error (server might return plain text)
-        const txt = await res.text();
-        throw new Error(txt || `Fetch failed: ${res.status}`);
-      }
-
-      const contentType = res.headers.get("content-type") || "";
-
-      if (contentType.includes("application/json")) {
-        // server returned JSON { success: true, html: "<...>" }
-        const data = await res.json();
-        if (!data.success) throw new Error(data.message || "Failed to load job");
-        modalBody.innerHTML = data.html || "<p>No content.</p>";
-      } else {
-        // assume HTML/text
-        const html = await res.text();
-        modalBody.innerHTML = html;
-      }
-    } catch (err) {
-      console.error("Failed to fetch job details:", err);
-      modalBody.innerHTML = `<p style="color:red;">Failed to load job details: ${err.message}</p>`;
-    }
-  });
-});
-
-document.addEventListener("DOMContentLoaded", function () {
-  const reportBtn = document.querySelector(".btn-report");
-  const reportModal = document.getElementById("reportModal");
-  const closeModal = document.querySelector(".close-report");
-  const cancelBtn = document.getElementById("cancelReport");
-  const confirmBtn = document.getElementById("confirmReport");
-
-  if (reportBtn) {
-    reportBtn.onclick = () => {
-      reportModal.style.display = "flex";
-    };
-  }
-
-  closeModal.onclick = () => {
-    reportModal.style.display = "none";
-  };
-
-  cancelBtn.onclick = () => {
-    reportModal.style.display = "none";
-  };
-
-  confirmBtn.onclick = () => {
-    const reason = document.getElementById("reportReason").value;
-
-    if (reason === "") {
-      alert("Please select a reason.");
-      return;
-    }
-
-    // Palitan ang modal content sa success message
-    reportModal.querySelector(".modal-job-details").innerHTML = `
-      <div class="report-icon">!</div>
-      <h2>Job Post Reported</h2>
-      <p>Please wait for further announcement about your report.</p>
-    `;
-
-    // Add event listener sa bagong Close button
-    const closeReportSuccess = document.getElementById("closeReportSuccess");
-    closeReportSuccess.onclick = () => {
-      reportModal.style.display = "none";
-    };
-  };
-
-  // Optional: click outside modal to close
-  window.addEventListener("click", (e) => {
-    if (e.target === reportModal) {
-      reportModal.style.display = "none";
-    }
-  });
-});
-
-</script>
-
   </body>
 </html>
