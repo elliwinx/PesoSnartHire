@@ -152,7 +152,12 @@ document.querySelectorAll(".edit-status-btn, #editStatusBtn").forEach((btn) => {
     const recruitmentType =
       btn.getAttribute("data-recruitment-type") ||
       (btn.closest("[data-recruitment-type]") || {}).dataset?.recruitmentType;
+    const changePending =
+      btn.getAttribute("data-change-pending") ||
+      (btn.closest("[data-change-pending]") || {}).dataset?.changePending;
 
+    if (changePending !== undefined)
+      statusModal.dataset.changePending = changePending;
     if (employerId) statusModal.dataset.employerId = employerId;
     if (applicantId) statusModal.dataset.applicantId = applicantId;
     if (recruitmentType) statusModal.dataset.recruitmentType = recruitmentType;
@@ -682,11 +687,30 @@ if (confirmRejectionBtn && rejectionModal) {
         requestAnimationFrame(() => requestAnimationFrame(resolve))
       );
 
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rejected", reason }),
-      });
+      const changePending = statusModal.dataset.changePending || 0;
+
+      let res;
+
+      if (changePending == "1") {
+        // Rejection is for RECRUITMENT TYPE CHANGE
+        res = await fetch(`/admin/reject-recruitment-type-change/${entityId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        });
+      } else {
+        // Normal registration rejection
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "rejected",
+            reason,
+            rejection_for: "registration",
+          }),
+        });
+      }
+
       const data = await res.json();
       hideLoader();
       if (confirmRejectionBtn) confirmRejectionBtn.disabled = false;
@@ -696,7 +720,10 @@ if (confirmRejectionBtn && rejectionModal) {
         const statusSpan =
           document.getElementById("employer-status") ||
           document.getElementById("applicant-status");
-        if (statusSpan) statusSpan.textContent = "Rejected";
+        if (statusSpan) {
+          statusSpan.textContent =
+            changePending == "1" ? "Approved" : "Rejected";
+        }
         showFlashAboveModal(data.message, "success");
         // hide both modals and refresh
         if (rejectionModal) rejectionModal.style.display = "none";

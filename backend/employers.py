@@ -42,7 +42,7 @@ EXPIRY_TO_UPLOADED_AT = {
     "dole_no_pending_case_expiry": "dole_no_pending_uploaded_at",
     "dole_authority_expiry": "dole_authority_uploaded_at",
     "dmw_no_pending_case_expiry": "dmw_no_pending_uploaded_at",
-    "license_to_recruit_expiry": "license_to_recruit_uploaded_at",
+    "license_to_recruit_expiry": "license_to_recruit_uploaded_at"
 }
 
 
@@ -617,20 +617,24 @@ def forced_password_change():
 
     if not new_password or not confirm_password:
         flash("Please fill in all password fields.", "danger")
-        return redirect(url_for("applicants.applicant_home"))
+        # Corrected redirect
+        return redirect(url_for("employers.employer_home"))
 
     if new_password != confirm_password:
         flash("Passwords do not match.", "danger")
-        return redirect(url_for("applicants.applicant_home"))
+        # Corrected redirect
+        return redirect(url_for("employers.employer_home"))
 
     if len(new_password) < 8:
         flash("Password must be at least 8 characters long.", "danger")
-        return redirect(url_for("applicants.applicant_home"))
+        # Corrected redirect
+        return redirect(url_for("employers.employer_home"))
 
     conn = create_connection()
     if not conn:
         flash("Database connection failed.", "danger")
-        return redirect(url_for("applicants.applicant_home"))
+        # Corrected redirect
+        return redirect(url_for("employers.employer_home"))
 
     try:
         hashed_password = generate_password_hash(new_password)
@@ -653,6 +657,7 @@ def forced_password_change():
         conn.rollback()
         conn.close()
         flash(f"Error updating password: {e}", "danger")
+        # Corrected redirect
         return redirect(url_for("employers.employer_home"))
 
 
@@ -737,6 +742,9 @@ def account_security():
 
     if request.method == "POST":
         try:
+            # Store the CURRENT recruitment type to compare
+            current_recruitment_type = employer.get("recruitment_type")
+
             # --- Fetch form data
             employer_name = request.form.get("employer_name", "")
             industry = request.form.get("industry", "")
@@ -750,15 +758,18 @@ def account_security():
             province = request.form.get("province", "")
 
             print(
-                f"[account_security] POST received - employer_id: {employer_id}, recruitment_type: {recruitment_type}")
+                f"[account_security] POST received - employer_id: {employer_id}, recruitment_type: {recruitment_type}"
+            )
 
-            recruitment_type_changed = request.form.get(
-                "recruitment_type_changed") == "true"
+            new_recruitment_type = request.form.get("recruitment_type", "")
+            recruitment_type_changed = (
+                new_recruitment_type != employer.get("recruitment_type"))
             if recruitment_type_changed:
                 old_type = employer["recruitment_type"]
                 new_type = recruitment_type
                 print(
-                    f"[account_security] Recruitment type change detected: {old_type} -> {new_type}")
+                    f"[account_security] Recruitment type change detected: {old_type} -> {new_type}"
+                )
 
             # STEP 1: Handle file uploads FIRST (before recruitment type validation)
             company_logo_file = request.files.get("company_logo")
@@ -814,8 +825,8 @@ def account_security():
 
             print(f"[account_security] Files processed")
 
+            # If recruitment type changed, validate required docs using temp paths
             if recruitment_type_changed:
-                # This ensures we check if required documents exist either in DB or newly uploaded
                 temp_data = {
                     "dole_no_pending_case_path": dole_no_pending_path or employer.get("dole_no_pending_case_path"),
                     "dole_authority_to_recruit_path": dole_authority_path or employer.get("dole_authority_to_recruit_path"),
@@ -848,225 +859,350 @@ def account_security():
                 print(
                     f"[account_security] ✓ Validation passed for recruitment type change")
 
+            # Track which files are ACTUALLY new vs. just being cleared
             expiry_updates = {}
             warning_reset_updates = {}
-            uploaded_at_updates = {
-                "business_permit_uploaded_at": employer.get("business_permit_uploaded_at"),
-                "philiobnet_uploaded_at": employer.get("philiobnet_uploaded_at"),
-                "job_orders_uploaded_at": employer.get("job_orders_uploaded_at"),
-                "dole_no_pending_uploaded_at": employer.get("dole_no_pending_uploaded_at"),
-                "dole_authority_uploaded_at": employer.get("dole_authority_uploaded_at"),
-                "dmw_no_pending_uploaded_at": employer.get("dmw_no_pending_uploaded_at"),
-                "license_to_recruit_uploaded_at": employer.get("license_to_recruit_uploaded_at"),
+            uploaded_at_updates = {}
+
+            if recruitment_type_changed:
+                recruitment_uploaded_at_updates = {}
+
+                if dole_no_pending_path:
+                    recruitment_uploaded_at_updates["dole_no_pending_uploaded_at"] = datetime.now(
+                    )
+                if dole_authority_path:
+                    recruitment_uploaded_at_updates["dole_authority_uploaded_at"] = datetime.now(
+                    )
+                if dmw_no_pending_path:
+                    recruitment_uploaded_at_updates["dmw_no_pending_uploaded_at"] = datetime.now(
+                    )
+                if license_to_recruit_path:
+                    recruitment_uploaded_at_updates["license_to_recruit_uploaded_at"] = datetime.now(
+                    )
+
+                # Add to the main uploaded_at_updates
+                uploaded_at_updates.update(recruitment_uploaded_at_updates)
+
+            # These will be managed by the recruitment handler's backup system
+            recruitment_docs_update = {}
+
+            # UPDATE: Process recruitment docs REGARDLESS of whether type is changing
+            # When changing types, new files should go to regular columns, not old_*
+            RECRUITMENT_DOCUMENTS = {
+                "dole_no_pending_case_path": "dole_no_pending_case_expiry",
+                "dole_authority_to_recruit_path": "dole_authority_expiry",
+                "dmw_no_pending_case_path": "dmw_no_pending_case_expiry",
+                "license_to_recruit_path": "license_to_recruit_expiry"
             }
 
-            for file_field, expiry_field in UPLOAD_TO_EXPIRY.items():
-                file_path = locals().get(file_field)  # e.g., business_permit_path
+            for file_field, expiry_field in RECRUITMENT_DOCUMENTS.items():
+                file_path = locals().get(file_field)
                 old_expiry = employer.get(expiry_field)
+                old_file_path = employer.get(file_field)
 
-                # new file uploaded
-                if file_path != employer.get(file_field) and file_path:
-                    # Determine document key in DOCUMENT_VALIDITY
+                # A file is "new" only if: (1) path changed AND (2) new path is not None
+                file_was_reuploaded = (file_path != old_file_path) and (
+                    file_path is not None)
+
+                uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
+                if not uploaded_at_field:
+                    print(
+                        f"[account_security] Warning: No uploaded_at field for {expiry_field}")
+                    continue
+
+                if file_was_reuploaded:
+                    # NEW FILE uploaded - set new expiry and update timestamp
                     months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
                     expiry_updates[expiry_field] = get_expiry_date(
                         months_valid)
 
-                    # --- Reset pre-expiry warning for this document ---
+                    # Reset warning flag
                     warning_field = expiry_field.replace(
                         "_expiry", "_warning_sent")
                     warning_reset_updates[warning_field] = 0
 
-                    uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
-                    if uploaded_at_field:
-                        uploaded_at_updates[uploaded_at_field] = datetime.now()
+                    uploaded_at_updates[uploaded_at_field] = datetime.now()
+                    print(
+                        f"[account_security] Recruitment file uploaded: {file_field}, updating expiry & timestamp")
 
+                    recruitment_docs_update[file_field] = file_path
                 else:
-                    # keep existing expiry
-                    expiry_updates[expiry_field] = old_expiry
+                    # File NOT changed - preserve old values
                     warning_field = expiry_field.replace(
                         "_expiry", "_warning_sent")
-                    warning_reset_updates[warning_field] = employer.get(
-                        warning_field)
+                    if old_file_path:
+                        expiry_updates[expiry_field] = old_expiry
+                        warning_reset_updates[warning_field] = employer.get(
+                            warning_field)
+                        uploaded_at_updates[uploaded_at_field] = employer.get(
+                            uploaded_at_field)
+                        recruitment_docs_update[file_field] = old_file_path
 
-            if recruitment_type_changed:
-                if new_type == "International":
-                    # Switching to International - clear DOLE, set/ensure DMW expiry if documents exist
-                    dole_no_pending_path = None
-                    dole_authority_path = None
-                    expiry_updates["dole_no_pending_case_expiry"] = None
-                    expiry_updates["dole_authority_expiry"] = None
-                    warning_reset_updates["dole_no_pending_case_warning_sent"] = 0
-                    warning_reset_updates["dole_authority_warning_sent"] = 0
-                    uploaded_at_updates["dole_no_pending_uploaded_at"] = None
-                    uploaded_at_updates["dole_authority_uploaded_at"] = None
+            # Do NOT touch recruitment-type-specific documents (DOLE/DMW) - the handler will manage them
+            # This prevents unintended updates to fields that shouldn't change
+            BASE_DOCUMENTS = {
+                "business_permit_path": "business_permit_expiry",
+                "philiobnet_registration_path": "philiobnet_registration_expiry",
+                "job_orders_of_client_path": "job_orders_expiry"
+            }
 
-                    if dmw_no_pending_path or employer.get("dmw_no_pending_case_path"):
-                        expiry_updates["dmw_no_pending_case_expiry"] = get_expiry_date(
-                            DOCUMENT_VALIDITY["dmw_no_pending_case"])
-                        if dmw_no_pending_path:  # Only update timestamp if newly uploaded
-                            uploaded_at_updates["dmw_no_pending_uploaded_at"] = datetime.now(
-                            )
-                        warning_reset_updates["dmw_no_pending_case_warning_sent"] = 0
-                        print(
-                            f"[account_security] ✓ Set DMW No Pending expiry to: {expiry_updates['dmw_no_pending_case_expiry']}")
+            for file_field, expiry_field in BASE_DOCUMENTS.items():
+                file_path = locals().get(file_field)
+                old_expiry = employer.get(expiry_field)
+                old_file_path = employer.get(file_field)
 
-                    if license_to_recruit_path or employer.get("license_to_recruit_path"):
-                        expiry_updates["license_to_recruit_expiry"] = get_expiry_date(
-                            DOCUMENT_VALIDITY["dmw_recruit_authority"])
-                        if license_to_recruit_path:  # Only update timestamp if newly uploaded
-                            uploaded_at_updates["license_to_recruit_uploaded_at"] = datetime.now(
-                            )
-                        warning_reset_updates["license_to_recruit_warning_sent"] = 0
-                        print(
-                            f"[account_security] ✓ Set License to Recruit expiry to: {expiry_updates['license_to_recruit_expiry']}")
+                # A file is "new" only if: (1) path changed AND (2) new path is not None
+                file_was_reuploaded = (file_path != old_file_path) and (
+                    file_path is not None)
 
+                uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
+                if not uploaded_at_field:
                     print(
-                        f"[account_security] Clearing DOLE columns for International recruitment")
+                        f"[account_security] Warning: No uploaded_at field for {expiry_field}")
+                    continue
 
-                elif new_type == "Local":
-                    # Switching to Local - clear DMW, set/ensure DOLE expiry if documents exist
-                    dmw_no_pending_path = None
-                    license_to_recruit_path = None
-                    expiry_updates["dmw_no_pending_case_expiry"] = None
-                    expiry_updates["license_to_recruit_expiry"] = None
-                    warning_reset_updates["dmw_no_pending_case_warning_sent"] = 0
-                    warning_reset_updates["license_to_recruit_warning_sent"] = 0
-                    uploaded_at_updates["dmw_no_pending_uploaded_at"] = None
-                    uploaded_at_updates["license_to_recruit_uploaded_at"] = None
+                if file_was_reuploaded:
+                    # NEW FILE uploaded - set new expiry and update timestamp
+                    months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
+                    expiry_updates[expiry_field] = get_expiry_date(
+                        months_valid)
 
-                    if dole_no_pending_path or employer.get("dole_no_pending_case_path"):
-                        expiry_updates["dole_no_pending_case_expiry"] = get_expiry_date(
-                            DOCUMENT_VALIDITY["dole_no_pending_case"])
-                        if dole_no_pending_path:  # Only update timestamp if newly uploaded
-                            uploaded_at_updates["dole_no_pending_uploaded_at"] = datetime.now(
-                            )
-                        warning_reset_updates["dole_no_pending_case_warning_sent"] = 0
-                        print(
-                            f"[account_security] ✓ Set DOLE No Pending expiry to: {expiry_updates['dole_no_pending_case_expiry']}")
+                    # Reset warning flag
+                    warning_field = expiry_field.replace(
+                        "_expiry", "_warning_sent")
+                    warning_reset_updates[warning_field] = 0
 
-                    if dole_authority_path or employer.get("dole_authority_to_recruit_path"):
-                        expiry_updates["dole_authority_expiry"] = get_expiry_date(
-                            DOCUMENT_VALIDITY["dole_recruit_authority"])
-                        if dole_authority_path:  # Only update timestamp if newly uploaded
-                            uploaded_at_updates["dole_authority_uploaded_at"] = datetime.now(
-                            )
-                        warning_reset_updates["dole_authority_warning_sent"] = 0
-                        print(
-                            f"[account_security] ✓ Set DOLE Authority expiry to: {expiry_updates['dole_authority_expiry']}")
-
+                    uploaded_at_updates[uploaded_at_field] = datetime.now()
                     print(
-                        f"[account_security] Clearing DMW columns for Local recruitment")
+                        f"[account_security] Base file re-uploaded: {file_field}, updating expiry & timestamp")
+                # This prevents touching updated_at when files haven't changed
+                else:
+                    # File NOT changed - DON'T add to update dicts (leave them out entirely)
+                    # This prevents the database from touching the row's updated_at timestamp
+                    warning_field = expiry_field.replace(
+                        "_expiry", "_warning_sent")
+                    # Only track warning/expiry if the document exists
+                    if old_file_path:
+                        expiry_updates[expiry_field] = old_expiry
+                        warning_reset_updates[warning_field] = employer.get(
+                            warning_field)
+                        uploaded_at_updates[uploaded_at_field] = employer.get(
+                            uploaded_at_field)
+
+            # These will be managed by the recruitment handler's backup system
+            recruitment_docs_update = {}
+            if not recruitment_type_changed:
+                # Only update recruitment docs if NOT changing type (handler will manage these during change)
+                RECRUITMENT_DOCUMENTS = {
+                    "dole_no_pending_case_path": "dole_no_pending_case_expiry",
+                    "dole_authority_to_recruit_path": "dole_authority_expiry",
+                    "dmw_no_pending_case_path": "dmw_no_pending_case_expiry",
+                    "license_to_recruit_path": "license_to_recruit_expiry"
+                }
+
+                for file_field, expiry_field in RECRUITMENT_DOCUMENTS.items():
+                    file_path = locals().get(file_field)
+                    old_expiry = employer.get(expiry_field)
+                    old_file_path = employer.get(file_field)
+
+                    file_was_reuploaded = (file_path != old_file_path) and (
+                        file_path is not None)
+
+                    uploaded_at_field = EXPIRY_TO_UPLOADED_AT.get(expiry_field)
+                    if not uploaded_at_field:
+                        continue
+
+                    if file_was_reuploaded:
+                        months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
+                        recruitment_docs_update[expiry_field] = get_expiry_date(
+                            months_valid)
+
+                        warning_field = expiry_field.replace(
+                            "_expiry", "_warning_sent")
+                        warning_reset_updates[warning_field] = 0
+
+                        recruitment_docs_update[uploaded_at_field] = datetime.now(
+                        )
+
+                # Merge recruitment docs updates
+                expiry_updates.update(recruitment_docs_update)
 
             documents_to_reupload_list = request.form.getlist(
                 "documents_to_reupload")
             documents_to_reupload_json = json.dumps(
                 documents_to_reupload_list) if documents_to_reupload_list else None
 
-            update_query = """
-                UPDATE employers SET
-                    employer_name=%s,
-                    industry=%s,
-                    recruitment_type=%s,
-                    contact_person=%s,
-                    phone=%s,
-                    email=%s,
-                    street=%s,
-                    barangay=%s,
-                    city=%s,
-                    province=%s,
-                    company_logo_path=%s,
-                    business_permit_path=%s,
-                    philiobnet_registration_path=%s,
-                    job_orders_of_client_path=%s,
-                    dole_no_pending_case_path=%s,
-                    dole_authority_to_recruit_path=%s,
-                    dmw_no_pending_case_path=%s,
-                    license_to_recruit_path=%s,
-                    business_permit_expiry=%s,
-                    philiobnet_registration_expiry=%s,
-                    job_orders_expiry=%s,
-                    dole_no_pending_case_expiry=%s,
-                    dole_authority_expiry=%s,
-                    dmw_no_pending_case_expiry=%s,
-                    license_to_recruit_expiry=%s,
-                    business_permit_warning_sent=%s,
-                    philiobnet_registration_warning_sent=%s,
-                    job_orders_warning_sent=%s,
-                    dole_no_pending_case_warning_sent=%s,
-                    dole_authority_warning_sent=%s,
-                    dmw_no_pending_case_warning_sent=%s,
-                    license_to_recruit_warning_sent=%s,
-                    business_permit_uploaded_at=%s,
-                    philiobnet_uploaded_at=%s,
-                    job_orders_uploaded_at=%s,
-                    dole_no_pending_uploaded_at=%s,
-                    dole_authority_uploaded_at=%s,
-                    dmw_no_pending_uploaded_at=%s,
-                    license_to_recruit_uploaded_at=%s,
-                    documents_to_reupload=%s,
-                    status=%s,
-                    is_active=%s
-                WHERE employer_id=%s
-            """
+            # -------------------------------------------
+            # STEP A: UPDATE employer NON-recruitment fields only
+            # (do NOT touch recruitment_type/old_recruitment_type/status/is_active here)
+            # -------------------------------------------
 
-            data = (
-                employer_name, industry, recruitment_type, contact_person, phone, email,
-                street, barangay, city, province,
-                company_logo_path, business_permit_path, philiobnet_registration_path,
-                job_orders_path, dole_no_pending_path, dole_authority_path,
-                dmw_no_pending_path, license_to_recruit_path,
-                expiry_updates["business_permit_expiry"],
-                expiry_updates["philiobnet_registration_expiry"],
-                expiry_updates["job_orders_expiry"],
-                expiry_updates["dole_no_pending_case_expiry"],
-                expiry_updates["dole_authority_expiry"],
-                expiry_updates["dmw_no_pending_case_expiry"],
-                expiry_updates["license_to_recruit_expiry"],
-                warning_reset_updates["business_permit_warning_sent"],
-                warning_reset_updates["philiobnet_registration_warning_sent"],
-                warning_reset_updates["job_orders_warning_sent"],
-                warning_reset_updates["dole_no_pending_case_warning_sent"],
-                warning_reset_updates["dole_authority_warning_sent"],
-                warning_reset_updates["dmw_no_pending_case_warning_sent"],
-                warning_reset_updates["license_to_recruit_warning_sent"],
-                uploaded_at_updates["business_permit_uploaded_at"],
-                uploaded_at_updates["philiobnet_uploaded_at"],
-                uploaded_at_updates["job_orders_uploaded_at"],
-                uploaded_at_updates["dole_no_pending_uploaded_at"],
-                uploaded_at_updates["dole_authority_uploaded_at"],
-                uploaded_at_updates["dmw_no_pending_uploaded_at"],
-                uploaded_at_updates["license_to_recruit_uploaded_at"],
-                documents_to_reupload_json,
-                employer["status"], employer["is_active"],
-                employer_id
-            )
+            if recruitment_type_changed:
+                # Skip recruitment document expiries/warnings/uploaded_at when changing type
+                # The handler will manage these via backup system
+                update_query = """
+                    UPDATE employers SET
+                        employer_name=%s,
+                        industry=%s,
+                        contact_person=%s,
+                        phone=%s,
+                        email=%s,
+                        street=%s,
+                        barangay=%s,
+                        city=%s,
+                        province=%s,
+                        company_logo_path=%s,
+                        business_permit_path=%s,
+                        philiobnet_registration_path=%s,
+                        job_orders_of_client_path=%s,
+                        dole_no_pending_case_path=%s,
+                        dole_authority_to_recruit_path=%s,
+                        dmw_no_pending_case_path=%s,
+                        license_to_recruit_path=%s,
+                        business_permit_expiry=%s,
+                        philiobnet_registration_expiry=%s,
+                        job_orders_expiry=%s,
+                        business_permit_warning_sent=%s,
+                        philiobnet_registration_warning_sent=%s,
+                        job_orders_warning_sent=%s,
+                        business_permit_uploaded_at=%s,
+                        philiobnet_uploaded_at=%s,
+                        job_orders_uploaded_at=%s,
+                        documents_to_reupload=%s
+                    WHERE employer_id=%s
+                """
 
-            print(f"[account_security] Executing UPDATE query")
-            result = run_query(conn, update_query, data)
+                data = (
+                    employer_name, industry,
+                    contact_person, phone, email,
+                    street, barangay, city, province,
+                    company_logo_path, business_permit_path, philiobnet_registration_path,
+                    job_orders_path, dole_no_pending_path, dole_authority_path,
+                    dmw_no_pending_path, license_to_recruit_path,
+                    expiry_updates.get("business_permit_expiry"),
+                    expiry_updates.get("philiobnet_registration_expiry"),
+                    expiry_updates.get("job_orders_expiry"),
+                    warning_reset_updates.get("business_permit_warning_sent"),
+                    warning_reset_updates.get(
+                        "philiobnet_registration_warning_sent"),
+                    warning_reset_updates.get("job_orders_warning_sent"),
+                    uploaded_at_updates.get("business_permit_uploaded_at"),
+                    uploaded_at_updates.get("philiobnet_uploaded_at"),
+                    uploaded_at_updates.get("job_orders_uploaded_at"),
+                    documents_to_reupload_json,
+                    employer_id
+                )
+            else:
+                # Normal update: include all fields (no recruitment type change)
+                update_query = """
+                    UPDATE employers SET
+                        employer_name=%s,
+                        industry=%s,
+                        contact_person=%s,
+                        phone=%s,
+                        email=%s,
+                        street=%s,
+                        barangay=%s,
+                        city=%s,
+                        province=%s,
+                        company_logo_path=%s,
+                        business_permit_path=%s,
+                        philiobnet_registration_path=%s,
+                        job_orders_of_client_path=%s,
+                        dole_no_pending_case_path=%s,
+                        dole_authority_to_recruit_path=%s,
+                        dmw_no_pending_case_path=%s,
+                        license_to_recruit_path=%s,
+                        business_permit_expiry=%s,
+                        philiobnet_registration_expiry=%s,
+                        job_orders_expiry=%s,
+                        dole_no_pending_case_expiry=%s,
+                        dole_authority_expiry=%s,
+                        dmw_no_pending_case_expiry=%s,
+                        license_to_recruit_expiry=%s,
+                        business_permit_warning_sent=%s,
+                        philiobnet_registration_warning_sent=%s,
+                        job_orders_warning_sent=%s,
+                        dole_no_pending_case_warning_sent=%s,
+                        dole_authority_warning_sent=%s,
+                        dmw_no_pending_case_warning_sent=%s,
+                        license_to_recruit_warning_sent=%s,
+                        business_permit_uploaded_at=%s,
+                        philiobnet_uploaded_at=%s,
+                        job_orders_uploaded_at=%s,
+                        dole_no_pending_uploaded_at=%s,
+                        dole_authority_uploaded_at=%s,
+                        dmw_no_pending_uploaded_at=%s,
+                        license_to_recruit_uploaded_at=%s,
+                        documents_to_reupload=%s
+                    WHERE employer_id=%s
+                """
 
-            if not result or result == 0:
-                print(
-                    f"[account_security] ✗ Database update failed - no rows affected for employer {employer_id}")
-                flash(
-                    "Failed to update employer record. No changes were saved.", "danger")
-                conn.rollback()
-                conn.close()
-                return redirect(url_for("employers.account_security"))
+                data = (
+                    employer_name, industry,
+                    contact_person, phone, email,
+                    street, barangay, city, province,
+                    company_logo_path, business_permit_path, philiobnet_registration_path,
+                    job_orders_path, dole_no_pending_path, dole_authority_path,
+                    dmw_no_pending_path, license_to_recruit_path,
+                    expiry_updates.get("business_permit_expiry"),
+                    expiry_updates.get("philiobnet_registration_expiry"),
+                    expiry_updates.get("job_orders_expiry"),
+                    expiry_updates.get("dole_no_pending_case_expiry"),
+                    expiry_updates.get("dole_authority_expiry"),
+                    expiry_updates.get("dmw_no_pending_case_expiry"),
+                    expiry_updates.get("license_to_recruit_expiry"),
+                    warning_reset_updates.get("business_permit_warning_sent"),
+                    warning_reset_updates.get(
+                        "philiobnet_registration_warning_sent"),
+                    warning_reset_updates.get("job_orders_warning_sent"),
+                    warning_reset_updates.get(
+                        "dole_no_pending_case_warning_sent"),
+                    warning_reset_updates.get("dole_authority_warning_sent"),
+                    warning_reset_updates.get(
+                        "dmw_no_pending_case_warning_sent"),
+                    warning_reset_updates.get(
+                        "license_to_recruit_warning_sent"),
+                    uploaded_at_updates.get("business_permit_uploaded_at"),
+                    uploaded_at_updates.get("philiobnet_uploaded_at"),
+                    uploaded_at_updates.get("job_orders_uploaded_at"),
+                    uploaded_at_updates.get("dole_no_pending_uploaded_at"),
+                    uploaded_at_updates.get("dole_authority_uploaded_at"),
+                    uploaded_at_updates.get("dmw_no_pending_uploaded_at"),
+                    uploaded_at_updates.get("license_to_recruit_uploaded_at"),
+                    documents_to_reupload_json,
+                    employer_id
+                )
 
+            print(f"[account_security] Executing non-recruitment UPDATE query")
+            cursor = conn.cursor()
+            cursor.execute(update_query, data)
             conn.commit()
             print(
-                f"[account_security] ✓ Database UPDATE committed successfully")
+                f"[account_security] ✓ Non-recruitment UPDATE committed (files saved)")
 
-            # STEP 2: Now handle recruitment type change (after files are saved to DB)
+            # -----------
+            # STEP B: If recruitment type changed, validate then call single handler that will
+            #          set old_recruitment_type, recruitment_type, status, is_active, and commit.
+            # -----------
             if recruitment_type_changed:
                 print(
-                    f"[account_security] Processing recruitment type change: {old_type} -> {new_type}")
+                    f"[account_security] Processing recruitment type change: {old_type} -> {new_type}"
+                )
 
+                uploaded_paths = {
+                    'dole_no_pending_case_path': dole_no_pending_path,
+                    'dole_authority_to_recruit_path': dole_authority_path,
+                    'dmw_no_pending_case_path': dmw_no_pending_path,
+                    'license_to_recruit_path': license_to_recruit_path,
+                }
+
+                # This handler GUARANTEES old_recruitment_type is set to the current value before change
                 result = handle_recruitment_type_change(
-                    employer_id, conn, old_type, new_type)
+                    employer_id, conn, new_type, uploaded_paths)
 
                 if result["success"]:
-                    conn.commit()
+                    # handler already committed (it calls conn.commit()). We still have to close session and redirect
                     print(
                         f"[account_security] ✓ Recruitment type change handled successfully")
                     conn.close()
@@ -1075,26 +1211,33 @@ def account_security():
                         "Recruitment type changed — Your documents will be set for verification. You cannot access your account in the mean time.", "info")
                     return redirect(url_for("home"))
                 else:
+                    # handler failed: only the recruitment handler needs rollback, files are already saved
                     error_msg = result.get('message', 'Unknown error')
                     if 'error' in result:
                         error_msg += f" - {result['error']}"
                     print(
                         f"[account_security] ✗ Recruitment type change failed: {error_msg}")
-                    flash(error_msg, "danger")
-                    conn.rollback()
                     conn.close()
+                    flash(error_msg, "danger")
                     return redirect(url_for("employers.account_security"))
-
-            flash(
-                "Your account details and files have been updated successfully.", "success")
-            conn.close()
-            return redirect(url_for("employers.account_security"))
+            else:
+                # No recruitment change: commit only the non-recruitment update
+                # (already committed above)
+                print(
+                    f"[account_security] ✓ Database non-recruitment UPDATE committed successfully")
+                flash(
+                    "Your account details and files have been updated successfully.", "success")
+                conn.close()
+                return redirect(url_for("employers.account_security"))
 
         except Exception as e:
             print(f"[account_security] ✗ Exception in POST handler: {e}")
             import traceback
             traceback.print_exc()
-            conn.rollback()
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             flash(f"Error updating information: {e}", "danger")
             conn.close()
             return redirect(url_for("employers.account_security"))
@@ -1248,7 +1391,11 @@ def submit_reupload():
                     f"[submit_reupload] Warning: No uploaded_at mapping for {expiry_field}")
                 continue
 
-            if file_path != old_path and file_path:  # new file uploaded
+            # Check if a new file was actually uploaded for this field
+            file_was_reuploaded = (file_path != old_path) and (
+                file_path is not None)
+
+            if file_was_reuploaded:  # New file uploaded
                 months_valid = DOCUMENT_VALIDITY[doc_key_map[file_field]]
                 expiry_updates[expiry_field] = get_expiry_date(months_valid)
 
@@ -1257,7 +1404,7 @@ def submit_reupload():
                 warning_reset_updates[warning_field] = 0
 
                 uploaded_at_updates[uploaded_at_field] = datetime.now()
-            else:
+            else:  # File not changed (either unchanged or cleared)
                 expiry_updates[expiry_field] = old_expiry
 
                 warning_field = expiry_field.replace(
@@ -1265,6 +1412,7 @@ def submit_reupload():
                 warning_reset_updates[warning_field] = employer_data.get(
                     warning_field)
 
+                # Keep old timestamp if not re-uploaded
                 uploaded_at_updates[uploaded_at_field] = employer_data.get(
                     uploaded_at_field)
 

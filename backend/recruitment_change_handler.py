@@ -5,35 +5,33 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Adjust these if your DB column names differ
+# Map of logical document groups to their DB columns
 BACKUP_COLS = {
     "dole_no_pending_case": {
         "path": "dole_no_pending_case_path",
         "expiry": "dole_no_pending_case_expiry",
         "warning": "dole_no_pending_case_warning_sent",
-        "last_update": "dole_no_pending_case_last_update"
+        "uploaded_at": "dole_no_pending_uploaded_at",
     },
     "dole_authority": {
         "path": "dole_authority_to_recruit_path",
         "expiry": "dole_authority_expiry",
         "warning": "dole_authority_warning_sent",
-        "last_update": "dole_authority_last_update"
+        "uploaded_at": "dole_authority_uploaded_at",
     },
     "dmw_no_pending_case": {
         "path": "dmw_no_pending_case_path",
         "expiry": "dmw_no_pending_case_expiry",
         "warning": "dmw_no_pending_case_warning_sent",
-        "last_update": "dmw_no_pending_case_last_update"
+        "uploaded_at": "dmw_no_pending_uploaded_at",
     },
     "license_to_recruit": {
         "path": "license_to_recruit_path",
         "expiry": "license_to_recruit_expiry",
         "warning": "license_to_recruit_warning_sent",
-        "last_update": "license_to_recruit_last_update"
+        "uploaded_at": "license_to_recruit_uploaded_at",
     }
 }
-
-# corresponding backup column name generator: e.g. old_dole_no_pending_case_path
 
 
 def backup_col(col_name):
@@ -58,11 +56,10 @@ def safe_remove_file(file_path):
 
 
 def validate_recruitment_type_change(employer_id, db, new_type, current_data):
-    """
-    NEW: Validate that required documents exist for new recruitment type BEFORE any DB update.
-    This prevents the constraint violation error.
+    """Validate that necessary documents exist for the requested new_type.
 
-    Returns: (is_valid: bool, missing_docs: list, error_msg: str)
+    This function inspects the provided `current_data` (dictionary) for presence
+    of required document paths. It does not change the DB.
     """
     try:
         logger.info(
@@ -71,356 +68,508 @@ def validate_recruitment_type_change(employer_id, db, new_type, current_data):
         missing_docs = []
 
         if new_type == "Local":
-            dole_no_pending = current_data.get("dole_no_pending_case_path")
-            dole_authority = current_data.get("dole_authority_to_recruit_path")
-
-            logger.info(
-                f"[Validation] Local - dole_no_pending: {bool(dole_no_pending)} ({dole_no_pending}), dole_authority: {bool(dole_authority)} ({dole_authority})")
-
-            if not dole_no_pending:
+            if not current_data.get("dole_no_pending_case_path"):
                 missing_docs.append("DOLE No Pending Case")
-            if not dole_authority:
+            if not current_data.get("dole_authority_to_recruit_path"):
                 missing_docs.append("DOLE Authority to Recruit")
-
         elif new_type == "International":
-            dmw_no_pending = current_data.get("dmw_no_pending_case_path")
-            license_to_recruit = current_data.get("license_to_recruit_path")
-
-            logger.info(
-                f"[Validation] International - dmw_no_pending: {bool(dmw_no_pending)} ({dmw_no_pending}), license: {bool(license_to_recruit)} ({license_to_recruit})")
-
-            if not dmw_no_pending:
+            if not current_data.get("dmw_no_pending_case_path"):
                 missing_docs.append("DMW No Pending Case")
-            if not license_to_recruit:
+            if not current_data.get("license_to_recruit_path"):
                 missing_docs.append("License to Recruit")
 
         if missing_docs:
-            error_msg = f"Cannot change to {new_type}. Missing: {', '.join(missing_docs)}"
-            logger.warning(f"[Validation] {error_msg}")
-            return False, missing_docs, error_msg
+            return False, missing_docs, f"Cannot change to {new_type}. Missing: {', '.join(missing_docs)}"
 
-        logger.info(
-            f"[Validation] ✓ All required documents present for {new_type}")
         return True, [], ""
-
     except Exception as e:
-        logger.exception(f"[Validation] Error during document validation: {e}")
-        return False, [], f"Validation error: {str(e)}"
+        logger.exception(f"Validation error: {e}")
+        return False, [], str(e)
 
 
-def handle_recruitment_type_change(employer_id, db, old_type, new_type):
-    """
-    Called when an employer requests recruitment_type change.
-    - Back up ALL old document fields into old_* columns
-    - Set recruitment_type to new_type, mark pending and inactive
-    - Do NOT delete any files yet
+def handle_recruitment_type_change(employer_id, db, new_type, uploaded_paths=None):
+    """Mark a recruitment type change as pending.
+
+    FLOW:
+      1. Back up ONLY OLD TYPE's document columns (old_* columns)
+      2. Clear OLD TYPE's regular columns after backup
+      3. Calculate and SET dates for NEW type documents immediately
+      4. Mark employer as pending (status='Pending', is_active=0)
+      5. Keep old document paths/info intact in old_* columns
+      6. Notify admins for review
+
+    Args:
+        employer_id: ID of the employer
+        db: Database connection
+        new_type: New recruitment type ('Local' or 'International')
+        uploaded_paths: Dict of uploaded file paths for new type documents
+                       e.g. {'dole_no_pending_case_path': '/path/to/file', ...}
     """
     try:
-        cursor = db.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT * FROM employers WHERE employer_id = %s
-        """, (employer_id,))
-        employer = cursor.fetchone()
-        if not employer:
-            logger.error(
-                f"[handle_recruitment_type_change] Employer {employer_id} not found")
-            return {"success": False, "message": "Employer not found"}
-
-        is_valid, missing_docs, error_msg = validate_recruitment_type_change(
-            employer_id, db, new_type, employer
-        )
-
-        if not is_valid:
-            logger.warning(
-                f"[handle_recruitment_type_change] Validation failed: {error_msg}")
-            return {
-                "success": False,
-                "message": error_msg,
-                "missing_docs": missing_docs
-            }
+        if uploaded_paths is None:
+            uploaded_paths = {}
 
         now = datetime.now()
+        cursor = db.cursor(dictionary=True)
 
-        # Build backup assignment list
+        # Get employer record
+        cursor.execute(
+            "SELECT * FROM employers WHERE employer_id = %s", (employer_id,))
+        employer = cursor.fetchone()
+
+        if not employer:
+            return {"success": False, "message": "Employer not found"}
+
+        current_type = employer.get("recruitment_type")
+        if current_type == new_type:
+            return {"success": False, "message": "Recruitment type is already the requested type"}
+
+        old_type = current_type
+
+        # === DEBUG LOG: print current expiries ===
+        logger.debug("=== EMPLOYER BEFORE CHANGE ===")
+        for k in [
+            "dole_no_pending_case_expiry",
+            "dole_authority_expiry",
+            "dmw_no_pending_case_expiry",
+            "license_to_recruit_expiry"
+        ]:
+            logger.debug(f"{k}: {employer.get(k)}")
+
+        cursor.execute("SET FOREIGN_KEY_CHECKS=0")
+        cursor.execute("ALTER TABLE employers DISABLE KEYS")
+        cursor.execute("SET sql_mode='NO_ZERO_DATE'")
+
+        # === Step 1: Back up ONLY OLD TYPE's document-related columns ===
         backup_assignments = []
         backup_values = []
-        for group in BACKUP_COLS.values():
-            p = group["path"]
-            e = group["expiry"]
-            w = group["warning"]
-            l = group["last_update"]
 
-            backup_assignments.extend([
-                f"{backup_col(p)} = %s",
-                f"{backup_col(e)} = %s",
-                f"{backup_col(w)} = %s",
-                f"{backup_col(l)} = %s"
-            ])
-            backup_values.extend([
-                employer.get(p),
-                employer.get(e),
-                employer.get(w),
-                employer.get(l)
-            ])
+        # Determine which groups belong to the old type
+        if old_type == "Local":
+            groups_to_backup = ["dole_no_pending_case", "dole_authority"]
+        elif old_type == "International":
+            groups_to_backup = ["dmw_no_pending_case", "license_to_recruit"]
+        else:
+            groups_to_backup = []
 
-        update_query = f"""
-            UPDATE employers SET
-                old_recruitment_type = recruitment_type,
+        # Only backup the old type's columns
+        for group_name in groups_to_backup:
+            group = BACKUP_COLS[group_name]
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                col = group[key]
+                backup_assignments.append(f"{backup_col(col)} = %s")
+                backup_values.append(employer.get(col))
+
+        if backup_assignments:
+            backup_query = f"""
+                UPDATE employers
+                SET {', '.join(backup_assignments)}
+                WHERE employer_id = %s
+            """
+            cursor.execute(backup_query, backup_values + [employer_id])
+            db.commit()
+
+        # === DEBUG LOG: check what got saved in old_* columns ===
+        logger.debug("=== AFTER BACKUP QUERY ===")
+        cursor.execute("""
+            SELECT old_dole_no_pending_case_expiry,
+                   old_dole_authority_expiry,
+                   old_dmw_no_pending_case_expiry,
+                   old_license_to_recruit_expiry
+            FROM employers WHERE employer_id = %s
+        """, (employer_id,))
+        backup_check = cursor.fetchone()
+        logger.debug(f"Backed-up expiries: {backup_check}")
+
+        # This ensures old documents don't show in the regular columns anymore
+        clear_old_type_assignments = []
+        if old_type == "Local":
+            # Clearing DOLE columns since changing away from Local
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                clear_old_type_assignments.append(
+                    f"{BACKUP_COLS['dole_no_pending_case'][key]} = NULL")
+                clear_old_type_assignments.append(
+                    f"{BACKUP_COLS['dole_authority'][key]} = NULL")
+        elif old_type == "International":
+            # Clearing DMW columns since changing away from International
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                clear_old_type_assignments.append(
+                    f"{BACKUP_COLS['dmw_no_pending_case'][key]} = NULL")
+                clear_old_type_assignments.append(
+                    f"{BACKUP_COLS['license_to_recruit'][key]} = NULL")
+
+        if clear_old_type_assignments:
+            clear_query = f"""
+                UPDATE employers
+                SET {', '.join(clear_old_type_assignments)}
+                WHERE employer_id = %s
+            """
+            cursor.execute(clear_query, (employer_id,))
+            db.commit()
+            logger.debug(f"Cleared {old_type} type columns after backup")
+
+        # === Step 3: Set dates for NEW type documents in regular columns ===
+        set_new_dates_assignments = []
+        set_new_dates_values = []
+
+        if new_type == "Local":
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['dole_no_pending_case']['expiry']} = %s")
+            set_new_dates_values.append(now + relativedelta(months=6))
+
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['dole_authority']['expiry']} = %s")
+            set_new_dates_values.append(now + relativedelta(months=36))
+
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['dole_no_pending_case']['uploaded_at']} = %s")
+            set_new_dates_values.append(now)
+
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['dole_authority']['uploaded_at']} = %s")
+            set_new_dates_values.append(now)
+
+            dole_pending_path = uploaded_paths.get('dole_no_pending_case_path')
+            dole_authority_path = uploaded_paths.get(
+                'dole_authority_to_recruit_path')
+
+            if dole_pending_path:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['dole_no_pending_case']['path']} = %s")
+                set_new_dates_values.append(dole_pending_path)
+            else:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['dole_no_pending_case']['path']} = NULL")
+
+            if dole_authority_path:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['dole_authority']['path']} = %s")
+                set_new_dates_values.append(dole_authority_path)
+            else:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['dole_authority']['path']} = NULL")
+
+        elif new_type == "International":
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['dmw_no_pending_case']['expiry']} = %s")
+            set_new_dates_values.append(now + relativedelta(months=6))
+
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['license_to_recruit']['expiry']} = %s")
+            set_new_dates_values.append(now + relativedelta(months=48))
+
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['dmw_no_pending_case']['uploaded_at']} = %s")
+            set_new_dates_values.append(now)
+
+            set_new_dates_assignments.append(
+                f"{BACKUP_COLS['license_to_recruit']['uploaded_at']} = %s")
+            set_new_dates_values.append(now)
+
+            dmw_pending_path = uploaded_paths.get('dmw_no_pending_case_path')
+            license_path = uploaded_paths.get('license_to_recruit_path')
+
+            if dmw_pending_path:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['dmw_no_pending_case']['path']} = %s")
+                set_new_dates_values.append(dmw_pending_path)
+            else:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['dmw_no_pending_case']['path']} = NULL")
+
+            if license_path:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['license_to_recruit']['path']} = %s")
+                set_new_dates_values.append(license_path)
+            else:
+                set_new_dates_assignments.append(
+                    f"{BACKUP_COLS['license_to_recruit']['path']} = NULL")
+
+        if set_new_dates_assignments:
+            set_dates_query = f"""
+                UPDATE employers
+                SET {', '.join(set_new_dates_assignments)}
+                WHERE employer_id = %s
+            """
+            cursor.execute(set_dates_query,
+                           set_new_dates_values + [employer_id])
+            db.commit()
+
+        # === Step 4: Mark employer as pending ===
+        update_query = """
+            UPDATE employers
+            SET old_recruitment_type = %s,
                 recruitment_type = %s,
                 status = 'Pending',
                 is_active = 0,
                 recruitment_type_change_pending = 1,
-                updated_at = %s,
-                {', '.join(backup_assignments)}
+                updated_at = %s
             WHERE employer_id = %s
         """
-
-        params = [new_type, now] + backup_values + [employer_id]
-        cursor.execute(update_query, params)
+        cursor.execute(update_query, (old_type, new_type, now, employer_id))
         db.commit()
-        logger.info(
-            f"[handle_recruitment_type_change] ✓ Updated employer {employer_id}: {old_type} -> {new_type}")
 
-        # Notification logic (reuse your existing create_notification)
+        cursor.execute("ALTER TABLE employers ENABLE KEYS")
+        cursor.execute("SET FOREIGN_KEY_CHECKS=1")
+
+        # === Step 5: Notify admins ===
         notif_title = f"Recruitment Type Change - {employer.get('employer_name')}"
-        notif_message = f"Employer {employer.get('employer_name')} changed recruitment type from {old_type} to {new_type}. Please re-review their documents."
+        notif_message = (
+            f"Employer {employer.get('employer_name')} changed recruitment type "
+            f"from {old_type} to {new_type}. Please review their documents."
+        )
+
         try:
             cursor.execute("""
-                UPDATE notifications SET
-                    title = %s, message = %s, count = count + 1, is_read = 0, updated_at = NOW()
-                WHERE employer_id = %s AND notification_type = 'employer_approval'
+                UPDATE notifications
+                SET title = %s,
+                    message = %s,
+                    count = count + 1,
+                    is_read = 0
+                WHERE employer_id = %s
+                  AND notification_type = 'employer_approval'
             """, (notif_title, notif_message, employer_id))
+
             if cursor.rowcount == 0:
-                # fallback to your create_notification helper
-                from .notifications import create_notification
-                create_notification(
-                    notification_type="employer_approval",
-                    title=notif_title,
-                    message=notif_message,
-                    related_ids=[employer_id],
-                    employer_id=employer_id,
-                    recruitment_type=new_type
-                )
+                try:
+                    from .notifications import create_notification
+                    create_notification(
+                        notification_type="employer_approval",
+                        title=notif_title,
+                        message=notif_message,
+                        related_ids=[employer_id],
+                        employer_id=employer_id,
+                        recruitment_type=new_type
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to create notification via create_notification")
+
             db.commit()
-            logger.info(
-                f"[handle_recruitment_type_change] ✓ Notification created for employer {employer_id}")
         except Exception as e:
             logger.exception(
-                f"[handle_recruitment_type_change] Failed to update/create notification: {e}")
+                f"[notifications] Failed to update or create notifications: {e}")
 
-        return {"success": True, "message": "Recruitment type change marked for approval and backed up."}
+        return {"success": True, "message": "Recruitment type change marked for approval."}
 
     except Exception as e:
         db.rollback()
-        logger.exception(f"[handle_recruitment_type_change] Error: {e}")
-        return {"success": False, "message": "Error processing recruitment type change", "error": str(e)}
+        logger.exception(e)
+        return {
+            "success": False,
+            "message": "Error processing recruitment type change",
+            "error": str(e)
+        }
 
 
 def approve_recruitment_type_change(employer_id, db):
-    """
-    Admin approves the recruitment type change:
-    - Delete OLD documents (from old_* backup fields)
-    - Set expiries for current (new) documents (if they exist)
-    - Clear backup columns and pending flag, activate account
+    """Approve a pending recruitment type change.
+
+    This function performs a safe approval flow:
+      - Loads ALL current and old_* backup columns
+      - Deletes old-type backup files (those stored in old_* path columns)
+      - Clears ALL old-type document columns (path, expiry, warning, uploaded_at)
+      - Also clears all backup (old_*) columns to complete the cleanup
+      - NEW-type dates are already set from handle_recruitment_type_change()
+      - Activates the employer, clears pending flags, and clears backup columns
     """
     try:
         cursor = db.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT recruitment_type, old_recruitment_type,
-                   %s, %s, %s, %s, %s, %s, %s, %s
-            FROM employers WHERE employer_id = %s AND recruitment_type_change_pending = 1
-        """ % (
-            BACKUP_COLS["dole_no_pending_case"]["path"], BACKUP_COLS["dole_no_pending_case"]["expiry"],
-            BACKUP_COLS["dole_authority"]["path"], BACKUP_COLS["dole_authority"]["expiry"],
-            BACKUP_COLS["dmw_no_pending_case"]["path"], BACKUP_COLS["dmw_no_pending_case"]["expiry"],
-            BACKUP_COLS["license_to_recruit"]["path"], BACKUP_COLS["license_to_recruit"]["expiry"]
-        ), (employer_id,))
+
+        # Build SELECT for all current and backup columns
+        select_cols = ["recruitment_type", "old_recruitment_type"]
+        for group in BACKUP_COLS.values():
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                col = group[key]
+                select_cols.append(col)
+                select_cols.append(backup_col(col))
+
+        cursor.execute(f"""
+            SELECT {', '.join(select_cols)}
+            FROM employers
+            WHERE employer_id = %s AND recruitment_type_change_pending = 1
+        """, (employer_id,))
         employer = cursor.fetchone()
+
         if not employer:
-            logger.error(
-                f"[approve_recruitment_type_change] Employer {employer_id} not found or no pending change")
-            return {"success": False, "message": "Employer not found or no pending recruitment type change"}
+            return {"success": False, "message": "Employer not found or no pending change"}
 
         new_type = employer["recruitment_type"]
         old_type = employer["old_recruitment_type"]
 
-        # Delete old documents from backups (only those that belonged to OLD recruitment type)
+        # Delete OLD-TYPE backup files using old_* path columns (if present)
         files_to_delete = []
         if old_type == "Local":
             files_to_delete.append(employer.get(backup_col(
-                BACKUP_COLS["dole_no_pending_case"]["path"])))
+                BACKUP_COLS['dole_no_pending_case']['path'])))
             files_to_delete.append(employer.get(
-                backup_col(BACKUP_COLS["dole_authority"]["path"])))
+                backup_col(BACKUP_COLS['dole_authority']['path'])))
         elif old_type == "International":
             files_to_delete.append(employer.get(backup_col(
-                BACKUP_COLS["dmw_no_pending_case"]["path"])))
-            files_to_delete.append(employer.get(backup_col(
-                BACKUP_COLS["license_to_recruit"]["path"])))
+                BACKUP_COLS['dmw_no_pending_case']['path'])))
+            files_to_delete.append(employer.get(
+                backup_col(BACKUP_COLS['license_to_recruit']['path'])))
 
         for f in files_to_delete:
-            if f:
-                safe_remove_file(f)
+            safe_remove_file(f)
 
         now = datetime.now()
-        # Prepare expiry updates based on new_type and presence of the new paths (current path columns)
-        expiry_updates = {}
-        if new_type == "Local":
-            expiry_updates = {
-                BACKUP_COLS["dole_no_pending_case"]["expiry"]: now + relativedelta(months=6),
-                BACKUP_COLS["dole_authority"]["expiry"]: now + relativedelta(months=36),
-                BACKUP_COLS["dmw_no_pending_case"]["expiry"]: None,
-                BACKUP_COLS["license_to_recruit"]["expiry"]: None
-            }
+
+        columns_to_null = []
+
+        # Clear ALL old-type document columns (path, expiry, warning, uploaded_at)
+        if old_type == "Local":
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                columns_to_null.append(
+                    BACKUP_COLS['dole_no_pending_case'][key])
+                columns_to_null.append(BACKUP_COLS['dole_authority'][key])
         else:  # International
-            expiry_updates = {
-                BACKUP_COLS["dmw_no_pending_case"]["expiry"]: now + relativedelta(months=6),
-                BACKUP_COLS["license_to_recruit"]["expiry"]: now + relativedelta(months=48),
-                BACKUP_COLS["dole_no_pending_case"]["expiry"]: None,
-                BACKUP_COLS["dole_authority"]["expiry"]: None
-            }
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                columns_to_null.append(BACKUP_COLS['dmw_no_pending_case'][key])
+                columns_to_null.append(BACKUP_COLS['license_to_recruit'][key])
 
-        # Build SET clause for clearing backups too
-        set_clauses = []
-        values = []
-        for col, val in expiry_updates.items():
-            if val is None:
-                set_clauses.append(f"{col} = NULL")
-            else:
-                set_clauses.append(f"{col} = %s")
-                values.append(val)
-
-        # Activate employer, clear pending flag, clear all old_* backup columns
-        # Compose clearing of all backup columns
-        clear_backups = []
+        # Clear ALL backup (old_*) columns
         for group in BACKUP_COLS.values():
-            clear_backups.append(f"{backup_col(group['path'])} = NULL")
-            clear_backups.append(f"{backup_col(group['expiry'])} = NULL")
-            clear_backups.append(f"{backup_col(group['warning'])} = NULL")
-            clear_backups.append(f"{backup_col(group['last_update'])} = NULL")
-        clear_backups.append("old_recruitment_type = NULL")
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                columns_to_null.append(backup_col(group[key]))
+
+        # Build SET clauses
+        set_clauses = ["recruitment_type = %s"]
+        for col in columns_to_null:
+            set_clauses.append(f"{col} = NULL")
 
         set_clauses.extend([
+            "status = 'Approved'",
             "is_active = 1",
-            "status = 'Active'",
             "recruitment_type_change_pending = 0",
+            "old_recruitment_type = NULL",
             "updated_at = NOW()"
         ])
-        set_clauses.extend(clear_backups)
 
-        update_query = f"UPDATE employers SET {', '.join(set_clauses)} WHERE employer_id = %s"
-        values.append(employer_id)
+        update_query = f"""
+            UPDATE employers SET {', '.join(set_clauses)} WHERE employer_id = %s
+        """
 
-        cursor.execute(update_query, values)
+        cursor.execute(update_query, [new_type, employer_id])
         db.commit()
 
-        logger.info(
-            f"[approve_recruitment_type_change] ✓ Approved employer {employer_id}: {old_type} -> {new_type}")
-        return {"success": True, "message": "Recruitment type change approved. Old documents removed and backups cleared."}
+        return {"success": True, "message": "Recruitment type change approved."}
 
     except Exception as e:
         db.rollback()
-        logger.exception(f"[approve_recruitment_type_change] Error: {e}")
-        return {"success": False, "message": "Error approving recruitment type change", "error": str(e)}
+        logger.exception(e)
+        return {"success": False, "message": str(e)}
 
 
 def revert_recruitment_type_change(employer_id, db):
-    """
-    Admin rejects the recruitment type change:
-    - Delete NEW documents that were uploaded for the pending change (current path columns for new type)
-    - Restore ALL old document fields from old_* backup columns
-    - Clear backup columns and set employer back to previous (active) state
+    """Reject/revert a pending recruitment type change.
+
+    This function:
+      - Deletes any newly set documents for the requested (new) type
+      - Clears all new-type document columns (path, expiry, warning, uploaded_at)
+      - Restores all document columns from old_* backups
+      - Clears backup columns and resets the employer state
     """
     try:
         cursor = db.cursor(dictionary=True)
-        # fetch current and backup columns
-        select_cols = []
+
+        # Build SELECT for all current and backup columns
+        select_cols = ["recruitment_type", "old_recruitment_type"]
         for group in BACKUP_COLS.values():
-            select_cols.append(group["path"])
-            select_cols.append(group["expiry"])
-            select_cols.append(group["warning"])
-            select_cols.append(group["last_update"])
-            # corresponding backups
-            select_cols.append(backup_col(group["path"]))
-            select_cols.append(backup_col(group["expiry"]))
-            select_cols.append(backup_col(group["warning"]))
-            select_cols.append(backup_col(group["last_update"]))
-        select_cols_str = ", ".join(
-            select_cols + ["recruitment_type", "old_recruitment_type"])
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                col = group[key]
+                select_cols.append(col)
+                select_cols.append(backup_col(col))
 
         cursor.execute(f"""
-            SELECT {select_cols_str}
+            SELECT {', '.join(select_cols)}
             FROM employers
             WHERE employer_id = %s AND recruitment_type_change_pending = 1
         """, (employer_id,))
         row = cursor.fetchone()
+
         if not row:
-            logger.error(
-                f"[revert_recruitment_type_change] Employer {employer_id} not found or no pending change")
-            return {"success": False, "message": "Employer not found or no pending recruitment type change"}
+            return {"success": False, "message": "Employer not found or no pending change"}
 
         new_type = row["recruitment_type"]
         old_type = row["old_recruitment_type"]
 
-        # Delete only NEW documents that were uploaded for the pending change (current paths for new_type)
+        # 1) Delete newly uploaded files that belong to the new (rejected) type
         files_to_delete = []
-        if new_type == "Local":
-            files_to_delete.append(
-                row.get(BACKUP_COLS["dole_no_pending_case"]["path"]))
-            files_to_delete.append(
-                row.get(BACKUP_COLS["dole_authority"]["path"]))
-        else:  # International
-            files_to_delete.append(
-                row.get(BACKUP_COLS["dmw_no_pending_case"]["path"]))
-            files_to_delete.append(
-                row.get(BACKUP_COLS["license_to_recruit"]["path"]))
+        if new_type == "International":
+            files_to_delete.extend([
+                row.get(BACKUP_COLS["dmw_no_pending_case"]["path"]),
+                row.get(BACKUP_COLS["license_to_recruit"]["path"]),
+            ])
+        elif new_type == "Local":
+            files_to_delete.extend([
+                row.get(BACKUP_COLS["dole_no_pending_case"]["path"]),
+                row.get(BACKUP_COLS["dole_authority"]["path"]),
+            ])
 
         for f in files_to_delete:
-            if f:
-                safe_remove_file(f)
+            safe_remove_file(f)
 
-        # Build restore assignments: current_col = old_current_col
+        # This prevents stale data from being left in the DB
+        clear_new_type_assignments = []
+        if new_type == "Local":
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                col = BACKUP_COLS["dole_no_pending_case"][key]
+                clear_new_type_assignments.append(f"{col} = NULL")
+                col = BACKUP_COLS["dole_authority"][key]
+                clear_new_type_assignments.append(f"{col} = NULL")
+        else:  # International
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                col = BACKUP_COLS["dmw_no_pending_case"][key]
+                clear_new_type_assignments.append(f"{col} = NULL")
+                col = BACKUP_COLS["license_to_recruit"][key]
+                clear_new_type_assignments.append(f"{col} = NULL")
+
+        # This prevents NULL values from overwriting valid expiry dates
         restore_assignments = []
-        restore_values = []
-        for group in BACKUP_COLS.values():
-            p = group["path"]
-            e = group["expiry"]
-            w = group["warning"]
-            l = group["last_update"]
+        if old_type == "Local":
+            groups_to_restore = ["dole_no_pending_case", "dole_authority"]
+        else:  # International
+            groups_to_restore = ["dmw_no_pending_case", "license_to_recruit"]
 
-            restore_assignments.extend([
-                f"{p} = {backup_col(p)}",
-                f"{e} = {backup_col(e)}",
-                f"{w} = {backup_col(w)}",
-                f"{l} = {backup_col(l)}"
-            ])
-        # Restore recruitment_type from old_recruitment_type and clear old_* backups
+        for group_name in groups_to_restore:
+            group = BACKUP_COLS[group_name]
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                col = group[key]
+                restore_assignments.append(f"{col} = {backup_col(col)}")
+
+        # 3) Clear backups and old_recruitment_type after restoring
         clear_backups = []
         for group in BACKUP_COLS.values():
-            clear_backups.append(f"{backup_col(group['path'])} = NULL")
-            clear_backups.append(f"{backup_col(group['expiry'])} = NULL")
-            clear_backups.append(f"{backup_col(group['warning'])} = NULL")
-            clear_backups.append(f"{backup_col(group['last_update'])} = NULL")
+            for key in ["path", "expiry", "warning", "uploaded_at"]:
+                clear_backups.append(f"{backup_col(group[key])} = NULL")
         clear_backups.append("old_recruitment_type = NULL")
 
         update_query = f"""
             UPDATE employers SET
-                recruitment_type = old_recruitment_type,
-                {', '.join(restore_assignments)},
-                status = 'Active',
+                recruitment_type = %s,
+                status = 'Approved',
                 is_active = 1,
                 recruitment_type_change_pending = 0,
-                updated_at = NOW(),
+                {', '.join(clear_new_type_assignments)},
+                {', '.join(restore_assignments)},
                 {', '.join(clear_backups)}
             WHERE employer_id = %s
         """
-        cursor.execute(update_query, (employer_id,))
+
+        cursor.execute(update_query, (old_type, employer_id))
         db.commit()
 
-        logger.info(
-            f"[revert_recruitment_type_change] ✓ Reverted employer {employer_id} back to {old_type}")
-        return {"success": True, "message": f"Recruitment type change rejected. Reverted to {old_type}."}
+        return {
+            "success": True,
+            "message": f"Recruitment type change rejected. Reverted to {old_type}."
+        }
 
     except Exception as e:
         db.rollback()
-        logger.exception(f"[revert_recruitment_type_change] Error: {e}")
-        return {"success": False, "message": "Error reverting recruitment type change", "error": str(e)}
+        logger.exception(e)
+        return {
+            "success": False,
+            "message": "Error reverting recruitment type change",
+            "error": str(e)
+        }

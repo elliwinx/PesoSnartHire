@@ -218,8 +218,9 @@
               >Job Orders of Client</a
             >
           </li>
-          {% endif %} {% if employer.recruitment_type == 'Local' %} {% if
-          employer.dole_no_pending_case_path %}
+          {% endif %}
+          <!-- Show DOLE documents if they exist, regardless of recruitment_type -->
+          {% if employer.dole_no_pending_case_path %}
           <li>
             <a
               href="{{ url_for('static', filename=employer.dole_no_pending_case_path) }}"
@@ -235,8 +236,9 @@
               >DOLE Authority to Recruit</a
             >
           </li>
-          {% endif %} {% endif %} {% if employer.recruitment_type ==
-          'International' %} {% if employer.dmw_no_pending_case_path %}
+          {% endif %}
+          <!-- Show DMW documents if they exist, regardless of recruitment_type -->
+          {% if employer.dmw_no_pending_case_path %}
           <li>
             <a
               href="{{ url_for('static', filename=employer.dmw_no_pending_case_path) }}"
@@ -252,7 +254,7 @@
               >License to Recruit</a
             >
           </li>
-          {% endif %} {% endif %}
+          {% endif %}
         </ul>
       </div>
 
@@ -264,14 +266,17 @@
           <div class="doc-card">
             <h4>{{ doc.name }}</h4>
             <p>
-              <strong>Last Updated:</strong> {{ doc.last_updated.strftime('%b
-              %d, %Y %I:%M %p') if doc.last_updated else 'N/A' }}
+              <strong>Last Updated:</strong>
+              {% if doc.last_updated %} {{ doc.last_updated.strftime('%b %d, %Y
+              %I:%M %p') }} {% else %} For Verification {% endif %}
             </p>
             <p>
-              <strong>Expires At:</strong> {{ doc.expires_at.strftime('%b %d,
-              %Y') if doc.expires_at else 'N/A' }}
+              <strong>Expires At:</strong>
+              {% if doc.expires_at %} {{ doc.expires_at.strftime('%b %d, %Y') }}
+              {% else %} Calculating... {% endif %}
             </p>
           </div>
+
           {% endfor %}
         </div>
       </div>
@@ -337,6 +342,7 @@
             class="edit-status-btn"
             data-employer-id="{{ employer.employer_id }}"
             data-recruitment-type="{{ employer.recruitment_type }}"
+            data-change-pending="{{ employer.recruitment_type_change_pending }}"
           >
             EDIT STATUS
           </button>

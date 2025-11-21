@@ -1343,11 +1343,12 @@ tbody tr:hover {
   }
 
   .nav {
-    gap: 15px;
+    gap: 3px;
+    text-align: center;
   }
 
   .nav-link {
-    font-size: 12px;
+    font-size: 9px;
   }
 
   .profile-container {
