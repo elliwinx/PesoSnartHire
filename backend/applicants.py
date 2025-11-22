@@ -602,7 +602,7 @@ def applicants_terms():
 
 
 @applicants_bp.route('/account-security', methods=['GET', 'POST'])
-def account_security_applicant():
+def account_security():
     """Applicant account & security page (exists so templates can link to it)."""
     if 'applicant_id' not in session:
         flash('Please log in to access this page.', 'warning')
