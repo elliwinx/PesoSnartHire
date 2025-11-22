@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Applicants for {{ job.job_position }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/employer.css') }}" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container">
+        <div class="logo">
+          <img src="{{ url_for('static', filename='Assets/PESO_logo.png') }}" alt="PESO" />
+        </div>
+        <nav class="nav">
+          <a href="{{ url_for('employers.employer_home') }}" class="nav-link">Home</a>
+          <a href="{{ url_for('employers.application_management') }}" class="nav-link">Application Management</a>
+          <a href="{{ url_for('employers.notifications') }}" class="nav-link">Notifications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <h1>Applicants for "{{ job.job_position }}"</h1>
+      <p>Status: {{ job.status }}</p>
+
+      {% if not applicants or applicants|length == 0 %}
+      <p class="empty-msg">No applicants yet for this job.</p>
+      {% else %}
+      <div class="applicants-list">
+        {% for a in applicants %}
+        <div class="applicant-card">
+          <img src="{{ url_for('static', filename=a.profile_pic_path) if a.profile_pic_path else url_for('static', filename='Assets/default_profile.png') }}" alt="Profile" class="applicant-avatar" />
+          <div class="applicant-info">
+            <h3>{{ a.first_name }} {{ a.last_name }}</h3>
+            <p>{{ a.city or 'N/A' }} | {{ a.email }}</p>
+            <p>Applied at: {{ a.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</p>
+          </div>
+          <div class="applicant-actions">
+            <a href="{{ url_for('employers.view_applicant', applicant_id=a.applicant_id) }}" class="btn btn-primary">View Profile</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </main>
+
+    <footer class="footer">
+      <div class="container"><p>© 2025 PESO SmartHire</p></div>
+    </footer>
+  </body>
+</html>

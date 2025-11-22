@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ applicant.first_name }} {{ applicant.last_name }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/employer.css') }}" />
+  </head>
+  <body>
+    <header class="header">
+      <div class="container">
+        <div class="logo">
+          <img src="{{ url_for('static', filename='Assets/PESO_logo.png') }}" alt="PESO" />
+        </div>
+        <nav class="nav">
+          <a href="{{ url_for('employers.employer_home') }}" class="nav-link">Home</a>
+          <a href="{{ url_for('employers.application_management') }}" class="nav-link">Application Management</a>
+          <a href="{{ url_for('employers.notifications') }}" class="nav-link">Notifications</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <div class="profile-header">
+        <img src="{{ url_for('static', filename=applicant.profile_pic_path) if applicant.profile_pic_path else url_for('static', filename='Assets/default_profile.png') }}" alt="Profile" class="applicant-avatar-large" />
+        <h1>{{ applicant.first_name }} {{ applicant.last_name }}</h1>
+        <p>{{ applicant.city or 'N/A' }} | {{ applicant.email }} | {{ applicant.phone }}</p>
+      </div>
+
+      <section>
+        <h2>Applications</h2>
+        {% if not applications or applications|length == 0 %}
+        <p class="empty-msg">No application records found.</p>
+        {% else %}
+        <ul>
+          {% for app in applications %}
+          <li>Job ID: {{ app.job_id }} — Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container"><p>© 2025 PESO SmartHire</p></div>
+    </footer>
+  </body>
+</html>

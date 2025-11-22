@@ -1114,6 +1114,32 @@ def get_notifications():
 
         normalized = []
         for notif in notifications or []:
+            # default redirect to application management
+            redirect_url = "/employers/application_management"
+
+            # if related_ids contains a job_id, redirect to that job's applicants page
+            try:
+                related = notif.get('related_ids')
+                if related:
+                    # related might be stored as JSON string; attempt to parse
+                    if isinstance(related, str):
+                        import json as _json
+                        try:
+                            parsed = _json.loads(related)
+                        except Exception:
+                            parsed = [related]
+                    else:
+                        parsed = related
+
+                    if parsed and len(parsed) > 0:
+                        try:
+                            job_id_candidate = int(parsed[0])
+                            redirect_url = f"/employers/job/{job_id_candidate}/applicants"
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
             normalized.append({
                 "notification_id": notif.get("notification_id"),
                 "notification_type": notif.get("notification_type"),
@@ -1121,7 +1147,7 @@ def get_notifications():
                 "message": notif.get("message"),
                 "is_read": notif.get("is_read"),
                 "created_at": notif.get("created_at").isoformat() if notif.get("created_at") else None,
-                "redirect_url": "/employers/application_management"
+                "redirect_url": redirect_url
             })
 
         return jsonify({
@@ -1137,31 +1163,98 @@ def get_notifications():
         conn.close()
 
 
-@employers_bp.route("/api/notifications/mark-read", methods=["POST"])
-def mark_notification_read():
-    """Mark a notification as read"""
+# New endpoint to mark single notification as read (matches front-end usage)
+@employers_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
+def mark_notification_read_single(notification_id):
     if "employer_id" not in session:
         return jsonify({"success": False}), 401
 
-    notification_id = request.json.get("notification_id")
-    if not notification_id:
-        return jsonify({"success": False, "message": "Notification ID required"})
-
+    employer_id = session["employer_id"]
     conn = create_connection()
     if not conn:
-        return jsonify({"success": False})
+        return jsonify({"success": False}), 500
 
     try:
         run_query(
             conn,
-            "UPDATE notifications SET is_read = 1 WHERE notification_id = %s",
-            (notification_id,)
+            "UPDATE notifications SET is_read = 1 WHERE notification_id = %s AND employer_id = %s",
+            (notification_id, employer_id)
         )
         conn.commit()
         return jsonify({"success": True})
     except Exception as e:
         conn.rollback()
         print(f"Error marking notification as read: {e}")
-        return jsonify({"success": False})
+        return jsonify({"success": False}), 500
+    finally:
+        conn.close()
+
+
+# Route to show applicants for a specific job (employer-facing)
+@employers_bp.route("/job/<int:job_id>/applicants")
+def job_applicants(job_id):
+    if "employer_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+
+    employer_id = session["employer_id"]
+    conn = create_connection()
+    if not conn:
+        flash("DB connection failed.", "danger")
+        return redirect(url_for("employers.employer_home"))
+
+    try:
+        # Verify job belongs to employer
+        job = run_query(conn, "SELECT job_id, job_position, status, created_at FROM jobs WHERE job_id = %s AND employer_id = %s",
+                        (job_id, employer_id), fetch="one")
+        if not job:
+            flash("Job not found or you do not have permission to view it.", "danger")
+            return redirect(url_for("employers.application_management"))
+
+        # SQL to fetch applicants for the job
+        applicants = run_query(conn, """
+            SELECT a.application_id, a.applied_at, a.status as application_status,
+                   ap.applicant_id, ap.first_name, ap.last_name, ap.profile_pic_path, ap.email, ap.phone, ap.city
+            FROM applications a
+            JOIN applicants ap ON a.applicant_id = ap.applicant_id
+            WHERE a.job_id = %s
+            ORDER BY a.applied_at DESC
+        """, (job_id,), fetch="all")
+
+        return render_template("Employer/job_applicants.html", job=job, applicants=applicants)
+    except Exception as e:
+        print(f"Error loading job applicants: {e}")
+        flash("Failed to load applicants for this job.", "danger")
+        return redirect(url_for("employers.application_management"))
+    finally:
+        conn.close()
+
+
+# Route to view individual applicant profile (employer-facing)
+@employers_bp.route("/applicant/<int:applicant_id>")
+def view_applicant(applicant_id):
+    if "employer_id" not in session:
+        flash("Please log in to access this page.", "warning")
+        return redirect(url_for("home"))
+
+    conn = create_connection()
+    if not conn:
+        flash("DB connection failed.", "danger")
+        return redirect(url_for("employers.employer_home"))
+
+    try:
+        applicant = run_query(conn, "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,), fetch="one")
+        if not applicant:
+            flash("Applicant not found.", "danger")
+            return redirect(url_for("employers.application_management"))
+
+        # Optionally fetch application records for this applicant if needed
+        applications = run_query(conn, "SELECT * FROM applications WHERE applicant_id = %s ORDER BY applied_at DESC", (applicant_id,), fetch="all")
+
+        return render_template("Employer/applicant_profile.html", applicant=applicant, applications=applications)
+    except Exception as e:
+        print(f"Error loading applicant profile: {e}")
+        flash("Failed to load applicant profile.", "danger")
+        return redirect(url_for("employers.application_management"))
     finally:
         conn.close()
