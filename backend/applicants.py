@@ -577,22 +577,24 @@ def notifications():
         notifications = []
         # Normalize types that should NOT be shown to applicants (admin-only)
         admin_only_types = {
-            'employer_approval', 'applicant_approval', 'employer_reported', 'applicant_reported', 'employer_outdated_docu', 'applicant_batch'
+            'employer_approval', 'applicant_approval', 'employer_reported', 'employer_outdated_docu', 'applicant_batch'
         }
         for n in (all_notifs or []):
             try:
+                # First, always skip admin-only notification types regardless of FK (defensive for existing bad rows)
+                if n.get('notification_type') in admin_only_types:
+                    continue
+
                 # direct FK match
                 if n.get('applicant_id') == applicant_id:
                     notifications.append(n)
                     continue
+
                 # fallback: related_ids may contain the applicant id (stored as ints or strings)
                 related = n.get('related_ids') or []
                 related_norm = [int(x) if isinstance(x, (int, str)) and str(x).isdigit() else None for x in related]
                 related_norm = [x for x in related_norm if x is not None]
                 if applicant_id in related_norm:
-                    # only include if not admin-only notification (avoid showing admin alerts)
-                    if n.get('notification_type') in admin_only_types:
-                        continue
                     notifications.append(n)
             except Exception:
                 # be resilient to malformed related_ids
