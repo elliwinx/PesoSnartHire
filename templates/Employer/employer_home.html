@@ -47,6 +47,62 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
+
+    <!-- Added Force Password Modal -->
+    <!-- Force Password Modal -->
+    <div id="forcePasswordModal" class="custom-modal">
+      <div class="modal-content">
+        <h5>Change Your Password</h5>
+        <p>
+          For security, you must change your password before accessing your
+          account.
+        </p>
+        <div class="passwordRequirementsCard">
+          <!-- Password Requirements Notice -->
+          <ul id="passwordRequirements">
+            <li>At least 8 characters long</li>
+            <li>Contains uppercase and lowercase letters</li>
+            <li>Includes at least one number</li>
+            <li>Has at least one special character (@, $, !, %, *, ?, &)</li>
+          </ul>
+        </div>
+        <form
+          id="forcePasswordForm"
+          method="POST"
+          action="{{ url_for('employers.forced_password_change') }}"
+        >
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="newPassword"
+              name="newPassword"
+              placeholder="New Password"
+              required
+            />
+            <span class="toggle-password">Show</span>
+          </div>
+          <div class="password-wrapper">
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              required
+            />
+            <span class="toggle-password">Show</span>
+          </div>
+          <!--  Live feedback (invalid, mismatch, etc.) -->
+          <small
+            id="passwordHint"
+            style="color: #ff6666; display: block; margin-top: 5px"
+          ></small>
+          <button type="submit" id="submitBtn" class="submitBtn" disabled>
+            Change Password
+          </button>
+        </form>
+      </div>
+    </div>
+
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -93,7 +149,6 @@
             Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
             endif %}!
           </h1>
-          <!-- You can add the employer's name here using python-->
           <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
