@@ -8,7 +8,6 @@ from db_connection import create_connection, run_query
 from extensions import mail
 from flask_mail import Message
 from .notifications import create_notification, get_notifications, mark_notification_read
-from .notifications import create_notification, get_notifications, mark_notification_read
 from .recaptcha import verify_recaptcha
 from flask import request
 from dateutil.relativedelta import relativedelta
@@ -299,7 +298,19 @@ def register_applicant(form, files):
             fetch="one"
         )
         applicant_id = applicant_id_row["id"] if applicant_id_row else None
-        print(f"Applicant ID: {applicant_id}")
+        print(f"[v0] Applicant ID: {applicant_id}")
+
+        applicant_code = "N/A"
+        if applicant_id:
+            applicant_code_row = run_query(
+                conn,
+                "SELECT applicant_code FROM applicants WHERE applicant_id=%s",
+                (applicant_id,),
+                fetch="one"
+            )
+            applicant_code = applicant_code_row["applicant_code"] if applicant_code_row and applicant_code_row.get(
+                "applicant_code") else "N/A"
+            print(f"[v0] Applicant Code: {applicant_code}")
 
         if is_from_lipa:
             print("Creating notification for Lipeno applicant (auto-approved)...")
@@ -314,8 +325,7 @@ def register_applicant(form, files):
             )
             print("Notification created for Lipeno applicant")
         else:
-            print(
-                "Creating notification for Non-Lipeno applicant (pending approval)...")
+            print("Creating notification for Non-Lipeno applicant (pending approval)...")
             create_notification(
                 notification_type="applicant_approval",
                 title="Non-Lipeno Applicant Account Pending Approval",
@@ -326,15 +336,6 @@ def register_applicant(form, files):
                 applicant_id=applicant_id   # <-- NEW explicit FK
             )
             print("Notification created for Non-Lipeno applicant")
-
-        # Fetch the generated applicant_code
-        applicant_code_row = run_query(
-            conn,
-            "SELECT applicant_code FROM applicants WHERE email=%s",
-            (email,),
-            fetch="one"
-        )
-        applicant_code = applicant_code_row["applicant_code"] if applicant_code_row else "N/A"
 
         # ==== Send Email ====
         try:
@@ -651,7 +652,7 @@ def apply_job(job_id):
                     "UPDATE employers SET application_count = application_count + 1 WHERE employer_id = %s",
                     (employer_id,)
                 )
-            except Exception:
+            except Exception as e:
                 # Fallback to old column name if DB still uses applicant_count
                 try:
                     run_query(
@@ -985,7 +986,7 @@ def api_delete_application(app_id):
                 except Exception:
                     try:
                         run_query(
-                            conn, 'UPDATE employers SET applicant_count = applicant_count - 1 WHERE employer_id = %s AND applicant_count > 0', (emp_id,))
+                            conn, 'UPDATE employers SET applicant_count = applicant_count - 1 WHERE employer_id = %s AND application_count > 0', (emp_id,))
                     except Exception:
                         pass
         except Exception:
