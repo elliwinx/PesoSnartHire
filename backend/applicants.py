@@ -626,3 +626,18 @@ def account_security():
         print('[v0] Failed to load applicant account_security:', e)
         flash('Failed to load account security page.', 'danger')
         return redirect(url_for('applicants.applicant_home'))
+
+
+@applicants_bp.route('/applications')
+def applications_page():
+    """Render the applicant's Applications page. The page uses client-side JS to load data from /applicants/api/applications."""
+    if 'applicant_id' not in session:
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('home'))
+
+    if session.get('applicant_status') == 'Reupload':
+        flash('Please complete your document reupload first.', 'info')
+        return redirect(url_for('applicants.account_security'))
+
+    # Render the template; JS will call /applicants/api/applications to populate the list
+    return render_template('Applicant/application.html')

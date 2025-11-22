@@ -62,7 +62,11 @@
             class="nav-link-active"
             >Home</a
           >
-          <a href="/applicants/applications" class="nav-link">Applications</a>
+          <a
+            href="{{ url_for('applicants.applications') }}"
+            class="nav-link"
+            >Applications</a
+          >
           <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
             >Real-Time Notifications</a
           >
