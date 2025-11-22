@@ -404,13 +404,6 @@ def apply_job(job_id):
             (job_id, applicant_id)
         )
 
-        # Increment job applicant count
-        run_query(
-            conn,
-            "UPDATE jobs SET application_count = application_count + 1 WHERE job_id = %s",
-            (job_id,)
-        )
-
         if job_details and applicant_details:
             employer_id = job_details["employer_id"]
             job_position = job_details["job_position"]
@@ -431,12 +424,15 @@ def apply_job(job_id):
                 print(f"[v0] Error creating notification: {notif_error}")
                 # Continue even if notification fails
 
-            # Increment employer applicant count
-            run_query(
-                conn,
-                "UPDATE employers SET applicant_count = applicant_count + 1 WHERE employer_id = %s",
-                (employer_id,)
-            )
+            # Try to increment employer applicant count if column exists
+            try:
+                run_query(
+                    conn,
+                    "UPDATE employers SET applicant_count = applicant_count + 1 WHERE employer_id = %s",
+                    (employer_id,)
+                )
+            except Exception as e:
+                print("[v0] Skipping employers.applicant_count update (column may be missing):", e)
 
         conn.commit()
 
@@ -622,7 +618,7 @@ def get_applications_alias():
             conn,
             """
             SELECT
-                a.application_id AS id,
+                a.id AS id,
                 CASE
                     WHEN j.status IN ('Inactive', 'Suspended', 'Archived') THEN 'Closed Job'
                     ELSE COALESCE(a.status, 'Applied')
@@ -695,7 +691,7 @@ def delete_application(app_id):
     try:
         cur.execute("""
             DELETE FROM applications 
-            WHERE application_id = %s AND applicant_id = %s
+            WHERE id = %s AND applicant_id = %s
         """, (app_id, applicant_id))
         conn.commit()
         success = cur.rowcount > 0
