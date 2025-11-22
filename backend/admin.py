@@ -45,13 +45,13 @@ def api_get_notifications():
         if not notification_type:
             notification_type = filter_param
 
-    print(
-        f"[v0] Fetching notifications - filter: {filter_param}, type: {notification_type}, is_read: {is_read}")
-
+    # Admin should only see system notifications, not employer job applications
     notifications = get_notifications(
-        notification_type=notification_type, is_read=is_read)
-
-    print(f"[v0] Found {len(notifications)} notifications")
+        notification_type=notification_type,
+        is_read=is_read,
+        # Exclude employer-only notifications
+        exclude_types=['job_application']
+    )
 
     return jsonify({
         "success": True,

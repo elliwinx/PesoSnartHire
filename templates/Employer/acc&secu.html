@@ -56,8 +56,8 @@
         </div>
         <nav class="nav">
           <a href="{{url_for('employers.employer_home')}}" class="nav-link">Home</a>
-          <a href="#" class="nav-link">Application Management</a>
-          <a href="#" class="nav-link">Real-Time Notification</a>
+          <a href="{{url_for('employers.application_management')}}" class="nav-link">Application Management</a>
+          <a href="{{url_for('employers.notifications')}}" class="nav-link">Notification</a>
           <a href="{{url_for('employers.account_security')}}" class="nav-link-active">Account & Security</a>
           <a href="{{url_for('employers.logout')}}" id="logoutLink" class="nav-link"
             >Log Out</a

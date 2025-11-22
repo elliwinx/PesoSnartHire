@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EMPLOYER - HOME</title>
+    <!-- Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/employer.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
+    <style>
+      /* Minimal inline tweaks in case you don't want to edit employer.css immediately */
+      .tab-group button.active {
+        background: #8b1515;
+        color: #fff;
+      }
+      .empty-msg {
+        color: #666;
+        padding: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <div class="logo">
+          <img
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+            alt="PESO SmartHire Logo"
+          />
+        </div>
+        <nav class="nav">
+          <a href="{{url_for('employers.employer_home')}}" class="nav-link"
+            >Home</a
+          >
+          <a
+            href="{{url_for('employers.application_management')}}"
+            class="nav-link-active"
+            >Application Management</a
+          >
+          <a href="{{url_for('employers.notifications')}}" class="nav-link"
+            >Notification</a
+          >
+          <a href="{{url_for('employers.account_security')}}" class="nav-link"
+            >Account & Security</a
+          >
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-background">
+        <img
+          src="{{ url_for('static', filename='Assets/background.png') }}"
+          alt="New City Hall of Lipa CIty"
+        />
+      </div>
+      <div class="hero-content">
+        <div class="container">
+          <h1 class="hero-title">
+            Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
+            endif %}!
+          </h1>
+          <p class="hero-description">Here's what we have today</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="container">
+        <div class="form-header">
+          <h2 class="form-title">Application Management</h2>
+          <p class="form-instruction">
+            Manage your job posts and review applicants
+          </p>
+        </div>
+        <div class="tab-group">
+          <button class="active" data-filter="all">All</button>
+          <button data-filter="active">Active</button>
+          <button data-filter="inactive">Inactive</button>
+          <button data-filter="suspended">Suspended</button>
+          <button data-filter="archived">Archived</button>
+        </div>
+
+        <!-- JOB LISTINGS -->
+        <div class="listing-container">
+          {% for job in jobs %}
+          <div
+            class="listing-card"
+            data-job-id="{{ job.job_id }}"
+            data-status="{{ job.status|lower }}"
+            data-href="{{ url_for('employers.job_applicants', job_id=job.job_id) }}"
+            style="cursor: pointer;"
+          >
+            <div class="listing-header">
+              <h3 class="listing-title">{{ job.job_position }}</h3>
+              <span class="status-chip status-{{ job.status|lower }}">
+                {{ job.status.title() }}
+              </span>
+            </div>
+
+            <div class="listing-meta">
+              <div class="posted">
+                Posted {{ job['created_at'].strftime('%m/%d/%Y') }}
+              </div>
+              <div class="meta-counts">
+                <span id="applicant-count-{{ job.job_id }}" class="applicant-count-badge">
+                  <i class="fa-regular fa-user"></i> {{ job.applicant_count }}
+                </span>
+              </div>
+            </div>
+
+            <div class="listing-actions">
+              <button
+                type="button"
+                class="action-btn action-edit"
+                data-job-id="{{ job.job_id }}"
+                data-action="edit"
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                class="action-btn action-archive"
+                data-job-id="{{ job.job_id }}"
+                data-action="archive"
+              >
+                Archive
+              </button>
+
+              <button
+                type="button"
+                class="action-btn action-delete"
+                data-job-id="{{ job.job_id }}"
+                data-action="delete"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+
+          <!-- Moved empty state message inside the container -->
+          <p
+            id="noJobsMessage"
+            style="
+              display: none;
+              text-align: center;
+              color: #666;
+              font-size: 1.1rem;
+              width: 100%;
+              grid-column: 1 / -1;
+            "
+          >
+            No job posts found for this category.
+          </p>
+        </div>
+
+        <!-- EDIT JOB MODAL -->
+        <div
+          id="ej_editJobModal"
+          class="ej-modal-overlay"
+          style="display: none"
+        >
+          <div class="ej-modal-content ej-job-edit-modal">
+            <button class="ej-close-modal" aria-label="Close">&times;</button>
+            <h2>Edit Job Vacancy</h2>
+
+            <form id="ej_editJobForm">
+              <input type="hidden" name="ej_job_id" id="ej_editJobId" />
+
+              <div class="ej-form-row">
+                <div class="ej-form-group">
+                  <label for="ej_editJobTitle">Job Position</label>
+                  <input
+                    type="text"
+                    id="ej_editJobTitle"
+                    name="ej_job_position"
+                    placeholder="Job Position"
+                    required
+                  />
+                </div>
+                <div class="ej-form-group">
+                  <label for="ej_editJobSchedule">Work Schedule</label>
+                  <input
+                    type="text"
+                    id="ej_editJobSchedule"
+                    name="ej_work_schedule"
+                    placeholder="Work Schedule"
+                  />
+                </div>
+              </div>
+
+              <div class="ej-form-row ej-three-col">
+                <div class="ej-form-group">
+                  <label for="ej_editJobVacancy">Number of Vacancy</label>
+                  <input
+                    type="number"
+                    id="ej_editJobVacancy"
+                    name="ej_vacancy"
+                    min="1"
+                    value="1"
+                  />
+                </div>
+                <div class="ej-form-group">
+                  <label for="ej_editJobMinSalary">Minimum Salary (₱)</label>
+                  <input
+                    type="number"
+                    id="ej_editJobMinSalary"
+                    name="ej_min_salary"
+                    step="0.01"
+                    value="0.00"
+                  />
+                </div>
+                <div class="ej-form-group">
+                  <label for="ej_editJobMaxSalary">Maximum Salary (₱)</label>
+                  <input
+                    type="number"
+                    id="ej_editJobMaxSalary"
+                    name="ej_max_salary"
+                    step="0.01"
+                    value="0.00"
+                  />
+                </div>
+              </div>
+
+              <div class="ej-form-group">
+                <label for="ej_editJobDescription">Job Description</label>
+                <textarea
+                  id="ej_editJobDescription"
+                  name="ej_job_description"
+                  rows="4"
+                  placeholder="Description"
+                  required
+                ></textarea>
+              </div>
+
+              <div class="ej-form-group">
+                <label for="ej_editJobQualifications">Qualifications</label>
+                <textarea
+                  id="ej_editJobQualifications"
+                  name="ej_qualifications"
+                  rows="2"
+                  placeholder="Qualifications"
+                ></textarea>
+              </div>
+
+              <div class="ej-form-group">
+                <label for="ej_editJobStatus">Status</label>
+                <select id="ej_editJobStatus" name="ej_status">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Suspended">Suspended</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </div>
+
+              <div class="ej-modal-actions">
+                <button
+                  type="button"
+                  class="ej-btn-edit-status"
+                  id="ej_btnEditStatus"
+                >
+                  Edit Status
+                </button>
+                <button type="submit" class="ej-btn-save">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Added confirmation modal for delete and archive actions -->
+        <!-- CONFIRMATION MODAL -->
+        <div id="confirmModal" class="ej-modal-overlay" style="display: none">
+          <div class="ej-modal-content" style="max-width: 400px">
+            <h2 id="confirmModalTitle">Confirm Action</h2>
+            <p id="confirmModalMessage" style="margin: 20px 0; color: #555">
+              Are you sure you want to proceed?
+            </p>
+            <div class="ej-modal-actions" style="gap: 10px">
+              <button
+                type="button"
+                class="ej-btn-save"
+                id="confirmModalYes"
+                style="background: #8b1515"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                class="ej-btn-edit-status"
+                id="confirmModalNo"
+                style="background: #666"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-left">
+            <h3>PESO SmartHire</h3>
+            <p>
+              Connecting talent with opportunity through innovative recruitment
+              solutions.
+            </p>
+            <a href="{{url_for('terms_and_conditions')}}" class="footer-note"
+              >Terms and Conditions</a
+            >
+            <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
+          </div>
+          <div class="footer-right">
+            <h3>Development Team</h3>
+            <div class="team-member">
+              <span>Anoya, Ruffa F.</span>
+              <div class="social-links">
+                <a href="https://github.com/anoyaruffa" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a href="#"><i class="devicon-facebook-plain"></i></a>
+                <a href="mailto: ruffaanoya2005@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Levita, Reymark A.</span>
+              <div class="social-links">
+                <a href="https://github.com/elliwinx" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/reymark.levita.3"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Samonte, Ralph Matthew A.</span>
+              <div class="social-links">
+                <a href="https://github.com/RalphWreckeri2" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/ralphmatthew.13"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div class="modal-body">
+          <i class="fas fa-check-circle success-icon"></i>
+          <h3>Success!</h3>
+          <p>Job post successfully created!</p>
+          <button class="btn btn-primary" id="modalOk">OK</button>
+        </div>
+      </div>
+    </div>
+
+    {% include 'partials/loader.html' %}
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      // Make listing-card clickable to view applicants for that job
+      document.addEventListener('click', function (e) {
+        const card = e.target.closest('.listing-card');
+        if (!card) return;
+        const href = card.dataset.href;
+        // Ignore clicks on action buttons so they still work
+        if (e.target.closest('.listing-actions')) return;
+        if (href) window.location.href = href;
+      });
+
+      // Poll job counts and update badges
+      async function fetchJobCounts() {
+        try {
+          const res = await fetch('/employers/api/job_counts');
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.success) return;
+          const counts = data.counts || {};
+          Object.keys(counts).forEach(jobId => {
+            const el = document.getElementById(`applicant-count-${jobId}`);
+            if (el) {
+              const current = parseInt(el.dataset.count || el.textContent.replace(/\D/g,'')) || 0;
+              const updated = counts[jobId];
+              if (current !== updated) {
+                el.dataset.count = updated;
+                el.innerHTML = `<i class="fa-regular fa-user"></i> ${updated}`;
+              }
+            }
+          });
+        } catch (err) {
+          console.error('Failed to fetch job counts', err);
+        }
+      }
+
+      // Initial fetch and periodic polling
+      fetchJobCounts();
+      setInterval(fetchJobCounts, 15000);
+    </script>
+  </body>
+</html>

@@ -3,23 +3,55 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Applications</title>
-    <link
-      rel="icon"
-      type="image/png"
-      href="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
-    />
-    <!-- Styles -->
+    <title>EMPLOYER - NOTIFICATIONS</title>
+    <!-- Icons -->
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/applicant.css') }}"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/employer.css') }}"
     />
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
+    <style>
+      .notif-dot {
+        display: none;
+        width: 8px;
+        height: 8px;
+        background: #e74c3c;
+        border-radius: 50%;
+        margin-left: 6px;
+      }
+      .card.unread { border-left: 4px solid #e74c3c; }
+    </style>
   </head>
   <body>
+    <!-- Added flash messages section for success/error notifications -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -30,20 +62,20 @@
           />
         </div>
         <nav class="nav">
-          <a href="{{ url_for('applicants.applicant_home') }}" class="nav-link"
+          <a href="{{url_for('employers.employer_home')}}" class="nav-link"
             >Home</a
           >
           <a
-            href="{{ url_for('applicants.applications_page') }}"
-            class="nav-link-active"
-            >Applications</a
-          >
-          <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Real-Time Notifications</a
+            href="{{url_for('employers.application_management')}}"
+            class="nav-link"
+            >Application Management</a
           >
           <a
-            href="{{ url_for('applicants.account_security') }}"
-            class="nav-link"
+            href="{{url_for('employers.notifications')}}"
+            class="nav-link-active"
+            >Notification</a
+          >
+          <a href="{{url_for('employers.account_security')}}" class="nav-link"
             >Account & Security</a
           >
           <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
@@ -63,35 +95,34 @@
       <div class="hero-content">
         <div class="container">
           <h1 class="hero-title">
-            Welcome{% if session.applicant_name %}, {{ session.applicant_name
-            }}{% endif %}!
+            Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
+            endif %}!
           </h1>
-          <p class="hero-description">Here’s what we have today</p>
+          <!-- You can add the employer's name here using python-->
+          <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
 
-    <!-- Container Section -->
-    <section class="container">
-      <h2>My Applications</h2>
-      <p>Manage and Track your Applications!</p>
-    </section>
+    <!-- Main Content -->
+    <main class="notifications-container">
+      <div class="notifications-header">
+        <h1>Job Application Notifications</h1>
+        <p>Stay updated with new applicants and job application status</p>
+      </div>
 
-    <div class="tab-group">
-      <button class="active" data-filter="all">All</button>
-      <button data-filter="pending">Pending</button>
-      <button data-filter="shortlisted">Shortlisted</button>
-      <button data-filter="for-interview">For Interview</button>
-      <button data-filter="hired">Hired</button> 
-      <button data-filter="rejected">Rejected</button>
-      <button data-filter="cancelled">Cancelled</button> 
-      <button data-filter="close-job">Close Job</button> 
-    </div>
+      <!-- Filter Tabs -->
+      <div class="tab-group">
+        <button class="active" data-filter="all">All</button>
+        <button data-filter="unread">Unread</button>
+        <button data-filter="job_application">Job Applications</button>
+      </div>
 
-    <div class="applications-list" id="applicationsList"></div>
-
-  </div>
-<br>
+      <!-- Updated to use card-list instead of notification-list for consistency -->
+      <div id="notificationList" class="card-list">
+        <!-- Notifications will be dynamically loaded here -->
+      </div>
+    </main>
 
     <!-- Footer -->
     <footer class="footer">
@@ -133,7 +164,7 @@
                   target="_blank"
                   ><i class="devicon-facebook-plain"></i
                 ></a>
-                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -159,16 +190,8 @@
       </div>
     </footer>
 
-    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/employers_notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script>
-      // Ensure the applications list is loaded when the page is ready
-      document.addEventListener('DOMContentLoaded', function() {
-        if (typeof renderApplications === 'function') renderApplications();
-      });
-    </script>
   </body>
 </html>

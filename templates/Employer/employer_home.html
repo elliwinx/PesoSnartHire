@@ -62,8 +62,14 @@
             class="nav-link-active"
             >Home</a
           >
-          <a href="#" class="nav-link">Application Management</a>
-          <a href="#" class="nav-link">Real-Time Notification</a>
+          <a
+            href="{{url_for('employers.application_management')}}"
+            class="nav-link"
+            >Application Management</a
+          >
+          <a href="{{url_for('employers.notifications')}}" class="nav-link"
+            >Real-Time Notification</a
+          >
           <a href="{{url_for('employers.account_security')}}" class="nav-link"
             >Account & Security</a
           >
@@ -106,83 +112,97 @@
         <!-- Job Form Section -->
         <section class="job-form-section">
           <h3 class="section-title">Job Vacancy Details</h3>
-          <form id="jobPostForm" class="job-form">
+
+          <form
+            id="createJobForm"
+            method="POST"
+            action="{{ url_for('employers.create_job') }}"
+          >
+            <input
+              type="hidden"
+              name="employer_id"
+              value="{{ current_employer_id }}"
+            />
+
             <div class="form-row">
               <div class="form-group">
-                <label for="jobPosition">Job Position</label>
+                <label for="job_position">Job Position</label>
                 <input
                   type="text"
-                  id="jobPosition"
-                  name="jobPosition"
+                  id="job_position"
+                  name="job_position"
                   placeholder="Job Position"
                   required
                 />
-                <span class="error-message" id="jobPositionError"></span>
+                <span class="error-message"></span>
               </div>
+
               <div class="form-group">
-                <label for="workSchedule">Work Schedule</label>
-                <select id="workSchedule" name="workSchedule" required>
-                  <option value="">Work Schedule</option>
+                <label for="work_schedule">Work Schedule</label>
+                <select id="work_schedule" name="work_schedule" required>
+                  <option value="">Select Schedule</option>
                   <option value="full-time">Full Time</option>
                   <option value="part-time">Part Time</option>
                   <option value="contract">Contract</option>
                   <option value="freelance">Freelance</option>
                 </select>
-                <span class="error-message" id="workScheduleError"></span>
+                <span class="error-message"></span>
               </div>
             </div>
 
             <div class="form-row">
               <div class="form-group">
-                <label for="numVacancy">Number of Vacancy</label>
+                <label for="num_vacancy">Number of Vacancy</label>
                 <input
                   type="number"
-                  id="numVacancy"
-                  name="numVacancy"
+                  id="num_vacancy"
+                  name="num_vacancy"
                   value="1"
                   min="1"
                   required
                 />
-                <span class="error-message" id="numVacancyError"></span>
+                <span class="error-message"></span>
               </div>
+
               <div class="form-group">
-                <label for="minSalary">Minimum Salary (₱)</label>
+                <label for="min_salary">Minimum Salary (₱)</label>
                 <input
                   type="number"
-                  id="minSalary"
-                  name="minSalary"
+                  id="min_salary"
+                  name="min_salary"
                   placeholder="1.00"
                   min="0"
                   step="0.01"
                   required
                 />
-                <span class="error-message" id="minSalaryError"></span>
+                <span class="error-message"></span>
               </div>
+
               <div class="form-group">
-                <label for="maxSalary">Maximum Salary (₱)</label>
+                <label for="max_salary">Maximum Salary (₱)</label>
                 <input
                   type="number"
-                  id="maxSalary"
-                  name="maxSalary"
+                  id="max_salary"
+                  name="max_salary"
                   placeholder="1.00"
                   min="0"
                   step="0.01"
                   required
                 />
-                <span class="error-message" id="maxSalaryError"></span>
+                <span class="error-message"></span>
               </div>
             </div>
 
             <div class="form-group">
-              <label for="jobDescription">Job Description</label>
+              <label for="job_description">Job Description</label>
               <textarea
-                id="jobDescription"
-                name="jobDescription"
+                id="job_description"
+                name="job_description"
                 placeholder="Description"
                 rows="4"
                 required
               ></textarea>
-              <span class="error-message" id="jobDescriptionError"></span>
+              <span class="error-message"></span>
             </div>
 
             <div class="form-group">
@@ -194,24 +214,24 @@
                 rows="4"
                 required
               ></textarea>
-              <span class="error-message" id="qualificationsError"></span>
+              <span class="error-message"></span>
             </div>
 
             <div class="form-actions">
-              <button type="button" id="clearForm" class="btn btn-outline">
-                Clear Form
-              </button>
+              <button type="reset" class="btn btn-outline">Clear Form</button>
               <button type="submit" class="btn btn-primary">
                 Create Job Post
               </button>
             </div>
           </form>
         </section>
-      </div>
 
-      <!-- Add Job Vacancy Button -->
-      <div class="add-btn-container">
-        <button class="add-job-btn" id="addJobVacancy">Add Job Vacancy</button>
+        <!-- Hidden the "Add Job Vacancy" button to prevent duplicate job creation -->
+        <div class="add-btn-container" style="display: none">
+          <button class="add-job-btn" id="addJobVacancy">
+            Add Job Vacancy
+          </button>
+        </div>
       </div>
     </main>
 
@@ -255,7 +275,7 @@
                   target="_blank"
                   ><i class="devicon-facebook-plain"></i
                 ></a>
-                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -280,73 +300,6 @@
         </div>
       </div>
     </footer>
-
-    <!-- Success Modal -->
-    <div id="successModal" class="modal">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <div class="modal-body">
-          <i class="fas fa-check-circle success-icon"></i>
-          <h3>Success!</h3>
-          <p>Job post successfully created!</p>
-          <button class="btn btn-primary" id="modalOk">OK</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Force Password Modal -->
-    <div id="forcePasswordModal" class="custom-modal">
-      <div class="modal-content">
-        <h5>Change Your Password</h5>
-        <p>
-          For security, you must change your password before accessing your
-          account.
-        </p>
-        <div class="passwordRequirementsCard">
-          <!-- 📋 Password Requirements Notice -->
-          <ul id="passwordRequirements">
-            <li>At least 8 characters long</li>
-            <li>Contains uppercase and lowercase letters</li>
-            <li>Includes at least one number</li>
-            <li>Has at least one special character (@, $, !, %, *, ?, &)</li>
-          </ul>
-        </div>
-        <form
-          id="forcePasswordForm"
-          method="POST"
-          action="{{ url_for('employers.forced_password_change') }}"
-        >
-          <div class="password-wrapper">
-            <input
-              type="password"
-              id="newPassword"
-              name="newPassword"
-              placeholder="New Password"
-              required
-            />
-            <span class="toggle-password">Show</span>
-          </div>
-          <div class="password-wrapper">
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              required
-            />
-            <span class="toggle-password">Show</span>
-          </div>
-          <!--  Live feedback (invalid, mismatch, etc.) -->
-          <small
-            id="passwordHint"
-            style="color: #ff6666; display: block; margin-top: 5px"
-          ></small>
-          <button type="submit" id="submitBtn" class="submitBtn" disabled>
-            Change Password
-          </button>
-        </form>
-      </div>
-    </div>
 
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}

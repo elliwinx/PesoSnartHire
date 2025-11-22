@@ -29,25 +29,29 @@
   </head>
   <body
     data-must-change-password="{{ 'true' if session.must_change_password else 'false' }}"
+    data-job-url-template="{{ url_for('applicants.job_page', job_id=0) }}"
   >
-    <!--Flash of Welcome Back Message-->
+    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
       {{ msg }}
-      <button class="close" onclick="this.parentElement.remove()">×</button>
+      <button class="close" onclick="this.parentElement.remove()">x</button>
     </div>
     {% endfor %}
     <script>
       setTimeout(() => {
-        const flashes = document.querySelectorAll(".flash");
-        flashes.forEach((f) => f.classList.add("fade-out"));
-        setTimeout(() => {
-          flashes.forEach((f) => f.remove());
-        }, 500);
+        document
+          .querySelectorAll(".flash")
+          .forEach((f) => f.classList.add("fade-out"));
+        setTimeout(
+          () => document.querySelectorAll(".flash").forEach((f) => f.remove()),
+          500
+        );
       }, 3000);
     </script>
     {% endif %} {% endwith %}
+
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -63,30 +67,32 @@
             class="nav-link-active"
             >Home</a
           >
+          <a
+            href="{{ url_for('applicants.applications_page') }}"
+            class="nav-link"
+            >Applications</a
+          >
           <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
             >Real-Time Notifications</a
-          >
-          <a href="{{ url_for('applicants.applications') }}" class="nav-link"
-            >Applications</a
           >
           <a
             href="{{ url_for('applicants.account_security') }}"
             class="nav-link"
             >Account & Security</a
           >
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+          <a href="{{ url_for('logout') }}" id="logoutLink" class="nav-link"
             >Log Out</a
           >
         </nav>
       </div>
     </header>
 
-    {% block content %}
+    <!-- Hero Section -->
     <section class="hero">
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
+          alt="New City Hall of Lipa City"
         />
       </div>
       <div class="hero-content">
@@ -100,29 +106,266 @@
       </div>
     </section>
 
-    <!-- Job Vacancies -->
+    <!-- Job Vacancies Section -->
     <section class="job-vacancy">
       <div class="container">
         <h2>Available Job Vacancies</h2>
         <p>
           Bringing Applicants and Employers with Trust – Find opportunities
-          <br />
           perfect for fresh graduates and experienced hires.
         </p>
 
+        <!-- Search & Filters -->
         <div class="search-filter">
-          <input type="text" placeholder="Search a job" />
-          <select>
-            <option>Filter</option>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search a job or company"
+          />
+          <select id="industrySelect" class="filter-dropdown">
+            <option value="">Select Industry</option>
+            <option value="Technology & IT">Technology & IT</option>
+            <option value="Finance & Insurance">Finance & Insurance</option>
+            <option value="Healthcare & Pharmaceuticals">
+              Healthcare & Pharmaceuticals
+            </option>
+            <option value="Education">Education</option>
+            <option value="Manufacturing & Industry">
+              Manufacturing & Industry
+            </option>
+            <option value="Retail & E-commerce">Retail & E-commerce</option>
+            <option value="Media & Entertainment">Media & Entertainment</option>
+            <option value="Real Estate & Construction">
+              Real Estate & Construction
+            </option>
+            <option value="Transportation & Logistics">
+              Transportation & Logistics
+            </option>
+            <option value="Energy & Utilities">Energy & Utilities</option>
+            <option value="Government & Nonprofit">
+              Government & Nonprofit
+            </option>
+            <option value="Professional Services">Professional Services</option>
+            <option value="Hospitality, Food & Travel">
+              Hospitality, Food & Travel
+            </option>
+          </select>
+
+          <select id="typeSelect" class="filter-dropdown">
+            <option value="">All Types</option>
+            <option value="Local">Local</option>
+            <option value="International">International</option>
+          </select>
+
+          <select id="scheduleSelect" class="filter-dropdown">
+            <option value="">All Schedules</option>
+            <option value="Full-Time">Full-Time</option>
+            <option value="Part-Time">Part-Time</option>
+            <option value="Contract">Contract</option>
+            <option value="Freelance">Freelance</option>
           </select>
         </div>
 
-        <div class="job-grid">
-          <!-- Job Cards will be injected via script.js -->
+        <!-- Job Cards -->
+        <div class="job-listing-container">
+          {% if jobs %} {% for job in jobs %}
+          <div
+            class="job-card"
+            data-industry="{{ job.industry|default('') }}"
+            data-type="{{ job.type_of_recruitment|default('') }}"
+            data-schedule="{{ job.work_schedule|default('') }}"
+            data-title="{{ job.job_position|default('') }}"
+            data-company="{{ job.company_name|default('') }}"
+          >
+            <div class="job-card-top">
+              <div class="logo-and-title">
+                <img
+                  src="{{ url_for('static', filename=job.company_logo_path) }}"
+                  alt="Company Logo"
+                  class="company-logo"
+                />
+                <div class="title-wrap">
+                  <h3 class="job-title">{{ job.job_position }}</h3>
+                  <p class="company-name">{{ job.company_name }}</p>
+                  <p class="posted-time">Posted {{ job.created_at|timeago }}</p>
+                </div>
+              </div>
+              <span class="status-badge">Active</span>
+            </div>
+
+            <div class="job-details">
+              <p class="job-location">
+                <i class="fas fa-map-marker-alt"></i> {{ job.location or
+                'Location' }}
+              </p>
+              <p class="job-salary">
+                <i class="fa-solid fa-sack-dollar"></i> ₱{{
+                "{:,.0f}".format(job.min_salary|default(0)) }} - ₱{{
+                "{:,.0f}".format(job.max_salary|default(0)) }}
+              </p>
+              <p class="job-meta">
+                <i class="fa-regular fa-user"></i> {{ job.num_vacancy or 1 }}
+                Vacancies | {{ job.work_schedule or 'Full-Time' }}
+              </p>
+
+              <!-- Visible industry and recruitment type for users -->
+              <p class="job-industry-visible">
+                <i class="fa-solid fa-building"></i> {{ job.industry or 'N/A' }}
+              </p>
+              <p class="job-type-visible">
+                <i class="fa-solid fa-briefcase"></i> {{ job.type_of_recruitment
+                or 'Local' }}
+              </p>
+            </div>
+
+            <!-- Hidden spans for filtering -->
+            <span class="job-industry" style="display: none"
+              >{{ job.industry }}</span
+            >
+            <span class="job-type" style="display: none"
+              >{{ job.type_of_recruitment }}</span
+            >
+            <span class="job-schedule" style="display: none"
+              >{{ job.work_schedule }}</span
+            >
+
+            <div class="job-actions">
+              <div class="left-buttons">
+                <a
+                  href="#"
+                  class="btn btn-details"
+                  data-job-id="{{ job.job_id }}"
+                  >Details</a
+                >
+                <form
+                  id="applyForm-{{ job.job_id }}"
+                  action="{{ url_for('applicants.apply_job', job_id=job.job_id) }}"
+                  method="POST"
+                  class="apply-form"
+                >
+                  <button
+                    type="button"
+                    class="btn btn-apply"
+                    data-job-id="{{ job.job_id }}"
+                  >
+                    Apply
+                  </button>
+                </form>
+              </div>
+              <div class="right-button">
+                <button class="btn-report" title="Report">!</button>
+              </div>
+            </div>
+          </div>
+          {% endfor %} {% else %}
+          <p class="no-jobs-msg">No job postings available at the moment.</p>
+          {% endif %}
         </div>
       </div>
     </section>
     {% endblock %}
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModalUnique" class="modal-overlay" style="display: none">
+      <div class="modal-content-confirm">
+        <h2>Confirm Application</h2>
+        <p>Are you sure you want to apply for this position?</p>
+        <div class="modal-actions-confirm">
+          <button class="btn-confirm">Yes, Apply</button>
+          <button class="btn-cancel-confirm">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="jobDetailsModalUnique" class="modal-overlay" style="display: none">
+      <div class="modal-content-confirm">
+        <span class="close-unique">&times;</span>
+        <div id="modal-body-unique" class="modal-job-content">
+          <!-- Job content will be inserted here by JavaScript -->
+        </div>
+        <div
+          class="modal-actions-confirm"
+          style="margin-top: 20px; display: flex; gap: 10px"
+        >
+          <button class="btn-confirm" id="modal-apply-btn">Apply Now</button>
+          <button class="btn-cancel-confirm" id="modal-close-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModalUnique" class="modal-unique">
+      <div class="modal-content-unique">
+        <span class="close-report-unique">&times;</span>
+
+        <div class="modal-job-details-unique">
+          <button class="btn-report">!</button>
+
+          <h2>Report Job Post</h2>
+          <p>Please select a reason for your report.</p>
+
+          <select id="reportReasonUnique">
+            <option value="">Reason</option>
+            <option value="Spam">Spam</option>
+            <option value="Scam">Scam</option>
+            <option value="Inappropriate">Inappropriate</option>
+          </select>
+
+          <div class="modal-buttons">
+            <button id="confirmReportUnique" class="confirm-btn">
+              Confirm
+            </button>
+            <button id="cancelReportUnique" class="cancel-btn">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="alreadyAppliedToast"
+      style="
+        display: none;
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #e8babe;
+        color: #721c24;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+      "
+    >
+      You have already applied to this job.
+      <button
+        id="alreadyAppliedClose"
+        style="
+          margin-left: 15px;
+          background: none;
+          border: none;
+          font-weight: 700;
+          cursor: pointer;
+          color: #721c24;
+          font-size: 16px;
+        "
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModalUnique" class="modal-overlay" style="display: none">
+      <div class="modal-content-confirm">
+        <h2>Application Submitted!</h2>
+        <p>Your application has been successfully submitted.</p>
+        <div class="modal-actions-confirm">
+          <button class="btn-confirm">OK</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">
@@ -148,7 +391,7 @@
                   ><i class="devicon-github-plain"></i
                 ></a>
                 <a href="#"><i class="devicon-facebook-plain"></i></a>
-                <a href="mailto: ruffaanoya2005@gmail.com" target="_blank"
+                <a href="mailto:ruffaanoya2005@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -164,7 +407,7 @@
                   target="_blank"
                   ><i class="devicon-facebook-plain"></i
                 ></a>
-                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -246,6 +489,7 @@
 
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
+
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
