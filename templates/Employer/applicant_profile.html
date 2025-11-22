@@ -10,15 +10,53 @@
     <header class="header">
       <div class="container">
         <div class="logo">
-          <img src="{{ url_for('static', filename='Assets/PESO_logo.png') }}" alt="PESO" />
+          <img
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+            alt="PESO SmartHire Logo"
+          />
         </div>
         <nav class="nav">
-          <a href="{{ url_for('employers.employer_home') }}" class="nav-link">Home</a>
-          <a href="{{ url_for('employers.application_management') }}" class="nav-link">Application Management</a>
-          <a href="{{ url_for('employers.notifications') }}" class="nav-link">Notifications</a>
+          <a
+            href="{{url_for('employers.employer_home')}}"
+            class="nav-link-active"
+            >Home</a
+          >
+          <a
+            href="{{url_for('employers.application_management')}}"
+            class="nav-link"
+            >Application Management</a
+          >
+          <a href="{{url_for('employers.notifications')}}" class="nav-link"
+            >Real-Time Notification</a
+          >
+          <a href="{{url_for('employers.account_security')}}" class="nav-link"
+            >Account & Security</a
+          >
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
+
+        <section class="hero">
+      <div class="hero-background">
+        <img
+          src="{{ url_for('static', filename='Assets/background.png') }}"
+          alt="New City Hall of Lipa CIty"
+        />
+      </div>
+      <div class="hero-content">
+        <div class="container">
+          <h1 class="hero-title">
+            Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
+            endif %}!
+          </h1>
+          <!-- You can add the employer's name here using python-->
+          <p class="hero-description">Here's what we have today</p>
+        </div>
+      </div>
+    </section>
 
     <main class="container">
       <div class="profile-header">
@@ -42,7 +80,68 @@
     </main>
 
     <footer class="footer">
-      <div class="container"><p>© 2025 PESO SmartHire</p></div>
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-left">
+            <h3>PESO SmartHire</h3>
+            <p>
+              Connecting talent with opportunity through innovative recruitment
+              solutions.
+            </p>
+            <a href="{{ url_for('terms_and_conditions') }}" class="footer-note"
+              >Terms and Conditions</a
+            >
+            <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
+          </div>
+          <div class="footer-right">
+            <h3>Development Team</h3>
+            <div class="team-member">
+              <span>Anoya, Ruffa F.</span>
+              <div class="social-links">
+                <a href="https://github.com/anoyaruffa" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a href="#"><i class="devicon-facebook-plain"></i></a>
+                <a href="mailto:ruffaanoya2005@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Levita, Reymark A.</span>
+              <div class="social-links">
+                <a href="https://github.com/elliwinx" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/reymark.levita.3"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Samonte, Ralph Matthew A.</span>
+              <div class="social-links">
+                <a href="https://github.com/RalphWreckeri2" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/ralphmatthew.13"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </footer>
   </body>
 </html>

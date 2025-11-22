@@ -1165,26 +1165,22 @@ def get_notifications():
 
 # New endpoint to mark single notification as read (matches front-end usage)
 @employers_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
-def mark_notification_read_single(notification_id):
-    if "employer_id" not in session:
+def mark_notification_read_by_id(notification_id):
+    """Mark a single employer notification as read (matches frontend call)."""
+    if 'employer_id' not in session:
         return jsonify({"success": False}), 401
 
-    employer_id = session["employer_id"]
+    employer_id = session['employer_id']
     conn = create_connection()
     if not conn:
         return jsonify({"success": False}), 500
 
     try:
-        run_query(
-            conn,
-            "UPDATE notifications SET is_read = 1 WHERE notification_id = %s AND employer_id = %s",
-            (notification_id, employer_id)
-        )
+        run_query(conn, "UPDATE notifications SET is_read = 1 WHERE notification_id = %s AND employer_id = %s", (notification_id, employer_id))
         conn.commit()
         return jsonify({"success": True})
     except Exception as e:
-        conn.rollback()
-        print(f"Error marking notification as read: {e}")
+        print(f"[v0] Error marking notification read: {e}")
         return jsonify({"success": False}), 500
     finally:
         conn.close()
@@ -1193,39 +1189,52 @@ def mark_notification_read_single(notification_id):
 # Route to show applicants for a specific job (employer-facing)
 @employers_bp.route("/job/<int:job_id>/applicants")
 def job_applicants(job_id):
-    if "employer_id" not in session:
-        flash("Please log in to access this page.", "warning")
-        return redirect(url_for("home"))
+    """Show list of applicants who applied to a given job (employer only)."""
+    if 'employer_id' not in session:
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('home'))
 
-    employer_id = session["employer_id"]
+    employer_id = session['employer_id']
     conn = create_connection()
     if not conn:
-        flash("DB connection failed.", "danger")
-        return redirect(url_for("employers.employer_home"))
+        flash('Database connection failed.', 'danger')
+        return redirect(url_for('employers.application_management'))
 
     try:
-        # Verify job belongs to employer
-        job = run_query(conn, "SELECT job_id, job_position, status, created_at FROM jobs WHERE job_id = %s AND employer_id = %s",
-                        (job_id, employer_id), fetch="one")
+        # ensure job belongs to this employer
+        job = run_query(conn, "SELECT * FROM jobs WHERE job_id = %s AND employer_id = %s", (job_id, employer_id), fetch='one')
         if not job:
-            flash("Job not found or you do not have permission to view it.", "danger")
-            return redirect(url_for("employers.application_management"))
+            flash('Job not found or you do not have permission to view it.', 'danger')
+            return redirect(url_for('employers.application_management'))
 
-        # SQL to fetch applicants for the job
-        applicants = run_query(conn, """
-            SELECT a.application_id, a.applied_at, a.status as application_status,
-                   ap.applicant_id, ap.first_name, ap.last_name, ap.profile_pic_path, ap.email, ap.phone, ap.city
+        applicants = run_query(
+            conn,
+            """
+            SELECT
+              a.id AS id,
+              a.applied_at,
+              a.status AS application_status,
+              ap.applicant_id,
+              ap.first_name,
+              ap.last_name,
+              ap.profile_pic_path,
+              ap.email,
+              ap.phone,
+              ap.city
             FROM applications a
             JOIN applicants ap ON a.applicant_id = ap.applicant_id
             WHERE a.job_id = %s
             ORDER BY a.applied_at DESC
-        """, (job_id,), fetch="all")
+            """,
+            (job_id,),
+            fetch='all'
+        )
 
-        return render_template("Employer/job_applicants.html", job=job, applicants=applicants)
+        return render_template('Employer/job_applicants.html', job=job, applicants=applicants)
     except Exception as e:
-        print(f"Error loading job applicants: {e}")
-        flash("Failed to load applicants for this job.", "danger")
-        return redirect(url_for("employers.application_management"))
+        print(f"[v0] Error fetching job applicants: {e}")
+        flash('Failed to load applicants for this job.', 'danger')
+        return redirect(url_for('employers.application_management'))
     finally:
         conn.close()
 
@@ -1233,28 +1242,39 @@ def job_applicants(job_id):
 # Route to view individual applicant profile (employer-facing)
 @employers_bp.route("/applicant/<int:applicant_id>")
 def view_applicant(applicant_id):
-    if "employer_id" not in session:
-        flash("Please log in to access this page.", "warning")
-        return redirect(url_for("home"))
+    """Employer-facing applicant profile and their applications."""
+    if 'employer_id' not in session:
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('home'))
 
     conn = create_connection()
     if not conn:
-        flash("DB connection failed.", "danger")
-        return redirect(url_for("employers.employer_home"))
+        flash('Database connection failed.', 'danger')
+        return redirect(url_for('employers.application_management'))
 
     try:
-        applicant = run_query(conn, "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,), fetch="one")
+        applicant = run_query(conn, "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,), fetch='one')
         if not applicant:
-            flash("Applicant not found.", "danger")
-            return redirect(url_for("employers.application_management"))
+            flash('Applicant not found.', 'danger')
+            return redirect(url_for('employers.application_management'))
 
-        # Optionally fetch application records for this applicant if needed
-        applications = run_query(conn, "SELECT * FROM applications WHERE applicant_id = %s ORDER BY applied_at DESC", (applicant_id,), fetch="all")
+        applications = run_query(
+            conn,
+            """
+            SELECT a.id AS id, a.job_id, a.applied_at, j.job_position
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.job_id
+            WHERE a.applicant_id = %s
+            ORDER BY a.applied_at DESC
+            """,
+            (applicant_id,),
+            fetch='all'
+        )
 
-        return render_template("Employer/applicant_profile.html", applicant=applicant, applications=applications)
+        return render_template('Employer/applicant_profile.html', applicant=applicant, applications=applications)
     except Exception as e:
-        print(f"Error loading applicant profile: {e}")
-        flash("Failed to load applicant profile.", "danger")
-        return redirect(url_for("employers.application_management"))
+        print(f"[v0] Error loading applicant profile: {e}")
+        flash('Failed to load applicant profile.', 'danger')
+        return redirect(url_for('employers.application_management'))
     finally:
         conn.close()
