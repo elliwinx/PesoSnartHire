@@ -442,6 +442,24 @@ def apply_job(job_id):
                 except Exception:
                     print("[v0] Skipping employers application count update (columns may be missing):", e)
 
+            # Also increment the job's application_count so frontend shows correct count
+            try:
+                run_query(
+                    conn,
+                    "UPDATE jobs SET application_count = application_count + 1 WHERE job_id = %s",
+                    (job_id,)
+                )
+            except Exception:
+                try:
+                    run_query(
+                        conn,
+                        "UPDATE jobs SET applicant_count = applicant_count + 1 WHERE job_id = %s",
+                        (job_id,)
+                    )
+                except Exception:
+                    # ignore if column missing
+                    pass
+
         conn.commit()
 
         # Fetch updated job applicant count
@@ -670,7 +688,7 @@ def api_applications():
             conn,
             """
             SELECT
-                COALESCE(a.application_id, a.id) AS id,
+                a.id AS id,
                 a.job_id,
                 j.job_position AS jobTitle,
                 e.employer_name AS companyName,
@@ -726,14 +744,14 @@ def api_delete_application(app_id):
 
     try:
         # Verify ownership and get job_id
-        row = run_query(conn, 'SELECT * FROM applications WHERE application_id = %s AND applicant_id = %s', (app_id, applicant_id), fetch='one')
+        row = run_query(conn, 'SELECT * FROM applications WHERE id = %s AND applicant_id = %s', (app_id, applicant_id), fetch='one')
         if not row:
             return jsonify({'success': False, 'message': 'Application not found'}), 404
 
         job_id = row.get('job_id')
 
         # Delete the application
-        run_query(conn, 'DELETE FROM applications WHERE application_id = %s', (app_id,))
+        run_query(conn, 'DELETE FROM applications WHERE id = %s', (app_id,))
 
         # Decrement job.application_count if present
         try:
