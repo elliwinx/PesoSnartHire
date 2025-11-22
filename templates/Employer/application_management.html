@@ -122,7 +122,7 @@
                 Posted {{ job['created_at'].strftime('%m/%d/%Y') }}
               </div>
               <div class="meta-counts">
-                <span id="applicant-count-{{ job.job_id }}">
+                <span id="applicant-count-{{ job.job_id }}" class="applicant-count-badge">
                   <i class="fa-regular fa-user"></i> {{ job.applicant_count }}
                 </span>
               </div>
@@ -413,6 +413,34 @@
         if (e.target.closest('.listing-actions')) return;
         if (href) window.location.href = href;
       });
+
+      // Poll job counts and update badges
+      async function fetchJobCounts() {
+        try {
+          const res = await fetch('/employers/api/job_counts');
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.success) return;
+          const counts = data.counts || {};
+          Object.keys(counts).forEach(jobId => {
+            const el = document.getElementById(`applicant-count-${jobId}`);
+            if (el) {
+              const current = parseInt(el.dataset.count || el.textContent.replace(/\D/g,'')) || 0;
+              const updated = counts[jobId];
+              if (current !== updated) {
+                el.dataset.count = updated;
+                el.innerHTML = `<i class="fa-regular fa-user"></i> ${updated}`;
+              }
+            }
+          });
+        } catch (err) {
+          console.error('Failed to fetch job counts', err);
+        }
+      }
+
+      // Initial fetch and periodic polling
+      fetchJobCounts();
+      setInterval(fetchJobCounts, 15000);
     </script>
   </body>
 </html>

@@ -1339,3 +1339,31 @@ def update_application_status(application_id):
 
     finally:
         conn.close()
+
+
+@employers_bp.route('/api/job_counts', methods=['GET'])
+def get_job_counts():
+    """Return a mapping of job_id -> application_count for the logged-in employer."""
+    if 'employer_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+
+    employer_id = session['employer_id']
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'DB connection failed'}), 500
+
+    try:
+        rows = run_query(conn, "SELECT job_id, application_count FROM jobs WHERE employer_id = %s AND status != 'deleted'", (employer_id,), fetch='all')
+        conn.close()
+        counts = {}
+        for r in rows or []:
+            counts[str(r['job_id'])] = int(r.get('application_count') or 0)
+
+        return jsonify({'success': True, 'counts': counts})
+    except Exception as e:
+        print(f"[v0] Error fetching job counts: {e}")
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return jsonify({'success': False, 'message': 'Failed to fetch counts'}), 500

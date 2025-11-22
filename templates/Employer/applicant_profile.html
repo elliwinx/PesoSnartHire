@@ -59,23 +59,97 @@
     </section>
 
     <main class="container">
-      <div class="profile-header">
-        <img src="{{ url_for('static', filename=applicant.profile_pic_path) if applicant.profile_pic_path else url_for('static', filename='Assets/default_profile.png') }}" alt="Profile" class="applicant-avatar-large" />
-        <h1>{{ applicant.first_name }} {{ applicant.last_name }}</h1>
-        <p>{{ applicant.city or 'N/A' }} | {{ applicant.email }} | {{ applicant.phone }}</p>
+      <div class="back-button" style="margin: 12px 0;">
+        <a href="javascript:history.back()"><i class="fa-solid fa-arrow-left"></i> Back</a>
       </div>
 
-      <section>
-        <h2>Applications</h2>
+      <div class="profile-header">
+        <div class="profile-pic">
+          {% if applicant.profile_pic_path %}
+          <img src="{{ url_for('static', filename=applicant.profile_pic_path) }}" alt="Profile Picture" />
+          {% else %}
+          <img src="{{ url_for('static', filename='Assets/default-avatar.png') }}" alt="Default Profile" />
+          {% endif %}
+        </div>
+        <div class="profile-details">
+          <h2>{{ applicant.first_name }} {% if applicant.middle_name %}{{ applicant.middle_name }} {% endif %}{{ applicant.last_name }}</h2>
+          <p><strong>Applicant Code:</strong> {{ applicant.applicant_code or 'N/A' }}</p>
+          <p><strong>Status:</strong> {{ applicant.status or 'N/A' }}</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Personal Information</h3>
+        <p><strong>Age:</strong> {{ applicant.age or 'N/A' }}</p>
+        <p><strong>Sex:</strong> {{ applicant.sex or 'N/A' }}</p>
+        <p><strong>Phone:</strong> {{ applicant.phone or 'N/A' }}</p>
+        <p><strong>Email:</strong> {{ applicant.email or 'N/A' }}</p>
+      </div>
+
+      <div class="section">
+        <h3>Address</h3>
+        <p><strong>Province:</strong> {{ applicant.province or 'N/A' }}</p>
+        <p><strong>City:</strong> {{ applicant.city or 'N/A' }}</p>
+        <p><strong>Barangay:</strong> {{ applicant.barangay or 'N/A' }}</p>
+      </div>
+
+      <div class="section">
+        <h3>Education</h3>
+        <p>{{ applicant.education or 'N/A' }}</p>
+      </div>
+
+      {% if applicant.is_pwd %}
+      <div class="section">
+        <h3>Person with Disability</h3>
+        <p><strong>Type:</strong> {{ applicant.pwd_type or 'N/A' }}</p>
+      </div>
+      {% endif %}
+
+      {% if applicant.has_work_exp %}
+      <div class="section">
+        <h3>Work Experience</h3>
+        <p><strong>Years of Experience:</strong> {{ applicant.years_experience or 'N/A' }}</p>
+      </div>
+      {% endif %}
+
+      <div class="section">
+        <h3>Reason for Registering</h3>
+        <p>{{ applicant.registration_reason or 'N/A' }}</p>
+      </div>
+
+      <div class="section documents">
+        <h3>Documents</h3>
+        <ul>
+          {% if applicant.resume_path %}
+          <li><a href="{{ url_for('static', filename=applicant.resume_path) }}" target="_blank">Resume</a></li>
+          {% endif %}
+          {% if not applicant.is_from_lipa and applicant.recommendation_letter_path %}
+          <li><a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}" target="_blank">Recommendation Letter</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <div class="section">
+        <h3>System Info</h3>
+        <p><strong>Registered At:</strong> {{ applicant.created_at }}</p>
+        <p><strong>Updated At:</strong> {{ applicant.updated_at }}</p>
+      </div>
+
+      <!-- Employer: Applications list with per-application status control -->
+      <div class="section">
+        <h3>Applications</h3>
         {% if not applications or applications|length == 0 %}
         <p class="empty-msg">No application records found.</p>
         {% else %}
-        <ul>
+        <div class="applications-list">
           {% for app in applications %}
-          <li>
-            Job ID: {{ app.job_id }} — Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}
-            <div class="app-status">
-              <span class="status-label">Status: <strong id="status-{{ app.id }}">{{ app.status or 'Pending' }}</strong></span>
+          <div class="application-row" style="margin-bottom:12px; padding:8px; border:1px solid #eee;">
+            <div>
+              <strong>Job:</strong> {{ app.job_position or ('Job ID: ' ~ app.job_id) }}
+              <div><small>Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</small></div>
+            </div>
+            <div style="margin-top:8px;">
+              <span>Status: <strong id="status-{{ app.id }}">{{ app.status or 'Pending' }}</strong></span>
               <select data-app-id="{{ app.id }}" class="status-select">
                 <option value="Pending" {% if app.status == 'Pending' %}selected{% endif %}>Pending</option>
                 <option value="For Interview" {% if app.status == 'For Interview' %}selected{% endif %}>For Interview</option>
@@ -84,11 +158,11 @@
                 <option value="Rejected" {% if app.status == 'Rejected' %}selected{% endif %}>Rejected</option>
               </select>
             </div>
-          </li>
+          </div>
           {% endfor %}
-        </ul>
+        </div>
         {% endif %}
-      </section>
+      </div>
 
     </main>
 
