@@ -633,6 +633,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Show modal with loading state
     jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
       "<p style='text-align: center; padding: 20px;'>Loading job details...</p>";
+    // store job id on modal element so modal buttons can reference it
+    jobDetailsModal.dataset.modalJobId = jobId;
     jobDetailsModal.style.display = "flex";
     console.log("[v0] Modal displayed");
 
@@ -653,27 +655,32 @@ document.addEventListener("DOMContentLoaded", () => {
       });
   });
 
-  if (modalApplyBtn) {
-    modalApplyBtn.addEventListener("click", async () => {
-      const jobIdFromModal = document.querySelector("[data-modal-job-id]")
-        ?.dataset.modalJobId;
-      if (!jobIdFromModal) {
-        console.log("[v0] No job ID in modal");
-        return;
-      }
+  // Add delegated listener for Apply button inside the job details modal
+  document.addEventListener("click", async (e) => {
+    const applyBtn = e.target.closest("#jobDetailsModalUnique .btn-apply, #jobDetailsModalUnique #modal-apply-btn");
+    if (!applyBtn) return;
 
-      selectedJobId = jobIdFromModal;
+    e.preventDefault();
+    e.stopPropagation();
 
-      if (await hasApplied(selectedJobId)) {
-        jobDetailsModal.style.display = "none";
-        showAlreadyAppliedToast();
-        return;
-      }
+    const jobIdFromModal = jobDetailsModal?.dataset?.modalJobId;
+    if (!jobIdFromModal) {
+      console.log("[v0] No job ID in modal");
+      return;
+    }
 
+    selectedJobId = jobIdFromModal;
+
+    if (await hasApplied(selectedJobId)) {
       jobDetailsModal.style.display = "none";
-      confirmModal.style.display = "flex";
-    });
-  }
+      showAlreadyAppliedToast();
+      return;
+    }
+
+    // close details and open confirm modal
+    jobDetailsModal.style.display = "none";
+    if (confirmModal) confirmModal.style.display = "flex";
+  });
 
   if (modalCloseBtn) {
     modalCloseBtn.addEventListener("click", () => {
