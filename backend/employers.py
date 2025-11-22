@@ -1361,7 +1361,11 @@ def update_application_status(application_id):
 
 @employers_bp.route('/api/job_counts', methods=['GET'])
 def get_job_counts():
-    """Return a mapping of job_id -> application_count for the logged-in employer."""
+    """Return a mapping of job_id -> application_count for the logged-in employer.
+    
+    FIXED: Now counts ACTUAL applications from the applications table
+    instead of returning the stale 'application_count' column.
+    """
     if 'employer_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'}), 401
 
@@ -1371,11 +1375,20 @@ def get_job_counts():
         return jsonify({'success': False, 'message': 'DB connection failed'}), 500
 
     try:
-        rows = run_query(conn, "SELECT job_id, application_count FROM jobs WHERE employer_id = %s AND status != 'deleted'", (employer_id,), fetch='all')
+        rows = run_query(
+            conn, 
+            """SELECT j.job_id, COUNT(a.id) AS applicant_count
+               FROM jobs j
+               LEFT JOIN applications a ON j.job_id = a.job_id
+               WHERE j.employer_id = %s AND j.status != 'deleted'
+               GROUP BY j.job_id""", 
+            (employer_id,), 
+            fetch='all'
+        )
         conn.close()
         counts = {}
         for r in rows or []:
-            counts[str(r['job_id'])] = int(r.get('application_count') or 0)
+            counts[str(r['job_id'])] = int(r.get('applicant_count') or 0)
 
         return jsonify({'success': True, 'counts': counts})
     except Exception as e:
