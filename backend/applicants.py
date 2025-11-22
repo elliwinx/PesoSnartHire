@@ -586,3 +586,16 @@ def mark_applicant_notification_read(notif_id):
             pass
         print('[v0] Error marking notification read:', e)
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@applicants_bp.route('/terms')
+def applicants_terms():
+    """Render Terms & Conditions for applicants.
+    This endpoint exists so templates can call url_for('applicants.applicants_terms').
+    """
+    try:
+        return render_template('Landing_Page/t_and_c_applicants.html')
+    except Exception as e:
+        print('[v0] Failed to render applicants terms page:', e)
+        # Fallback: render simple text page
+        return "Terms and Conditions (applicants)"
