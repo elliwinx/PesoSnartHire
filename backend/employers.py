@@ -1295,7 +1295,8 @@ def update_application_status(application_id):
 
     try:
         # Fetch application and verify ownership via job -> employer
-        app_row = run_query(conn, "SELECT a.id, a.job_id, a.status, j.employer_id FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s", (application_id,), fetch='one')
+        # include applicant_id and job_position so we can notify the applicant
+        app_row = run_query(conn, "SELECT a.id, a.job_id, a.applicant_id, a.status, j.employer_id, j.job_position FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s", (application_id,), fetch='one')
         if not app_row:
             return jsonify({'success': False, 'message': 'Application not found'}), 404
 
@@ -1329,6 +1330,23 @@ def update_application_status(application_id):
         run_query(conn, "INSERT INTO applications_history (application_id, old_status, new_status, changed_by) VALUES (%s, %s, %s, %s)", (application_id, old_status, new_status, employer_id))
 
         conn.commit()
+
+        # Notify the applicant about the status change
+        try:
+            applicant_to_notify = app_row.get('applicant_id')
+            job_id = app_row.get('job_id')
+            job_position = app_row.get('job_position') or 'your application'
+            if applicant_to_notify:
+                create_notification(
+                    notification_type='job_application',
+                    title='Application Status Updated',
+                    message=f"Your application for {job_position} is now: {new_status}",
+                    count=1,
+                    related_ids=[job_id] if job_id else None,
+                    applicant_id=applicant_to_notify
+                )
+        except Exception as notifErr:
+            print('[v0] Failed to create applicant notification:', notifErr)
 
         return jsonify({'success': True, 'message': 'Status updated', 'new_status': new_status})
 

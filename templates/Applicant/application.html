@@ -83,7 +83,7 @@
       <button data-filter="close-job">Close Job</button> 
     </div>
 
-  <div class="applications-list" id="applicationsList"></div>
+    <div class="applications-list" id="applicationsList"></div>
 
   </div>
 <br>
@@ -159,5 +159,11 @@
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script>
+      // Ensure the applications list is loaded when the page is ready
+      document.addEventListener('DOMContentLoaded', function() {
+        if (typeof renderApplications === 'function') renderApplications();
+      });
+    </script>
   </body>
 </html>
