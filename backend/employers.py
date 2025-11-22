@@ -1114,31 +1114,23 @@ def get_notifications():
 
         normalized = []
         for notif in notifications or []:
-            # default redirect to application management
+            # parse related_ids if present
+            related = []
+            if notif.get('related_ids'):
+                try:
+                    related = json.loads(notif.get('related_ids'))
+                except Exception:
+                    related = []
+
+            # determine redirect url: prefer job-specific applicants list when related_ids contains a job id
             redirect_url = "/employers/application_management"
-
-            # if related_ids contains a job_id, redirect to that job's applicants page
-            try:
-                related = notif.get('related_ids')
-                if related:
-                    # related might be stored as JSON string; attempt to parse
-                    if isinstance(related, str):
-                        import json as _json
-                        try:
-                            parsed = _json.loads(related)
-                        except Exception:
-                            parsed = [related]
-                    else:
-                        parsed = related
-
-                    if parsed and len(parsed) > 0:
-                        try:
-                            job_id_candidate = int(parsed[0])
-                            redirect_url = f"/employers/job/{job_id_candidate}/applicants"
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+            if related and len(related) > 0:
+                try:
+                    possible_job_id = int(related[0])
+                    redirect_url = f"/employers/job/{possible_job_id}/applicants"
+                except Exception:
+                    # fall back to default
+                    redirect_url = "/employers/application_management"
 
             normalized.append({
                 "notification_id": notif.get("notification_id"),

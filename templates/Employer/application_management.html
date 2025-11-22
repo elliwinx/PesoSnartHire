@@ -107,6 +107,8 @@
             class="listing-card"
             data-job-id="{{ job.job_id }}"
             data-status="{{ job.status|lower }}"
+            data-href="{{ url_for('employers.job_applicants', job_id=job.job_id) }}"
+            style="cursor: pointer;"
           >
             <div class="listing-header">
               <h3 class="listing-title">{{ job.job_position }}</h3>
@@ -401,5 +403,16 @@
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+      // Make listing-card clickable to view applicants for that job
+      document.addEventListener('click', function (e) {
+        const card = e.target.closest('.listing-card');
+        if (!card) return;
+        const href = card.dataset.href;
+        // Ignore clicks on action buttons so they still work
+        if (e.target.closest('.listing-actions')) return;
+        if (href) window.location.href = href;
+      });
+    </script>
   </body>
 </html>
