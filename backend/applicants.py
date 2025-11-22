@@ -153,8 +153,7 @@ def register_applicant(form, files):
                 message="1 Lipeno applicant has been auto-approved",
                 count=1,
                 related_ids=[applicant_id] if applicant_id else None,
-                residency_type="Lipeno",
-                applicant_id=applicant_id   # <-- NEW explicit FK
+                residency_type="Lipeno"
             )
             print("Notification created for Lipeno applicant")
         else:
@@ -166,8 +165,7 @@ def register_applicant(form, files):
                 message="1 non-Lipeno applicant registration needs approval",
                 count=1,
                 related_ids=[applicant_id] if applicant_id else None,
-                residency_type="Non-Lipeno",
-                applicant_id=applicant_id   # <-- NEW explicit FK
+                residency_type="Non-Lipeno"
             )
             print("Notification created for Non-Lipeno applicant")
 
@@ -576,7 +574,29 @@ def notifications():
     try:
         all_notifs = get_notifications(limit=200)
         applicant_id = session.get('applicant_id')
-        notifications = [n for n in all_notifs if n.get('applicant_id') == applicant_id]
+        notifications = []
+        # Normalize types that should NOT be shown to applicants (admin-only)
+        admin_only_types = {
+            'employer_approval', 'applicant_approval', 'employer_reported', 'applicant_reported', 'employer_outdated_docu', 'applicant_batch'
+        }
+        for n in (all_notifs or []):
+            try:
+                # direct FK match
+                if n.get('applicant_id') == applicant_id:
+                    notifications.append(n)
+                    continue
+                # fallback: related_ids may contain the applicant id (stored as ints or strings)
+                related = n.get('related_ids') or []
+                related_norm = [int(x) if isinstance(x, (int, str)) and str(x).isdigit() else None for x in related]
+                related_norm = [x for x in related_norm if x is not None]
+                if applicant_id in related_norm:
+                    # only include if not admin-only notification (avoid showing admin alerts)
+                    if n.get('notification_type') in admin_only_types:
+                        continue
+                    notifications.append(n)
+            except Exception:
+                # be resilient to malformed related_ids
+                continue
     except Exception as e:
         print('[v0] Failed to load notifications:', e)
         notifications = []

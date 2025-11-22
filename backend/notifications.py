@@ -57,7 +57,6 @@ def create_notification(
 
             if single_int is not None:
                 if notification_type in (
-                    "applicant_approval",
                     "applicant_reported",
                     "applicant_outdated_docu"
                 ):
