@@ -709,7 +709,33 @@ async function renderApplications() {
     const res = await fetch("/applicants/api/applications", {
       credentials: "same-origin",
     });
+
+    // Debug: log status for easier troubleshooting
+    console.log('[v0] /applicants/api/applications status:', res.status, res.statusText);
+
+    // If not ok, try to parse JSON for error message and display it
+    if (!res.ok) {
+      let bodyText = '';
+      try {
+        const errJson = await res.json();
+        bodyText = errJson.message || JSON.stringify(errJson);
+      } catch (e) {
+        bodyText = await res.text().catch(() => 'Failed to read response');
+      }
+      console.warn('[v0] Failed to load applications:', bodyText);
+      applicationsList.innerHTML = `<div class="empty-state"><p>Error loading applications: ${bodyText}</p></div>`;
+      return;
+    }
+
     const applications = await res.json();
+
+    // If API returned an object like {success:false, message:...}, show message
+    if (!applications || (Array.isArray(applications) === false && applications.success === false)) {
+      const msg = Array.isArray(applications) ? 'No applications yet.' : (applications.message || 'No applications yet.');
+      applicationsList.innerHTML = `<div class="empty-state"><p>${msg}</p></div>`;
+      console.log('[v0] Applications API returned empty or error:', applications);
+      return;
+    }
 
     if (!applications || applications.length === 0) {
       applicationsList.innerHTML = `<div class="empty-state"><p>No applications yet.</p></div>`;
@@ -745,8 +771,6 @@ async function renderApplications() {
       })
       .join("");
 
-    // Attach click handler for application cards (view details) and cancel buttons
-    // Use event delegation instead of attaching many listeners
   } catch (err) {
     console.error("Failed to load applications:", err);
     applicationsList.innerHTML = `<div class="empty-state"><p>Error loading applications.</p></div>`;
