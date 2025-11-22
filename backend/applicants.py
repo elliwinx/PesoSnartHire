@@ -599,3 +599,30 @@ def applicants_terms():
         print('[v0] Failed to render applicants terms page:', e)
         # Fallback: render simple text page
         return "Terms and Conditions (applicants)"
+
+
+@applicants_bp.route('/account-security', methods=['GET', 'POST'])
+def account_security_applicant():
+    """Applicant account & security page (exists so templates can link to it)."""
+    if 'applicant_id' not in session:
+        flash('Please log in to access this page.', 'warning')
+        return redirect(url_for('home'))
+
+    applicant_id = session['applicant_id']
+    conn = create_connection()
+    if not conn:
+        flash('Database connection failed.', 'danger')
+        return redirect(url_for('applicants.applicant_home'))
+
+    try:
+        applicant = run_query(conn, 'SELECT * FROM applicants WHERE applicant_id = %s', (applicant_id,), fetch='one')
+        conn.close()
+        return render_template('Applicant/acc&secu.html', applicant=applicant)
+    except Exception as e:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        print('[v0] Failed to load applicant account_security:', e)
+        flash('Failed to load account security page.', 'danger')
+        return redirect(url_for('applicants.applicant_home'))
