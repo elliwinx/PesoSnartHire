@@ -4,40 +4,152 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Applicants for {{ job.job_position }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/employer.css') }}" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/employer.css') }}"
+    />
   </head>
   <body>
     <header class="header">
       <div class="container">
         <div class="logo">
-          <img src="{{ url_for('static', filename='Assets/PESO_logo.png') }}" alt="PESO" />
+          <img
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+            alt="PESO SmartHire Logo"
+          />
         </div>
         <nav class="nav">
-          <a href="{{ url_for('employers.employer_home') }}" class="nav-link">Home</a>
-          <a href="{{ url_for('employers.application_management') }}" class="nav-link">Application Management</a>
-          <a href="{{ url_for('employers.notifications') }}" class="nav-link">Notifications</a>
+          <a href="{{url_for('employers.employer_home')}}" class="nav-link"
+            >Home</a
+          >
+          <a
+            href="{{url_for('employers.application_management')}}"
+            class="nav-link-active"
+            >Application Management</a
+          >
+          <a href="{{url_for('employers.notifications')}}" class="nav-link"
+            >Notification</a
+          >
+          <a href="{{url_for('employers.account_security')}}" class="nav-link"
+            >Account & Security</a
+          >
+          <a href="{{url_for('logout')}}" class="nav-link">Log Out</a>
         </nav>
       </div>
     </header>
 
     <main class="container">
-      <h1>Applicants for "{{ job.job_position }}"</h1>
-      <p>Status: {{ job.status }}</p>
+      <div class="back-button" style="margin: 20px 0">
+        <a href="{{ url_for('employers.application_management') }}"
+          ><i class="fa-solid fa-arrow-left"></i> Back to Jobs</a
+        >
+      </div>
+
+      <div class="section-header">
+        <h2>Applicants for {{ job.job_position }}</h2>
+        <p>Manage applicants for this position</p>
+      </div>
 
       {% if not applicants or applicants|length == 0 %}
-      <p class="empty-msg">No applicants yet for this job.</p>
+      <div
+        class="empty-state"
+        style="text-align: center; padding: 40px; color: #666"
+      >
+        <p>No applicants found for this job posting yet.</p>
+      </div>
       {% else %}
-      <div class="applicants-list">
-        {% for a in applicants %}
-        <div class="applicant-card">
-          <img src="{{ url_for('static', filename=a.profile_pic_path) if a.profile_pic_path else url_for('static', filename='Assets/default_profile.png') }}" alt="Profile" class="applicant-avatar" />
-          <div class="applicant-info">
-            <h3>{{ a.first_name }} {{ a.last_name }}</h3>
-            <p>{{ a.city or 'N/A' }} | {{ a.email }}</p>
-            <p>Applied at: {{ a.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</p>
+      <div
+        class="applicants-grid"
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 20px;
+          margin-top: 20px;
+        "
+      >
+        {% for applicant in applicants %}
+        <div
+          class="applicant-card"
+          style="
+            border: 1px solid #eee;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          "
+        >
+          <div
+            class="applicant-header"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 15px;
+              margin-bottom: 15px;
+            "
+          >
+            <img
+              src="{{ url_for('static', filename=applicant.profile_pic_path) if applicant.profile_pic_path else url_for('static', filename='Assets/default-avatar.png') }}"
+              alt="Profile"
+              style="
+                width: 60px;
+                height: 60px;
+                border-radius: 50%;
+                object-fit: cover;
+              "
+            />
+            <div>
+              <h3 style="margin: 0; font-size: 1.1rem">
+                {{ applicant.first_name }} {{ applicant.last_name }}
+              </h3>
+              <span
+                class="status-badge"
+                style="
+                  display: inline-block;
+                  padding: 4px 8px;
+                  background: #f0f0f0;
+                  border-radius: 4px;
+                  font-size: 0.8rem;
+                  margin-top: 4px;
+                "
+                >{{ applicant.status or 'Pending' }}</span
+              >
+            </div>
           </div>
+
+          <div
+            class="applicant-info"
+            style="margin-bottom: 15px; font-size: 0.9rem; color: #555"
+          >
+            <p><i class="fa-solid fa-envelope"></i> {{ applicant.email }}</p>
+            <p><i class="fa-solid fa-phone"></i> {{ applicant.phone }}</p>
+            <p>
+              <i class="fa-solid fa-clock"></i> Applied: {{
+              applicant.applied_at.strftime('%Y-%m-%d') if applicant.applied_at
+              else 'N/A' }}
+            </p>
+          </div>
+
           <div class="applicant-actions">
-            <a href="{{ url_for('employers.view_applicant', applicant_id=a.applicant_id) }}" class="btn btn-primary">View Profile</a>
+            <!-- Updated the link to point correctly to view_applicant and pass job_id to avoid navigation loops and enable filtering -->
+            <a
+              href="{{ url_for('employers.view_applicant', applicant_id=applicant.applicant_id, job_id=job.job_id) }}"
+              class="btn-view-profile"
+              style="
+                display: block;
+                text-align: center;
+                background: #8b1515;
+                color: white;
+                padding: 10px;
+                border-radius: 4px;
+                text-decoration: none;
+              "
+            >
+              View Profile
+            </a>
           </div>
         </div>
         {% endfor %}
@@ -45,8 +157,12 @@
       {% endif %}
     </main>
 
-    <footer class="footer">
-      <div class="container"><p>© 2025 PESO SmartHire</p></div>
+    <footer class="footer" style="margin-top: 50px">
+      <div class="container">
+        <p class="copyright" style="text-align: center">
+          © 2025 PESO SmartHire. All rights reserved.
+        </p>
+      </div>
     </footer>
   </body>
 </html>

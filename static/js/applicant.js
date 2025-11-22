@@ -20,6 +20,13 @@ function showFlash(message, category = "info") {
   }, 5000);
 }
 
+function hideFlash() {
+  const flashContainer = document.querySelector(".flash");
+  if (flashContainer) {
+    flashContainer.remove();
+  }
+}
+
 function showLoader(text = "Processing — please wait...") {
   const loader = document.getElementById("ajaxLoader");
   const loaderText = document.getElementById("ajaxLoaderText");
@@ -1088,7 +1095,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch("/applicants/report", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.JSON.stringify({ job_id: reportingJobId, reason }),
+          body: JSON.stringify({ job_id: reportingJobId, reason }),
           credentials: "same-origin",
         });
         const data = await res.json();
@@ -1332,135 +1339,157 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ==================== RENDER APPLICATIONS ====================
-  async function renderApplications() {
-    const applicationsList = document.getElementById("applicationsList");
-    if (!applicationsList) return;
+  // ========== ADDED FUNCTIONS FOR APPLICATION MANAGEMENT ==========
+
+  window.renderApplications = async (filter = "all") => {
+    const container = document.getElementById("applicationsList");
+    if (!container) return;
 
     try {
-      const res = await fetch("/applicants/api/applications", {
-        credentials: "same-origin",
-      });
+      container.innerHTML = '<div class="loader">Loading applications...</div>';
 
-      console.log(
-        "[v0] /applicants/api/applications status:",
-        res.status,
-        res.statusText
+      const response = await fetch(
+        `/applicants/api/applications?filter=${filter}`
       );
+      if (!response.ok) throw new Error("Failed to fetch applications");
 
-      if (!res.ok) {
-        let bodyText = "";
-        try {
-          const errJson = await res.json();
-          bodyText = errJson.message || JSON.stringify(errJson);
-        } catch (e) {
-          bodyText = await res.text().catch(() => "Failed to read response");
-        }
-        console.warn("[v0] Failed to load applications:", bodyText);
-        applicationsList.innerHTML = `<div class="empty-state"><p>Error loading applications: ${bodyText}</p></div>`;
+      const data = await response.json();
+      const applications = data.applications || [];
+
+      if (applications.length === 0) {
+        container.innerHTML = '<p class="empty-msg">No applications found.</p>';
         return;
       }
 
-      const applications = await res.json();
-
-      if (
-        !applications ||
-        (Array.isArray(applications) === false &&
-          applications.success === false)
-      ) {
-        const msg = Array.isArray(applications)
-          ? "No applications yet."
-          : applications.message || "No applications yet.";
-        applicationsList.innerHTML = `<div class="empty-state"><p>${msg}</p></div>`;
-        console.log(
-          "[v0] Applications API returned empty or error:",
-          applications
-        );
-        return;
-      }
-
-      if (!applications || applications.length === 0) {
-        applicationsList.innerHTML = `<div class="empty-state"><p>No applications yet.</p></div>`;
-        return;
-      }
-
-      applicationsList.innerHTML = applications
+      container.innerHTML = applications
         .map((app) => {
-          const statusText = app.status || "Applied";
-          const statusKey = (statusText || "").toString().toLowerCase();
-          let badgeClass = "badge-default";
-          if (statusKey.includes("pending") || statusKey === "applied")
-            badgeClass = "badge-pending";
-          else if (statusKey.includes("shortlist"))
-            badgeClass = "badge-shortlisted";
-          else if (statusKey.includes("interview"))
-            badgeClass = "badge-interview";
-          else if (statusKey.includes("hired")) badgeClass = "badge-hired";
-          else if (statusKey.includes("reject")) badgeClass = "badge-rejected";
-
-          const canCancel = ["pending", "applied"].includes(statusKey);
-
+          const statusClass = app.status.toLowerCase().replace(/\s+/g, "-");
           return `
-            <div class="application-card" data-app-id="${app.id}">
-              <div class="application-info">
-                <h3 class="app-job">${app.jobTitle || "N/A"}</h3>
-                <p class="app-company">${app.companyName || ""} ${
-            app.location ? "• " + app.location : ""
-          }</p>
-                <small class="app-date">${new Date(
-                  app.date
-                ).toLocaleString()}</small>
-              </div>
-              <div class="application-meta">
-                <span class="status-badge ${badgeClass}">${statusText}</span>
-                ${
-                  canCancel
-                    ? `<button class="btn btn-cancel-app" data-app-id="${app.id}">Cancel</button>`
-                    : ""
-                }
-              </div>
+          <div class="application-card" onclick="viewApplicationDetails(${
+            app.id
+          })" style="cursor: pointer;">
+            <div class="app-header">
+              <h3>${app.job_position}</h3>
+              <span class="status-badge ${statusClass}">${app.status}</span>
             </div>
-          `;
+            <div class="app-body">
+              <p><strong>Company:</strong> ${app.employer_name || "N/A"}</p>
+              <p><strong>Applied:</strong> ${new Date(
+                app.applied_at
+              ).toLocaleDateString()}</p>
+              <p class="click-hint" style="font-size: 0.8rem; color: #666; margin-top: 8px;">Click to view details</p>
+            </div>
+          </div>
+        `;
         })
         .join("");
-    } catch (err) {
-      console.error("Failed to load applications:", err);
-      applicationsList.innerHTML = `<div class="empty-state"><p>Error loading applications.</p></div>`;
+    } catch (error) {
+      console.error("Error rendering applications:", error);
+      container.innerHTML =
+        '<p class="error-msg">Failed to load applications. Please try again.</p>';
     }
-  }
+  };
 
-  document.addEventListener("click", async (e) => {
-    const cancelBtn = e.target.closest(".btn-cancel-app");
-    if (cancelBtn) {
-      e.preventDefault();
-      const appId = cancelBtn.dataset.appId;
-      if (!appId) return;
-      if (!confirm("Are you sure you want to cancel this application?")) return;
-      try {
-        const res = await fetch(`/applicants/api/delete-application/${appId}`, {
-          method: "DELETE",
-          credentials: "same-origin",
-        });
-        const data = await res.json();
-        if (data.success) {
-          if (typeof renderApplications === "function") renderApplications();
-          showFlash("Application cancelled.", "success");
-          try {
-            if (window.fetchJobCounts) window.fetchJobCounts();
-          } catch (e) {}
-        } else {
-          showFlash(data.message || "Failed to cancel application", "danger");
-        }
-      } catch (err) {
-        console.error("Cancel error", err);
-        showFlash("Error cancelling application", "danger");
+  window.viewApplicationDetails = async (applicationId) => {
+    const modal = document.getElementById("applicationDetailsModal");
+    const content = document.getElementById("applicationDetailsContent");
+    const actions = document.getElementById("applicationModalActions");
+
+    if (!modal || !content) return;
+
+    content.innerHTML = '<div class="loader">Loading details...</div>';
+    actions.innerHTML = "";
+    modal.style.display = "block";
+
+    try {
+      const response = await fetch(
+        `/applicants/api/applications/${applicationId}`
+      );
+      if (!response.ok) throw new Error("Failed to load details");
+
+      const data = await response.json();
+      const app = data.application;
+
+      content.innerHTML = `
+        <h2>${app.job_position}</h2>
+        <p class="company-name"><strong>Company:</strong> ${
+          app.employer_name
+        }</p>
+        
+        <div class="detail-group" style="margin: 15px 0;">
+          <p><strong>Status:</strong> <span class="status-badge ${app.status.toLowerCase()}">${
+        app.status
+      }</span></p>
+          <p><strong>Applied On:</strong> ${new Date(
+            app.applied_at
+          ).toLocaleString()}</p>
+          <p><strong>Location:</strong> ${app.location || "N/A"}</p>
+          <p><strong>Salary:</strong> ${app.salary_range || "N/A"}</p>
+        </div>
+
+        <div class="job-description" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
+          <h4>Job Description</h4>
+          <p>${app.job_description || "No description available."}</p>
+        </div>
+      `;
+
+      if (app.status === "Pending") {
+        actions.innerHTML = `
+          <button onclick="cancelApplication(${app.id})" class="btn btn-danger" style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+            Cancel Application
+          </button>
+        `;
+      } else {
+        actions.innerHTML = "";
       }
-      return;
+    } catch (error) {
+      console.error(error);
+      content.innerHTML = '<p class="error">Failed to load details.</p>';
     }
+  };
 
-    const card = e.target.closest(".application-card");
-    if (card && !e.target.closest(".btn-cancel-app")) {
-      const appId = card.dataset.appId;
-      // Card interaction can be added here if needed
+  window.cancelApplication = async (applicationId) => {
+    if (
+      !confirm(
+        "Are you sure you want to cancel this application? This action cannot be undone."
+      )
+    )
+      return;
+
+    try {
+      const response = await fetch(
+        `/applicants/api/applications/${applicationId}/cancel`,
+        {
+          method: "POST",
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert("Application cancelled successfully.");
+        document.getElementById("applicationDetailsModal").style.display =
+          "none";
+        if (typeof window.renderApplications === "function") {
+          window.renderApplications();
+        }
+      } else {
+        alert(data.message || "Failed to cancel application.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred.");
+    }
+  };
+
+  document.addEventListener("click", (event) => {
+    const modal = document.getElementById("applicationDetailsModal");
+    if (
+      event.target === modal ||
+      event.target.classList.contains("close-modal")
+    ) {
+      if (modal) modal.style.display = "none";
     }
   });
+  // END OF ADDED FUNCTIONS FOR APPLICATION MANAGEMENT
 });

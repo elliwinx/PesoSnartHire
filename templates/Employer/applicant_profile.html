@@ -143,7 +143,8 @@
         {% else %}
         <div class="applications-list">
           {% for app in applications %}
-          <div class="application-row" style="margin-bottom:12px; padding:8px; border:1px solid #eee;">
+          <!-- Added data-job-id attribute to allow filtering by Job ID -->
+          <div class="application-row" data-job-id="{{ app.job_id }}" style="margin-bottom:12px; padding:8px; border:1px solid #eee;">
             <div>
               <strong>Job:</strong> {{ app.job_position or ('Job ID: ' ~ app.job_id) }}
               <div><small>Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</small></div>
@@ -152,9 +153,7 @@
               <span>Status: <strong id="status-{{ app.id }}">{{ app.status or 'Pending' }}</strong></span>
               <select data-app-id="{{ app.id }}" class="status-select">
                 <option value="Pending" {% if app.status == 'Pending' %}selected{% endif %}>Pending</option>
-                <option value="For Interview" {% if app.status == 'For Interview' %}selected{% endif %}>For Interview</option>
-                <option value="Shortlisted" {% if app.status == 'Shortlisted' %}selected{% endif %}>Shortlisted</option>
-                <option value="Hired" {% if app.status == 'Hired' %}selected{% endif %}>Hired</option>
+                <option value="Accepted" {% if app.status == 'Accepted' %}selected{% endif %}>Accepted</option>
                 <option value="Rejected" {% if app.status == 'Rejected' %}selected{% endif %}>Rejected</option>
               </select>
             </div>
@@ -166,30 +165,51 @@
 
     </main>
 
-    <script>
-      document.addEventListener('change', async (e) => {
-        const sel = e.target.closest('.status-select');
-        if (!sel) return;
-        const appId = sel.dataset.appId;
-        const newStatus = sel.value;
-        try {
-          const res = await fetch(`/employers/api/applications/${appId}/status`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-          });
-          const data = await res.json();
-          if (data.success) {
-            document.getElementById(`status-${appId}`).textContent = data.new_status;
-          } else {
-            alert(data.message || 'Failed to update status');
-          }
-        } catch (err) {
-          console.error(err);
-          alert('Error updating status');
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    const filterJobId = params.get('job_id');
+
+    if (filterJobId) {
+      const rows = document.querySelectorAll('.application-row');
+      let visibleCount = 0;
+      
+      rows.forEach(row => {
+        if (row.dataset.jobId !== filterJobId) {
+          row.style.display = 'none';
+        } else {
+          row.style.display = 'block';
+          row.style.border = '2px solid #8b1515'; // Highlight the relevant application
+          row.style.backgroundColor = '#fff5f5';
+          visibleCount++;
         }
       });
-    </script>
+    }
+  });
+
+  document.addEventListener('change', async (e) => {
+    const sel = e.target.closest('.status-select');
+    if (!sel) return;
+    const appId = sel.dataset.appId;
+    const newStatus = sel.value;
+    try {
+      const res = await fetch(`/employers/api/applications/${appId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById(`status-${appId}`).textContent = data.new_status;
+      } else {
+        alert(data.message || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error updating status');
+    }
+  });
+</script>
 
     <footer class="footer">
       <div class="container">

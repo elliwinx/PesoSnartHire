@@ -82,16 +82,13 @@
       <button data-filter="pending">Pending</button>
       <button data-filter="shortlisted">Shortlisted</button>
       <button data-filter="for-interview">For Interview</button>
-      <button data-filter="hired">Hired</button> 
+      <button data-filter="hired">Hired</button>
       <button data-filter="rejected">Rejected</button>
-      <button data-filter="cancelled">Cancelled</button> 
-      <button data-filter="close-job">Close Job</button> 
+      <button data-filter="cancelled">Cancelled</button>
+      <button data-filter="close-job">Close Job</button>
     </div>
 
     <div class="applications-list" id="applicationsList"></div>
-
-  </div>
-<br>
 
     <!-- Footer -->
     <footer class="footer">
@@ -159,6 +156,22 @@
       </div>
     </footer>
 
+    <div id="applicationDetailsModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <div id="applicationDetailsContent">
+          <!-- Content will be injected by JS -->
+        </div>
+        <div
+          class="modal-actions"
+          id="applicationModalActions"
+          style="margin-top: 20px; text-align: right"
+        >
+          <!-- Cancel button will be injected here if applicable -->
+        </div>
+      </div>
+    </div>
+
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
     <!-- Scripts -->
@@ -166,8 +179,8 @@
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script>
       // Ensure the applications list is loaded when the page is ready
-      document.addEventListener('DOMContentLoaded', function() {
-        if (typeof renderApplications === 'function') renderApplications();
+      document.addEventListener("DOMContentLoaded", function () {
+        if (typeof renderApplications === "function") renderApplications();
       });
     </script>
   </body>

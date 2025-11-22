@@ -520,7 +520,6 @@ def logout():
 
 # ===== Applicant Navigation Pages =====
 @applicants_bp.route("/applicant_home")
-@applicants_bp.route("/applicant_home")
 def applicant_home():
     if "applicant_id" not in session:
         flash("Please log in to access this page.", "warning")
