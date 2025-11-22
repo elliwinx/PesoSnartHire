@@ -428,11 +428,19 @@ def apply_job(job_id):
             try:
                 run_query(
                     conn,
-                    "UPDATE employers SET applicant_count = applicant_count + 1 WHERE employer_id = %s",
+                    "UPDATE employers SET application_count = application_count + 1 WHERE employer_id = %s",
                     (employer_id,)
                 )
-            except Exception as e:
-                print("[v0] Skipping employers.applicant_count update (column may be missing):", e)
+            except Exception:
+                # Fallback to old column name if DB still uses applicant_count
+                try:
+                    run_query(
+                        conn,
+                        "UPDATE employers SET applicant_count = applicant_count + 1 WHERE employer_id = %s",
+                        (employer_id,)
+                    )
+                except Exception:
+                    print("[v0] Skipping employers application count update (columns may be missing):", e)
 
         conn.commit()
 
@@ -448,7 +456,7 @@ def apply_job(job_id):
         return jsonify({
             "success": True,
             "message": "Application submitted successfully!",
-            "applicant_count": new_count
+            "application_count": new_count
         })
 
     except Exception as e:
@@ -641,3 +649,122 @@ def applications_page():
 
     # Render the template; JS will call /applicants/api/applications to populate the list
     return render_template('Applicant/application.html')
+
+
+@applicants_bp.route('/api/applications')
+def api_applications():
+    """Return JSON list of applications for the logged-in applicant.
+    Fields match what the frontend expects: id, job_id, jobTitle, companyName, location, date, status
+    """
+    if 'applicant_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+
+    applicant_id = session['applicant_id']
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'DB connection failed'}), 500
+
+    try:
+        # Try to select common id column names (application_id or id)
+        rows = run_query(
+            conn,
+            """
+            SELECT
+                COALESCE(a.application_id, a.id) AS id,
+                a.job_id,
+                j.job_position AS jobTitle,
+                e.employer_name AS companyName,
+                e.city AS location,
+                a.applied_at AS date,
+                COALESCE(a.status, 'Applied') AS status
+            FROM applications a
+            LEFT JOIN jobs j ON a.job_id = j.job_id
+            LEFT JOIN employers e ON j.employer_id = e.employer_id
+            WHERE a.applicant_id = %s
+            ORDER BY a.applied_at DESC
+            """,
+            (applicant_id,),
+            fetch='all'
+        ) or []
+
+        # Normalize date to ISO strings for client-side Date parsing
+        apps = []
+        for r in rows:
+            d = r.get('date')
+            if hasattr(d, 'isoformat'):
+                date_str = d.isoformat()
+            else:
+                date_str = str(d) if d is not None else None
+
+            apps.append({
+                'id': r.get('id'),
+                'jobId': r.get('job_id'),
+                'jobTitle': r.get('jobTitle') or r.get('job_position') or 'N/A',
+                'companyName': r.get('companyName') or '',
+                'location': r.get('location') or '',
+                'date': date_str,
+                'status': r.get('status') or 'Applied'
+            })
+
+        return jsonify(apps)
+    except Exception as e:
+        print('[v0] Error fetching applications:', e)
+        return jsonify({'success': False, 'message': 'Failed to load applications'}), 500
+    finally:
+        conn.close()
+
+
+@applicants_bp.route('/api/delete-application/<int:app_id>', methods=['DELETE'])
+def api_delete_application(app_id):
+    if 'applicant_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+
+    applicant_id = session['applicant_id']
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'DB connection failed'}), 500
+
+    try:
+        # Verify ownership and get job_id
+        row = run_query(conn, 'SELECT * FROM applications WHERE application_id = %s AND applicant_id = %s', (app_id, applicant_id), fetch='one')
+        if not row:
+            return jsonify({'success': False, 'message': 'Application not found'}), 404
+
+        job_id = row.get('job_id')
+
+        # Delete the application
+        run_query(conn, 'DELETE FROM applications WHERE application_id = %s', (app_id,))
+
+        # Decrement job.application_count if present
+        try:
+            run_query(conn, 'UPDATE jobs SET application_count = application_count - 1 WHERE job_id = %s AND application_count > 0', (job_id,))
+        except Exception:
+            # try legacy column name
+            try:
+                run_query(conn, 'UPDATE jobs SET applicant_count = applicant_count - 1 WHERE job_id = %s AND applicant_count > 0', (job_id,))
+            except Exception:
+                pass
+
+        # If we can get employer id, decrement employer counts too
+        try:
+            jid = run_query(conn, 'SELECT employer_id FROM jobs WHERE job_id = %s', (job_id,), fetch='one')
+            if jid and jid.get('employer_id'):
+                emp_id = jid.get('employer_id')
+                try:
+                    run_query(conn, 'UPDATE employers SET application_count = application_count - 1 WHERE employer_id = %s AND application_count > 0', (emp_id,))
+                except Exception:
+                    try:
+                        run_query(conn, 'UPDATE employers SET applicant_count = applicant_count - 1 WHERE employer_id = %s AND applicant_count > 0', (emp_id,))
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        print('[v0] Error deleting application:', e)
+        return jsonify({'success': False, 'message': 'Failed to delete application'}), 500
+    finally:
+        conn.close()
