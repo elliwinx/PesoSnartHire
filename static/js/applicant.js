@@ -3,26 +3,28 @@ function capitalize(str) {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
-function showFlash(message, category = 'info') {
+function showFlash(message, category = "info") {
   const flashContainer = document.body;
-  const flashDiv = document.createElement('div');
+  const flashDiv = document.createElement("div");
   flashDiv.className = `flash ${category}`;
   flashDiv.innerHTML = `
     ${message}
     <button class="flash-close" onclick="this.parentElement.remove()">x</button>
   `;
   flashContainer.insertBefore(flashDiv, flashContainer.firstChild);
-  
+
   // Auto-remove after 3 seconds
   setTimeout(() => {
     if (flashDiv.parentElement) {
-      flashDiv.classList.add('fade-out');
+      flashDiv.classList.add("fade-out");
       setTimeout(() => flashDiv.remove(), 500);
     }
   }, 3000);
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("[v0] Initializing applicant.js");
+
   // ================== DROPDOWN MENU ==================
   const menuToggle = document.getElementById("menuToggle");
   const dropdownMenu = document.getElementById("dropdownMenu");
@@ -58,7 +60,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-});
 
   // ================== TAB SWITCHING ==================
   const buttons = document.querySelectorAll(".tab-btn");
@@ -130,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (workDetails && expYes)
       workDetails.style.display = expYes.checked ? "block" : "none";
   }
-
   [pwdYes, pwdNo, expYes, expNo].forEach((el) => {
     if (el) el.addEventListener("change", updateConditionals);
   });
@@ -256,6 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================== DEACTIVATE APPLICANT ==================
   const deactivateBtn = document.getElementById("deactivateApplicantBtn");
+  const Swal = window.Swal;
   if (deactivateBtn) {
     deactivateBtn.addEventListener("click", async () => {
       const confirmDelete = await Swal.fire({
@@ -343,13 +344,11 @@ document.addEventListener("DOMContentLoaded", () => {
     return (str || "").toString().trim().toLowerCase();
   }
 
-  // collect job cards and remember their default display value so we can
-  // restore it when showing the card (preserves layout like flex/grid)
-  let jobCards = Array.from(document.querySelectorAll(".job-card"));
+  const jobCards = Array.from(document.querySelectorAll(".job-card"));
   jobCards.forEach((card) => {
     const cs = window.getComputedStyle(card);
-    // if computed style is 'inline' we prefer 'inline-block' to avoid layout collapse
-    card.dataset.defaultDisplay = cs.display === "inline" ? "inline-block" : cs.display || "block";
+    card.dataset.defaultDisplay =
+      cs.display === "inline" ? "inline-block" : cs.display || "block";
   });
 
   function filterJobs() {
@@ -359,137 +358,44 @@ document.addEventListener("DOMContentLoaded", () => {
     const scheduleValue = _normalize(scheduleSelect?.value);
 
     jobCards.forEach((card) => {
-      const jobTitle = _normalize(card.querySelector(".job-title")?.textContent);
-      const companyName = _normalize(card.querySelector(".company-name")?.textContent);
-      const cardIndustry = _normalize(card.querySelector(".job-industry")?.textContent);
+      const jobTitle = _normalize(
+        card.querySelector(".job-title")?.textContent
+      );
+      const companyName = _normalize(
+        card.querySelector(".company-name")?.textContent
+      );
+      const cardIndustry = _normalize(
+        card.querySelector(".job-industry")?.textContent
+      );
       const cardType = _normalize(card.querySelector(".job-type")?.textContent);
-      const cardSchedule = _normalize(card.querySelector(".job-schedule")?.textContent);
+      const cardSchedule = _normalize(
+        card.querySelector(".job-schedule")?.textContent
+      );
 
       const matchesSearch =
-        !searchValue || jobTitle.includes(searchValue) || companyName.includes(searchValue);
-      const matchesIndustry = !industryValue || cardIndustry.includes(industryValue);
+        !searchValue ||
+        jobTitle.includes(searchValue) ||
+        companyName.includes(searchValue);
+      const matchesIndustry =
+        !industryValue || cardIndustry.includes(industryValue);
       const matchesType = !typeValue || cardType.includes(typeValue);
-      const matchesSchedule = !scheduleValue || cardSchedule.includes(scheduleValue);
+      const matchesSchedule =
+        !scheduleValue || cardSchedule.includes(scheduleValue);
 
-      const show = matchesSearch && matchesIndustry && matchesType && matchesSchedule;
+      const show =
+        matchesSearch && matchesIndustry && matchesType && matchesSchedule;
 
-      // Restore the original display when showing, don't force 'block'
       card.style.display = show ? card.dataset.defaultDisplay : "none";
       card.classList.toggle("hidden", !show);
     });
   }
 
-  // Use 'input' for the search to get immediate updates and 'change' for selects
   if (searchEl) searchEl.addEventListener("input", filterJobs);
   [industrySelect, typeSelect, scheduleSelect].forEach((el) => {
     if (el) el.addEventListener("change", filterJobs);
   });
 
-  // Run initially to apply any default filter state
   filterJobs();
-
-  // ================== JOB DETAILS MODAL ==================
-  const jobModal = document.getElementById("jobDetailsModalUnique");
-  const modalBody = document.getElementById("modal-body-unique");
-  const closeJobModalBtn = jobModal?.querySelector(".close-unique");
-  // backend route is /job/<id> (singular) — use that as default. You can override by
-  // setting <body data-job-url-template="/your/path/"></body>
-  const JOB_URL_TEMPLATE = document.querySelector("body")?.dataset.jobUrlTemplate || "/job/";
-  let currentJobIdFromModal = null;
-
-  if (closeJobModalBtn) {
-    closeJobModalBtn.addEventListener("click", () => {
-      jobModal.style.display = "none";
-      modalBody.innerHTML = "";
-      currentJobIdFromModal = null;
-    });
-  }
-
-  window.addEventListener("click", e => {
-    if (e.target === jobModal) {
-      jobModal.style.display = "none";
-      modalBody.innerHTML = "";
-      currentJobIdFromModal = null;
-    }
-  });
-
-  document.body.addEventListener("click", async e => {
-    const btn = e.target.closest(".btn-details");
-    if (!btn) return;
-    e.preventDefault();
-
-    const jobId = btn.dataset.jobId;
-    if (!jobId || !modalBody) return;
-    
-    currentJobIdFromModal = jobId;
-
-    modalBody.innerHTML = "<p>Loading...</p>";
-    jobModal.style.display = "flex";
-
-    try {
-      // Build URL from template; support templates like '/job/0' or '/job/'
-      let url;
-      if (JOB_URL_TEMPLATE.includes('0')) {
-        url = JOB_URL_TEMPLATE.replace(/\/0$/, `/${jobId}`);
-      } else {
-        url = JOB_URL_TEMPLATE.replace(/\/$/, '') + '/' + jobId;
-      }
-      const res = await fetch(url, { credentials: "same-origin" });
-      const contentType = res.headers.get("content-type") || "";
-
-      if (contentType.includes("application/json")) {
-        const data = await res.json();
-        modalBody.innerHTML = data.success ? data.html : "<p>No content available.</p>";
-      } else {
-        modalBody.innerHTML = await res.text();
-      }
-    } catch (err) {
-      console.error("[v0] Job details error:", err);
-      showFlash("Failed to load job details. Please try again.", "danger");
-      jobModal.style.display = "none";
-    }
-  });
-
-  const modalApplyBtn = document.getElementById("modalApplyBtn");
-  const modalCancelBtn = document.getElementById("modalCancelBtn");
-  
-  if (modalCancelBtn) {
-    modalCancelBtn.addEventListener("click", () => {
-      jobModal.style.display = "none";
-      modalBody.innerHTML = "";
-      currentJobIdFromModal = null;
-    });
-  }
-
-  if (modalApplyBtn) {
-    modalApplyBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      if (!currentJobIdFromModal) {
-        showFlash("No job selected.", "warning");
-        return;
-      }
-
-      // Set the global currentJobId to the modal's job
-      currentJobId = currentJobIdFromModal;
-      
-      // Show confirmation modal
-      if (confirmModal) {
-        confirmModal.style.display = "flex";
-      }
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-  const confirmModal = document.getElementById("confirmModalUnique");
-  const cancelBtn = document.getElementById("confirmCancelBtn");
-
-  cancelBtn?.addEventListener("click", () => {
-    if (confirmModal) confirmModal.style.display = "none";
-  });
-});
-
 
   // ================== REPORT MODAL ==================
   const reportModal = document.getElementById("reportModalUnique");
@@ -499,10 +405,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const reportReasonSelect = document.getElementById("reportReasonUnique");
   let reportingJobId = null;
 
-  document.body.addEventListener("click", e => {
+  document.body.addEventListener("click", (e) => {
     const btn = e.target.closest(".btn-report");
     if (!btn) return;
-    reportingJobId = btn.closest(".job-card")?.querySelector(".btn-details")?.dataset.jobId;
+    reportingJobId = btn.closest(".job-card")?.querySelector(".btn-details")
+      ?.dataset.jobId;
     reportModal.style.display = "flex";
   });
 
@@ -520,164 +427,281 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-if (confirmReportBtn) {
-  confirmReportBtn.addEventListener("click", async () => {  // <-- async here
-    const reason = reportReasonSelect?.value;
-    if (!reason) {
-      showFlash("Please select a reason for the report.", "warning");
-      return;
-    }
-
-    try {
-      const res = await fetch("/applicants/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: reportingJobId, reason }),
-        credentials: "same-origin"
-      });
-      const data = await res.json();
-
-      if (data.success) {
-        showFlash("Report submitted successfully. Thank you!", "success");
-        reportModal.style.display = "none";
-        reportReasonSelect.value = "";
-      } else {
-        showFlash(data.message || "Failed to submit report.", "danger");
+  if (confirmReportBtn) {
+    confirmReportBtn.addEventListener("click", async () => {
+      const reason = reportReasonSelect?.value;
+      if (!reason) {
+        showFlash("Please select a reason for the report.", "warning");
+        return;
       }
-    } catch (err) {
-      console.error("[v0] Report error:", err);
-      showFlash("An error occurred while submitting your report.", "danger");
-    }
-  });
-}
 
-  window.addEventListener("click", e => {
+      try {
+        const res = await fetch("/applicants/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_id: reportingJobId, reason }),
+          credentials: "same-origin",
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showFlash("Report submitted successfully. Thank you!", "success");
+          reportModal.style.display = "none";
+          reportReasonSelect.value = "";
+        } else {
+          showFlash(data.message || "Failed to submit report.", "danger");
+        }
+      } catch (err) {
+        console.error("[v0] Report error:", err);
+        showFlash("An error occurred while submitting your report.", "danger");
+      }
+    });
+  }
+
+  window.addEventListener("click", (e) => {
     if (e.target === reportModal) {
       reportModal.style.display = "none";
       reportReasonSelect.value = "";
     }
   });
+
   // ================== APPLY MODAL FLOW ==================
-let selectedJobId = null;
-const confirmModal = document.getElementById("confirmModalUnique");
-const successModal = document.getElementById("successModalUnique");
-const confirmApplyBtn = confirmModal?.querySelector(".btn-confirm");
-const successConfirmBtn = successModal?.querySelector(".btn-confirm");
+  let selectedJobId = null;
+  const confirmModal = document.getElementById("confirmModalUnique");
+  const successModal = document.getElementById("successModalUnique");
+  const confirmApplyBtn = confirmModal?.querySelector(".btn-confirm");
+  const cancelConfirmBtn = confirmModal?.querySelector(".btn-cancel-confirm");
+  const successConfirmBtn = successModal?.querySelector(".btn-confirm");
 
-/* ====================================================
-   CUSTOM TOAST FOR ALREADY APPLIED
-==================================================== */
-function showAlreadyAppliedToast() {
-  const toast = document.getElementById("alreadyAppliedToast");
-  if (!toast) return;
+  function showAlreadyAppliedToast() {
+    const toast = document.getElementById("alreadyAppliedToast");
+    if (!toast) return;
 
-  toast.style.display = "flex";
-  setTimeout(() => (toast.style.display = "none"), 3000);
-}
-
-document.getElementById("alreadyAppliedClose")?.addEventListener("click", () => {
-  document.getElementById("alreadyAppliedToast").style.display = "none";
-});
-
-/* ====================================================
-   CHECK IF USER ALREADY APPLIED (BACKEND)
-==================================================== */
-async function hasApplied(jobId) {
-  try {
-    const res = await fetch(`/api/check-application?jobId=${jobId}`);
-    const data = await res.json();
-    return data.applied; // backend should return { applied: true/false }
-  } catch (err) {
-    console.error("Error checking application:", err);
-    return false;
+    toast.style.display = "flex";
+    setTimeout(() => (toast.style.display = "none"), 3000);
   }
-}
 
-/* ====================================================
-   OPEN CONFIRM MODAL WHEN APPLY BUTTON IS CLICKED
-==================================================== */
-document.querySelectorAll(".btn-apply").forEach((button) => {
-  button.addEventListener("click", async () => {
-    selectedJobId = button.dataset.jobId;
-
-    if (await hasApplied(selectedJobId)) {
-      showAlreadyAppliedToast();
-      return;
-    }
-
-    confirmModal.style.display = "flex";
-  });
-});
-
-/* ====================================================
-   BACKEND SUBMISSION FUNCTION
-==================================================== */
-async function sendApplication(jobId) {
-  const form = document.getElementById(`applyForm-${jobId}`);
-  if (!form) return { success: false };
-
-  try {
-    const formData = new FormData(form);
-    const response = await fetch(form.action, {
-      method: "POST",
-      body: formData,
-      credentials: "same-origin",
+  document
+    .getElementById("alreadyAppliedClose")
+    ?.addEventListener("click", () => {
+      document.getElementById("alreadyAppliedToast").style.display = "none";
     });
 
-    return await response.json();
-  } catch {
-    return { success: false, message: "Invalid JSON" };
+  async function hasApplied(jobId) {
+    try {
+      const res = await fetch(
+        `/applicants/api/check-application?jobId=${jobId}`
+      );
+      const data = await res.json();
+      return data.applied;
+    } catch (err) {
+      console.error("Error checking application:", err);
+      return false;
+    }
   }
-}
 
-/* ====================================================
-   CONFIRM APPLY → SEND TO BACKEND
-==================================================== */
-if (confirmApplyBtn) {
-  confirmApplyBtn.addEventListener("click", async () => {
-    if (!selectedJobId) return;
+  document.querySelectorAll(".btn-apply").forEach((button) => {
+    button.addEventListener("click", async () => {
+      selectedJobId = button.dataset.jobId;
 
-    const backend = await sendApplication(selectedJobId);
+      if (await hasApplied(selectedJobId)) {
+        showAlreadyAppliedToast();
+        return;
+      }
 
-    if (!backend.success && backend.message.includes("already")) {
+      confirmModal.style.display = "flex";
+    });
+  });
+
+  if (cancelConfirmBtn) {
+    cancelConfirmBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("[v0] Cancel button clicked");
+
+      if (confirmModal) {
+        confirmModal.style.display = "none";
+      }
+      selectedJobId = null;
+    });
+  }
+
+  async function sendApplication(jobId) {
+    try {
+      const response = await fetch(`/applicants/apply/${jobId}`, {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      return await response.json();
+    } catch {
+      return { success: false, message: "Network error" };
+    }
+  }
+
+  if (confirmApplyBtn) {
+    confirmApplyBtn.addEventListener("click", async () => {
+      if (!selectedJobId) return;
+
+      const loader = document.getElementById("ajaxLoader");
+      const loaderText = document.getElementById("ajaxLoaderText");
+      if (loaderText) loaderText.textContent = "Submitting your application...";
+      if (loader) loader.style.display = "flex";
+
+      try {
+        const res = await fetch(`/applicants/apply/${selectedJobId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+        });
+
+        const data = await res.json();
+
+        if (loader) loader.style.display = "none";
+        confirmModal.style.display = "none";
+
+        if (data.success) {
+          successModal.style.display = "flex";
+
+          const jobCard = document
+            .querySelector(`.job-card [data-job-id="${selectedJobId}"]`)
+            ?.closest(".job-card");
+          if (jobCard) {
+            const applyBtn = jobCard.querySelector(".btn-apply");
+            if (applyBtn) {
+              applyBtn.textContent = "Applied";
+              applyBtn.disabled = true;
+              applyBtn.style.backgroundColor = "#6b7280";
+              applyBtn.style.cursor = "not-allowed";
+            }
+          }
+        } else {
+          showFlash(data.message || "Failed to submit application.", "danger");
+        }
+      } catch (err) {
+        if (loader) loader.style.display = "none";
+        console.error("[v0] Apply error:", err);
+        showFlash(
+          "An error occurred while submitting your application.",
+          "danger"
+        );
+      }
+    });
+  }
+
+  if (successConfirmBtn) {
+    successConfirmBtn.addEventListener("click", () => {
+      successModal.style.display = "none";
+      location.reload();
+    });
+  }
+
+  window.addEventListener("click", (e) => {
+    if (e.target === confirmModal) {
       confirmModal.style.display = "none";
-      showAlreadyAppliedToast();
+      selectedJobId = null;
+    }
+    if (e.target === successModal) successModal.style.display = "none";
+  });
+
+  // ================== JOB DETAILS MODAL ==================
+  const jobDetailsModal = document.getElementById("jobDetailsModalUnique");
+  const modalApplyBtn = document.getElementById("modal-apply-btn");
+  const modalCloseBtn = document.getElementById("modal-close-btn");
+  const closeBtn = jobDetailsModal?.querySelector(".close-unique");
+
+  document.addEventListener("click", (e) => {
+    const detailsBtn = e.target.closest(".btn-details");
+    if (!detailsBtn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const jobId = detailsBtn.dataset.jobId;
+    console.log("[v0] Details clicked for job:", jobId);
+
+    if (!jobId) {
+      console.log("[v0] No job ID found");
       return;
     }
 
-    confirmModal.style.display = "none";
-    successModal.style.display = "flex";
+    if (!jobDetailsModal) {
+      console.log("[v0] Modal not found in DOM");
+      return;
+    }
 
-    // Optionally, re-render applications list
-    renderApplications();
+    // Show modal with loading state
+    jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
+      "<p style='text-align: center; padding: 20px;'>Loading job details...</p>";
+    jobDetailsModal.style.display = "flex";
+    console.log("[v0] Modal displayed");
+
+    // Fetch job details
+    fetch(`/applicants/job/${jobId}`, { credentials: "same-origin" })
+      .then((res) => {
+        console.log("[v0] Response status:", res.status);
+        return res.text();
+      })
+      .then((html) => {
+        console.log("[v0] Loaded HTML length:", html.length);
+        jobDetailsModal.querySelector("#modal-body-unique").innerHTML = html;
+      })
+      .catch((err) => {
+        console.error("[v0] Fetch error:", err);
+        jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
+          "<p style='color: red; text-align: center;'>Failed to load job details. Please try again.</p>";
+      });
   });
-}
 
-/* ====================================================
-   SUCCESS MODAL CLOSE
-==================================================== */
-window.closeSuccessModal = () => {
-  successModal.style.display = "none";
-};
+  if (modalApplyBtn) {
+    modalApplyBtn.addEventListener("click", async () => {
+      const jobIdFromModal = document.querySelector("[data-modal-job-id]")
+        ?.dataset.modalJobId;
+      if (!jobIdFromModal) {
+        console.log("[v0] No job ID in modal");
+        return;
+      }
 
-successConfirmBtn?.addEventListener("click", () => {
-  successModal.style.display = "none";
+      selectedJobId = jobIdFromModal;
+
+      if (await hasApplied(selectedJobId)) {
+        jobDetailsModal.style.display = "none";
+        showAlreadyAppliedToast();
+        return;
+      }
+
+      jobDetailsModal.style.display = "none";
+      confirmModal.style.display = "flex";
+    });
+  }
+
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener("click", () => {
+      jobDetailsModal.style.display = "none";
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      jobDetailsModal.style.display = "none";
+    });
+  }
+
+  window.addEventListener("click", (e) => {
+    if (e.target === jobDetailsModal) {
+      jobDetailsModal.style.display = "none";
+    }
+  });
 });
 
-/* ====================================================
-   CLICK OUTSIDE TO CLOSE MODALS
-==================================================== */
-window.addEventListener("click", (e) => {
-  if (e.target === confirmModal) confirmModal.style.display = "none";
-  if (e.target === successModal) successModal.style.display = "none";
-});
-// ================== APPLICATIONS LIST RENDER & TAB FILTER ==================
 async function renderApplications() {
   const applicationsList = document.getElementById("applicationsList");
   if (!applicationsList) return;
 
   try {
-    const res = await fetch("/applicants/api/applications", { credentials: "same-origin" });
+    const res = await fetch("/applicants/api/applications", {
+      credentials: "same-origin",
+    });
     const applications = await res.json();
 
     if (!applications || applications.length === 0) {
@@ -685,42 +709,51 @@ async function renderApplications() {
       return;
     }
 
-    applicationsList.innerHTML = applications.map(app => `
-      <div class="application-card" data-status="${app.status?.toLowerCase() || 'pending'}">
-        <h3>${app.jobTitle || 'N/A'}</h3>
-        <p>${app.companyName || 'Company'}</p>
+    applicationsList.innerHTML = applications
+      .map(
+        (app) => `
+      <div class="application-card" data-status="${
+        app.status?.toLowerCase() || "pending"
+      }">
+        <h3>${app.jobTitle || "N/A"}</h3>
+        <p>${app.companyName || "Company"}</p>
         <p>Applied on: ${new Date(app.date).toLocaleDateString()}</p>
       </div>
-    `).join("");
+    `
+      )
+      .join("");
 
-    // ===== TAB LOGIC =====
-    const tabButtons = Array.from(document.querySelectorAll(".tab-group button"));
-    const cards = Array.from(applicationsList.querySelectorAll(".application-card"));
+    const tabButtons = Array.from(
+      document.querySelectorAll(".tab-group button")
+    );
+    const cards = Array.from(
+      applicationsList.querySelectorAll(".application-card")
+    );
 
     function filterCards(filter) {
-      cards.forEach(card => {
+      cards.forEach((card) => {
         const status = card.dataset.status || "";
-        card.style.display = filter === "all" || status === filter ? "flex" : "none";
+        card.style.display =
+          filter === "all" || status === filter ? "flex" : "none";
       });
     }
 
-    tabButtons.forEach(btn => {
+    tabButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
-        tabButtons.forEach(b => b.classList.remove("active"));
+        tabButtons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
         filterCards(btn.dataset.filter || "all");
       });
     });
 
-    const initialBtn = tabButtons.find(b => b.classList.contains("active")) || tabButtons[0];
+    const initialBtn =
+      tabButtons.find((b) => b.classList.contains("active")) || tabButtons[0];
     if (initialBtn) initialBtn.click();
-
   } catch (err) {
     console.error("Failed to load applications:", err);
   }
 }
 
-// Run after DOM loads
 document.addEventListener("DOMContentLoaded", renderApplications);
 
 async function deleteApplication(appId) {
@@ -729,12 +762,12 @@ async function deleteApplication(appId) {
   try {
     const res = await fetch(`/applicants/api/delete-application/${appId}`, {
       method: "DELETE",
-      credentials: "same-origin"
+      credentials: "same-origin",
     });
     const data = await res.json();
     if (data.success) {
       showFlash("Application deleted successfully.", "success");
-      renderApplications(); // ✅ replace loadApplications
+      renderApplications();
     } else {
       showFlash(data.message || "Failed to delete application.", "danger");
     }
@@ -744,33 +777,23 @@ async function deleteApplication(appId) {
   }
 }
 
-// Run once after DOM loaded
-document.addEventListener("DOMContentLoaded", renderApplications);
-
-  // ================== TAB FILTER ==================
- const applicationsList = document.getElementById("applicationsList");
- const cards = applicationsList ? Array.from(applicationsList.querySelectorAll(".application-card")) : [];
-
-
-  function filterCards(filter) {
-    cards.forEach((card) => {
-      const status = card.dataset.status || "";
-      card.style.display = filter === "all" || status === filter ? "flex" : "none";
-    });
+document.addEventListener("click", function (e) {
+  // OPEN CONFIRMATION MODAL
+  if (e.target.id === "modal-apply-btn") {
+    const modal = document.getElementById("confirmModalUnique");
+    modal.style.display = "flex";
   }
 
-  if (tabButtons.length) {
-    tabButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const filter = btn.dataset.filter || "all";
-        tabButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        filterCards(filter);
-      });
-    });
-
-    const initialBtn = tabButtons.find((b) => b.classList.contains("active")) || tabButtons[0];
-    if (initialBtn) initialBtn.click();
+  // CANCEL BUTTON
+  if (e.target.id === "confirmCancel") {
+    const modal = document.getElementById("confirmModalUnique");
+    modal.style.display = "none";
   }
 
-document.addEventListener("DOMContentLoaded", renderApplications);
+  // YES APPLY BUTTON
+  if (e.target.id === "confirmYes") {
+    console.log("Proceed with application!");
+    const modal = document.getElementById("confirmModalUnique");
+    modal.style.display = "none";
+  }
+});

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EMPLOYER - HOME</title>
+    <title>EMPLOYER - NOTIFICATIONS</title>
     <!-- Icons -->
     <link
       rel="stylesheet"
@@ -51,9 +51,7 @@
           />
         </div>
         <nav class="nav">
-          <a
-            href="{{url_for('employers.employer_home')}}"
-            class="nav-link-active"
+          <a href="{{url_for('employers.employer_home')}}" class="nav-link"
             >Home</a
           >
           <a
@@ -61,8 +59,10 @@
             class="nav-link"
             >Application Management</a
           >
-          <a href="{{url_for('employers.notifications')}}" class="nav-link"
-            >Real-Time Notification</a
+          <a
+            href="{{url_for('employers.notifications')}}"
+            class="nav-link-active"
+            >Notification</a
           >
           <a href="{{url_for('employers.account_security')}}" class="nav-link"
             >Account & Security</a
@@ -94,138 +94,22 @@
     </section>
 
     <!-- Main Content -->
-    <main class="main-content">
-      <div class="container">
-        <div class="form-header">
-          <h2 class="form-title">Create New Job Post</h2>
-          <p class="form-instruction">
-            Fill out the form below to create a new job posting for your company
-          </p>
-        </div>
+    <main class="notifications-container">
+      <div class="notifications-header">
+        <h1>Job Application Notifications</h1>
+        <p>Stay updated with new applicants and job application status</p>
+      </div>
 
-        <!-- Job Form Section -->
-        <section class="job-form-section">
-          <h3 class="section-title">Job Vacancy Details</h3>
+      <!-- Filter Tabs -->
+      <div class="tab-group">
+        <button class="active" data-filter="all">All</button>
+        <button data-filter="unread">Unread</button>
+        <button data-filter="job_application">Job Applications</button>
+      </div>
 
-          <form
-            id="createJobForm"
-            method="POST"
-            action="{{ url_for('employers.create_job') }}"
-          >
-            <input
-              type="hidden"
-              name="employer_id"
-              value="{{ current_employer_id }}"
-            />
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="job_position">Job Position</label>
-                <input
-                  type="text"
-                  id="job_position"
-                  name="job_position"
-                  placeholder="Job Position"
-                  required
-                />
-                <span class="error-message"></span>
-              </div>
-
-              <div class="form-group">
-                <label for="work_schedule">Work Schedule</label>
-                <select id="work_schedule" name="work_schedule" required>
-                  <option value="">Select Schedule</option>
-                  <option value="full-time">Full Time</option>
-                  <option value="part-time">Part Time</option>
-                  <option value="contract">Contract</option>
-                  <option value="freelance">Freelance</option>
-                </select>
-                <span class="error-message"></span>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="num_vacancy">Number of Vacancy</label>
-                <input
-                  type="number"
-                  id="num_vacancy"
-                  name="num_vacancy"
-                  value="1"
-                  min="1"
-                  required
-                />
-                <span class="error-message"></span>
-              </div>
-
-              <div class="form-group">
-                <label for="min_salary">Minimum Salary (₱)</label>
-                <input
-                  type="number"
-                  id="min_salary"
-                  name="min_salary"
-                  placeholder="1.00"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-                <span class="error-message"></span>
-              </div>
-
-              <div class="form-group">
-                <label for="max_salary">Maximum Salary (₱)</label>
-                <input
-                  type="number"
-                  id="max_salary"
-                  name="max_salary"
-                  placeholder="1.00"
-                  min="0"
-                  step="0.01"
-                  required
-                />
-                <span class="error-message"></span>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="job_description">Job Description</label>
-              <textarea
-                id="job_description"
-                name="job_description"
-                placeholder="Description"
-                rows="4"
-                required
-              ></textarea>
-              <span class="error-message"></span>
-            </div>
-
-            <div class="form-group">
-              <label for="qualifications">Qualifications</label>
-              <textarea
-                id="qualifications"
-                name="qualifications"
-                placeholder="Qualifications"
-                rows="4"
-                required
-              ></textarea>
-              <span class="error-message"></span>
-            </div>
-
-            <div class="form-actions">
-              <button type="reset" class="btn btn-outline">Clear Form</button>
-              <button type="submit" class="btn btn-primary">
-                Create Job Post
-              </button>
-            </div>
-          </form>
-        </section>
-
-        <!-- Hidden the "Add Job Vacancy" button to prevent duplicate job creation -->
-        <div class="add-btn-container" style="display: none">
-          <button class="add-job-btn" id="addJobVacancy">
-            Add Job Vacancy
-          </button>
-        </div>
+      <!-- Updated to use card-list instead of notification-list for consistency -->
+      <div id="notificationList" class="card-list">
+        <!-- Notifications will be dynamically loaded here -->
       </div>
     </main>
 
@@ -295,10 +179,8 @@
       </div>
     </footer>
 
-    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
-    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/employers_notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
   </body>
 </html>

@@ -246,7 +246,10 @@ body {
 
 .popup-container {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.4);
   display: none;
   justify-content: center;
@@ -257,7 +260,7 @@ body {
   background: white;
   padding: 20px 30px;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
   text-align: center;
   font-size: 18px;
 }
@@ -271,7 +274,6 @@ body {
   border-radius: 8px;
   cursor: pointer;
 }
-
 
 /* Form Actions */
 .form-actions {
@@ -376,26 +378,27 @@ body {
   color: #fff;
   border: none;
 }
+
 /* Job Listings Container */
 .listing-container {
   display: grid;
-  grid-template-columns: repeat(3, minmax(250px, 1fr)); 
+  grid-template-columns: repeat(3, minmax(250px, 1fr));
   gap: 35px;
   padding: 50px;
-  justify-items: center;   
-  max-width: 1200px;     
-  margin: 0 auto;         
-  background-color: #EBEBEB;
+  justify-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #ebebeb;
 }
 
 .listing-card {
   width: 100%;
-  max-width: 360px; 
+  max-width: 360px;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -405,7 +408,7 @@ body {
 /* Hover stays the same */
 .listing-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* Header */
@@ -453,7 +456,6 @@ body {
   background-color: #f8d7da;
   color: #721c24;
 }
-
 
 /* Meta Info */
 .listing-meta {
@@ -509,11 +511,92 @@ body {
 .listing-card.inactive-listing {
   opacity: 0.6;
 }
+
+/* Adding confirmation modal styling to match HTML class names */
+/* Confirmation Modal - using .ej-modal-overlay to match HTML */
+#confirmModal.ej-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none; /* Changed from explicit .show class in previous version */
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+  padding: 20px;
+}
+
+#confirmModal .ej-modal-content {
+  background: #fff;
+  border-radius: 10px;
+  padding: 30px;
+  max-width: 450px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  margin-left: 37%;
+  margin-top: 13%;
+}
+
+#confirmModal .ej-modal-content h2 {
+  /* Changed from h3 */
+  color: #8b1515;
+  margin: 0 0 15px 0;
+  font-size: 1.4rem;
+}
+
+#confirmModal .ej-modal-content p {
+  color: #555;
+  margin-bottom: 25px;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+#confirmModal .ej-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+#confirmModal button {
+  /* General button styling within the modal */
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#confirmModal #confirmModalYes {
+  /* Specific styling for Yes button */
+  background: #8b1515;
+  color: #fff;
+}
+
+#confirmModal #confirmModalYes:hover {
+  background: #a01818;
+}
+
+#confirmModal #confirmModalNo {
+  /* Specific styling for No button (formerly Cancel) */
+  background: #666; /* Updated color */
+  color: #fff;
+}
+
+#confirmModal #confirmModalNo:hover {
+  background: #555; /* Updated hover color */
+}
+
 /* Modal overlay + base */
 .ej-modal-overlay {
   position: fixed;
-  top: 0; left: 0; right:0; bottom:0;
-  background: rgba(0,0,0,0.45);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -523,24 +606,23 @@ body {
 
 /* Content look */
 .ej-job-edit-modal {
-    width: 900px;
-    max-width: 98%;
-    background: #fff;
-    border-radius: 10px;
-    padding: 28px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-    position: fixed;          
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%); 
-    font-family: inherit;
-    z-index: 9999;
+  width: 900px;
+  max-width: 98%;
+  background: #fff;
+  border-radius: 10px;
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: inherit;
+  z-index: 9999;
 }
 
-
-.ej-job-edit-modal h2 { 
-  color:#8b1515; 
-  margin: 0 0 16px 0; 
+.ej-job-edit-modal h2 {
+  color: #8b1515;
+  margin: 0 0 16px 0;
 }
 
 /* Close button */
@@ -556,28 +638,28 @@ body {
 }
 
 /* Layout rows */
-.ej-form-row { 
-  display: flex; 
-  gap: 14px; 
-  margin-bottom: 12px; 
+.ej-form-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 12px;
 }
 
-.ej-form-row.ej-three-col .ej-form-group { 
-  flex: 1; 
+.ej-form-row.ej-three-col .ej-form-group {
+  flex: 1;
 }
 
 /* Form group */
-.ej-form-group { 
-  flex: 1; 
-  display:flex; 
-  flex-direction: column; 
+.ej-form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.ej-form-group label { 
-  font-weight: 600; 
-  margin-bottom:6px; 
-  color:#222; 
-  font-size:0.95rem; 
+.ej-form-group label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #222;
+  font-size: 0.95rem;
 }
 
 .ej-form-group input,
@@ -592,39 +674,47 @@ body {
 }
 
 /* Make Job Position + Schedule visually like screenshot */
-.ej-form-row > .ej-form-group:first-child { flex: 2; } 
-.ej-form-row > .ej-form-group:last-child { flex: 1; }
+.ej-form-row > .ej-form-group:first-child {
+  flex: 2;
+}
+.ej-form-row > .ej-form-group:last-child {
+  flex: 1;
+}
 
 /* Actions */
-.ej-modal-actions { 
-  display:flex; 
-  justify-content:space-between; 
-  margin-top:18px; 
-  align-items:center; 
+.ej-modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 18px;
+  align-items: center;
 }
 
 .ej-btn-edit-status {
-  background:#8b1515; 
-  color:#fff; 
-  border:none; 
-  padding:10px 16px; 
-  border-radius:8px; 
-  cursor:pointer;
+  background: #8b1515;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .ej-btn-save {
-  background:#006943; 
-  color:#fff; 
-  border:none; 
-  padding:10px 18px; 
-  border-radius:8px; 
-  cursor:pointer;
+  background: #006943;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 /* Responsive */
 @media (max-width: 720px) {
-  .ej-form-row { flex-direction: column; }
-  .ej-job-edit-modal { padding:18px; }
+  .ej-form-row {
+    flex-direction: column;
+  }
+  .ej-job-edit-modal {
+    padding: 18px;
+  }
 }
 
 /* Footer */
@@ -1332,26 +1422,168 @@ body {
 
 /* === SweetAlert2 Maroon Theme === */
 div:where(.swal2-icon).swal2-warning {
-    border-color: maroon !important;
-    color: maroon !important;
+  border-color: maroon !important;
+  color: maroon !important;
 }
 
 .swal2-confirm {
-    background-color: maroon !important;
-    border: none !important;
-    color: #fff !important;
-    font-weight: 600;
-    border-radius: 6px;
+  background-color: maroon !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px;
 }
 
 .swal2-cancel {
-    background-color: #888 !important;
-    border: none !important;
-    color: #fff !important;
-    font-weight: 600;
-    border-radius: 6px;
+  background-color: #888 !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px;
 }
 
+/*Notifications*/
+.notifications-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
+
+.notifications-header {
+  margin-bottom: 2rem;
+}
+
+.notifications-header h1 {
+  font-size: 2rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.tab-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 20px 60px 20px;
+  max-width: 1200px;
+  justify-content: center;
+  margin: 0 auto; /* centers the .tab-group container itself */
+}
+
+.tab-group button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-group button:hover {
+  background: #7b1e1e;
+  color: #fff;
+  border: none;
+}
+
+.tab-group button.active {
+  background: #7b1e1e;
+  color: #fff;
+  border: none;
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px 0;
+}
+
+.card-list .card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.card-list .card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.card-list .card.unread {
+  background: #f5f5f5;
+  border-left-color: #ffc20e;
+}
+
+.card-details h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.card-details p {
+  margin: 0 0 10px 0;
+  color: #555;
+  line-height: 1.5;
+}
+
+.card-details small {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.card-actions .badge {
+  background: #ffc20e;
+  color: black;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.card-actions .view-btn {
+  background: #8b1515;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.3s ease;
+}
+
+.card-actions .view-btn:hover {
+  background: #a01818;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #999;
+}
+
+.empty-state i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  color: #ddd;
+}
 
 /* Responsive grid columns for smaller screens */
 @media (max-width: 1024px) {

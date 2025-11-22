@@ -72,7 +72,6 @@ def register_employer(form_data, files):
     print(f"[v0] Form data received for: {form_data.get('employerName')}")
     print(f"[v0] Recruitment type: {form_data.get('employerRecruitment')}")
 
-    # Get form data
     employer_data = {
         "employer_name": form_data.get("employerName"),
         "industry": form_data.get("employerIndustry"),
@@ -335,7 +334,7 @@ def notifications():
         flash("Please complete your document reupload first.", "warning")
         return redirect(url_for("employers.account_security"))
 
-    return render_template("Employer/notif.html")
+    return render_template("Employer/notifications.html")
 
 
 @employers_bp.route("/account-security", methods=["GET", "POST"])
@@ -696,6 +695,7 @@ def register():
 
     return render_template("Landing_Page/employer_registration.html")
 
+
 @employers_bp.route("/deactivate", methods=["POST"])
 def deactivate_employer_account():
     if "employer_id" not in session:
@@ -717,15 +717,16 @@ def deactivate_employer_account():
         if not employer:
             return jsonify({"success": False, "message": "Employer not found"}), 404
 
-        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (employer["id"],))
+        cursor.execute(
+            "DELETE FROM deactivated_users WHERE id = %s", (employer["id"],))
         cursor.execute("""
             INSERT INTO deactivated_users (id, name, email, password, phone, deactivated_at)
             VALUES (%s, %s, %s, %s, %s, NOW())
         """, (
-            employer["id"], 
-            employer["name"], 
-            employer["email"], 
-            employer["password"], 
+            employer["id"],
+            employer["name"],
+            employer["email"],
+            employer["password"],
             employer["phone"]
         ))
 
@@ -761,7 +762,8 @@ def reactivate_employer_account():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        cursor.execute("SELECT * FROM deactivated_users WHERE email = %s", (email,))
+        cursor.execute(
+            "SELECT * FROM deactivated_users WHERE email = %s", (email,))
         user = cursor.fetchone()
 
         if not user:
@@ -776,7 +778,8 @@ def reactivate_employer_account():
             WHERE employer_id = %s
         """, (user["id"],))
 
-        cursor.execute("DELETE FROM deactivated_users WHERE id = %s", (user["id"],))
+        cursor.execute(
+            "DELETE FROM deactivated_users WHERE id = %s", (user["id"],))
 
         conn.commit()
 
@@ -791,72 +794,78 @@ def reactivate_employer_account():
         conn.close()
 
 # ===== Job Posting Route =====
+
+
 @employers_bp.route("/create_job", methods=["POST"])
 def create_job():
     if "employer_id" not in session:
-        msg = "You must be logged in to create a job post."
-        return jsonify({"success": False, "message": msg}), 401
+        flash("Please log in to create a job post.", "warning")
+        return redirect(url_for("home"))
 
     employer_id = session["employer_id"]
 
-    job_position = request.form.get("jobPosition", "").strip()
-    work_schedule = request.form.get("workSchedule", "").strip()
-    num_vacancy = request.form.get("numVacancy", "0").strip()
-    min_salary = request.form.get("minSalary", "0").strip()
-    max_salary = request.form.get("maxSalary", "0").strip()
-    job_description = request.form.get("jobDescription", "").strip()
+    job_position = request.form.get("job_position", "").strip()
+    work_schedule = request.form.get("work_schedule", "").strip()
+    num_vacancy = request.form.get("num_vacancy", "").strip()
+    min_salary = request.form.get("min_salary", "").strip()
+    max_salary = request.form.get("max_salary", "").strip()
+    job_description = request.form.get("job_description", "").strip()
     qualifications = request.form.get("qualifications", "").strip()
 
-    # Validate numbers
+    if not all([job_position, work_schedule, num_vacancy, min_salary, max_salary, job_description, qualifications]):
+        flash("All fields are required.", "danger")
+        return redirect(url_for("employers.employer_home"))
+
     try:
         num_vacancy = int(num_vacancy)
         min_salary = float(min_salary)
         max_salary = float(max_salary)
-    except ValueError:
-        return jsonify({"success": False, "message": "Vacancy and salary must be valid numbers."})
 
-    # Validate required fields
-    if not job_position or not work_schedule or num_vacancy < 1 or min_salary < 0 or max_salary < min_salary or not job_description or not qualifications:
-        return jsonify({"success": False, "message": "Please fill in all fields correctly."})
+        if num_vacancy <= 0:
+            flash("Number of vacancies must be greater than 0.", "danger")
+            return redirect(url_for("employers.employer_home"))
+
+        if min_salary <= 0 or max_salary <= 0:
+            flash("Salary values must be greater than 0.", "danger")
+            return redirect(url_for("employers.employer_home"))
+
+        if max_salary < min_salary:
+            flash("Maximum salary cannot be less than minimum salary.", "danger")
+            return redirect(url_for("employers.employer_home"))
+
+    except ValueError:
+        flash("Invalid number format for vacancies or salary.", "danger")
+        return redirect(url_for("employers.employer_home"))
 
     conn = create_connection()
     if not conn:
-        return jsonify({"success": False, "message": "Database connection failed."})
+        flash("Database connection failed.", "danger")
+        return redirect(url_for("employers.employer_home"))
 
     try:
-        cursor = conn.cursor(dictionary=True)
-
-        # === DUPLICATE CHECK ===
-        cursor.execute("""
-            SELECT job_id 
-            FROM jobs 
-            WHERE employer_id=%s AND job_position=%s AND work_schedule=%s AND status != 'deleted'
-        """, (employer_id, job_position, work_schedule))
-        duplicate = cursor.fetchone()
-        if duplicate:
-            return jsonify({"success": False, "message": "You have already created this job post with the same position and schedule."})
-
-        # Insert new job
-        cursor.execute("""
+        query = """
             INSERT INTO jobs
             (employer_id, job_position, work_schedule, num_vacancy, 
              min_salary, max_salary, job_description, qualifications, status, created_at)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'active', NOW())
-        """, (
+        """
+
+        run_query(conn, query, (
             employer_id, job_position, work_schedule, num_vacancy,
             min_salary, max_salary, job_description, qualifications
         ))
-        conn.commit()
 
-        return jsonify({"success": True, "message": "Job post successfully created!"})
+        conn.commit()
+        flash("Job posted successfully!", "success")
 
     except Exception as e:
         conn.rollback()
-        print("Error inserting job:", e)
-        return jsonify({"success": False, "message": "Failed to create job post."})
-
+        flash(f"Error creating job: {str(e)}", "danger")
     finally:
         conn.close()
+
+    return redirect(url_for("employers.employer_home"))
+
 
 @employers_bp.route("/application_management")
 def application_management():
@@ -874,7 +883,7 @@ def application_management():
     """, (employer_id,))
     jobs = cursor.fetchall()
     conn.close()
-    
+
     return render_template("Employer/application_management.html", jobs=jobs)
 
 
@@ -893,7 +902,8 @@ def update_job_status(job_id, new_status):
 
     try:
         cursor = conn.cursor()
-        cursor.execute("UPDATE jobs SET status = %s WHERE job_id = %s", (new_status, job_id))
+        cursor.execute(
+            "UPDATE jobs SET status = %s WHERE job_id = %s", (new_status, job_id))
         conn.commit()
         return jsonify({"success": True, "message": f"Job status updated to {new_status}."})
     except Exception as e:
@@ -902,6 +912,7 @@ def update_job_status(job_id, new_status):
         return jsonify({"success": False, "message": "Failed to update job status."})
     finally:
         conn.close()
+
 
 @employers_bp.route("/auto_deactivate_jobs")
 def auto_deactivate_jobs():
@@ -919,6 +930,8 @@ def auto_deactivate_jobs():
 # -------------------------
 # Return job JSON for modal
 # -------------------------
+
+
 @employers_bp.route("/job/<int:job_id>/json")
 def get_job_json(job_id):
     conn = create_connection()
@@ -949,7 +962,8 @@ def get_job_json(job_id):
         return jsonify({"success": True, "job": job})
 
     except Exception as e:
-        current_app.logger.exception(f"Failed to fetch job JSON for job_id={job_id}: {e}")
+        current_app.logger.exception(
+            f"Failed to fetch job JSON for job_id={job_id}: {e}")
         return jsonify({"success": False, "message": f"Failed to load job: {str(e)}"}), 500
     finally:
         if conn:
@@ -958,6 +972,8 @@ def get_job_json(job_id):
 # -------------------------
 # Update job via modal POST
 # -------------------------
+
+
 @employers_bp.route("/job/<int:job_id>/update", methods=["POST"])
 def update_job(job_id):
     if "employer_id" not in session:
@@ -1027,7 +1043,8 @@ def archive_job(job_id):
         return jsonify({"success": False, "message": "DB connection failed"}), 500
 
     try:
-        run_query(conn, "UPDATE jobs SET status='archived' WHERE job_id=%s", (job_id,))
+        run_query(
+            conn, "UPDATE jobs SET status='archived' WHERE job_id=%s", (job_id,))
         conn.commit()
         return jsonify({"success": True, "message": "Job post archived successfully."})
     except Exception as e:
@@ -1053,5 +1070,98 @@ def delete_job(job_id):
     except Exception as e:
         conn.rollback()
         return jsonify({"success": False, "message": f"Error: {e}"})
+    finally:
+        conn.close()
+
+
+@employers_bp.route("/api/notifications", methods=["GET"])
+def get_notifications():
+    """Fetch notifications for the current employer"""
+    if "employer_id" not in session:
+        return jsonify({"success": False, "notifications": []}), 401
+
+    employer_id = session["employer_id"]
+    filter_type = request.args.get('filter', 'all')
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "notifications": []})
+
+    try:
+        query = """SELECT notification_id, notification_type, title, message, is_read, created_at, related_ids
+                   FROM notifications 
+                   WHERE employer_id = %s 
+                   AND notification_type = 'job_application'"""
+        params = [employer_id]
+
+        if filter_type == 'unread':
+            query += " AND is_read = 0"
+
+        query += " ORDER BY created_at DESC LIMIT 50"
+
+        notifications = run_query(conn, query, tuple(params), fetch="all")
+
+        unread_count = run_query(
+            conn,
+            """SELECT COUNT(*) as count 
+               FROM notifications 
+               WHERE employer_id = %s 
+               AND notification_type = 'job_application'
+               AND is_read = 0""",
+            (employer_id,),
+            fetch="one"
+        )
+
+        normalized = []
+        for notif in notifications or []:
+            normalized.append({
+                "notification_id": notif.get("notification_id"),
+                "notification_type": notif.get("notification_type"),
+                "title": notif.get("title"),
+                "message": notif.get("message"),
+                "is_read": notif.get("is_read"),
+                "created_at": notif.get("created_at").isoformat() if notif.get("created_at") else None,
+                "redirect_url": "/employers/application_management"
+            })
+
+        return jsonify({
+            "success": True,
+            "notifications": normalized,
+            "unread_count": unread_count["count"] if unread_count else 0
+        })
+
+    except Exception as e:
+        print(f"Error fetching notifications: {e}")
+        return jsonify({"success": False, "notifications": []})
+    finally:
+        conn.close()
+
+
+@employers_bp.route("/api/notifications/mark-read", methods=["POST"])
+def mark_notification_read():
+    """Mark a notification as read"""
+    if "employer_id" not in session:
+        return jsonify({"success": False}), 401
+
+    notification_id = request.json.get("notification_id")
+    if not notification_id:
+        return jsonify({"success": False, "message": "Notification ID required"})
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False})
+
+    try:
+        run_query(
+            conn,
+            "UPDATE notifications SET is_read = 1 WHERE notification_id = %s",
+            (notification_id,)
+        )
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        conn.rollback()
+        print(f"Error marking notification as read: {e}")
+        return jsonify({"success": False})
     finally:
         conn.close()

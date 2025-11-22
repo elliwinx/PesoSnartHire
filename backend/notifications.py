@@ -223,10 +223,12 @@ def build_redirect_url(notif, admin_prefix="/admin"):
     return "#"
 
 
-def get_notifications(notification_type=None, is_read=None, limit=50):
+def get_notifications(notification_type=None, is_read=None, limit=50, exclude_types=None):
     """
     Fetch notifications with optional filtering and normalize the returned dict keys
     so frontend can reliably use: notification_id, title, message, is_read, created_at, redirect_url, related_ids
+
+    exclude_types: list of notification types to exclude (e.g., ['job_application'])
     """
     conn = create_connection()
     if not conn:
@@ -242,6 +244,11 @@ def get_notifications(notification_type=None, is_read=None, limit=50):
     if is_read is not None:
         query += " AND is_read = %s"
         params.append(is_read)
+
+    if exclude_types and len(exclude_types) > 0:
+        placeholders = ", ".join(["%s"] * len(exclude_types))
+        query += f" AND notification_type NOT IN ({placeholders})"
+        params.extend(exclude_types)
 
     query += " ORDER BY created_at DESC LIMIT %s"
     params.append(limit)

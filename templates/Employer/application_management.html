@@ -5,14 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EMPLOYER - HOME</title>
     <!-- Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/employer.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/employer.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
     <style>
       /* Minimal inline tweaks in case you don't want to edit employer.css immediately */
-      .tab-group button.active { background:#8b1515; color:#fff; }
-      .empty-msg { color:#666; padding: 20px; }
+      .tab-group button.active {
+        background: #8b1515;
+        color: #fff;
+      }
+      .empty-msg {
+        color: #666;
+        padding: 20px;
+      }
     </style>
   </head>
   <body>
@@ -20,158 +38,285 @@
     <header class="header">
       <div class="container">
         <div class="logo">
-          <img src="{{ url_for('static', filename='Assets/PESO_logo.png') }}" alt="PESO SmartHire Logo" />
+          <img
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+            alt="PESO SmartHire Logo"
+          />
         </div>
         <nav class="nav">
-          <a href="{{url_for('employers.employer_home')}}" class="nav-link">Home</a>
-          <a href="{{url_for('employers.application_management')}}" class="nav-link-active">Application Management</a>
-          <a href="#" class="nav-link">Real-Time Notification</a>
-          <a href="{{url_for('employers.account_security')}}" class="nav-link">Account & Security</a>
-          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link">Log Out</a>
+          <a href="{{url_for('employers.employer_home')}}" class="nav-link"
+            >Home</a
+          >
+          <a
+            href="{{url_for('employers.application_management')}}"
+            class="nav-link-active"
+            >Application Management</a
+          >
+          <a href="{{url_for('employers.notifications')}}" class="nav-link"
+            >Notification</a
+          >
+          <a href="{{url_for('employers.account_security')}}" class="nav-link"
+            >Account & Security</a
+          >
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
         </nav>
       </div>
     </header>
 
     <section class="hero">
       <div class="hero-background">
-        <img src="{{ url_for('static', filename='Assets/background.png') }}" alt="New City Hall of Lipa CIty" />
+        <img
+          src="{{ url_for('static', filename='Assets/background.png') }}"
+          alt="New City Hall of Lipa CIty"
+        />
       </div>
       <div class="hero-content">
         <div class="container">
-          <h1 class="hero-title">Welcome{% if session.employer_name %}, {{ session.employer_name }}{% endif %}!</h1>
+          <h1 class="hero-title">
+            Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
+            endif %}!
+          </h1>
           <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
 
-        <!-- Main Content -->
-        <main class="main-content">
-          <div class="container">
-            <div class="form-header">
-              <h2 class="form-title">Application Management</h2>
-              <p class="form-instruction">Manage your job posts and review applicants</p>
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="container">
+        <div class="form-header">
+          <h2 class="form-title">Application Management</h2>
+          <p class="form-instruction">
+            Manage your job posts and review applicants
+          </p>
+        </div>
+        <div class="tab-group">
+          <button class="active" data-filter="all">All</button>
+          <button data-filter="active">Active</button>
+          <button data-filter="inactive">Inactive</button>
+          <button data-filter="suspended">Suspended</button>
+          <button data-filter="archived">Archived</button>
+        </div>
+
+        <!-- JOB LISTINGS -->
+        <div class="listing-container">
+          {% for job in jobs %}
+          <div
+            class="listing-card"
+            data-job-id="{{ job.job_id }}"
+            data-status="{{ job.status|lower }}"
+          >
+            <div class="listing-header">
+              <h3 class="listing-title">{{ job.job_position }}</h3>
+              <span class="status-chip status-{{ job.status|lower }}">
+                {{ job.status.title() }}
+              </span>
             </div>
-    <div class="tab-group">
-      <button class="active" data-filter="all">All</button>
-      <button data-filter="active">Active</button>
-      <button data-filter="inactive">Inactive</button>
-      <button data-filter="suspended">Suspended</button>
-      <button data-filter="archived">Archived</button> 
-    </div>
 
-    <!-- JOB LISTINGS -->
-    <div class="listing-container">
-      {% for job in jobs %}
-      <div class="listing-card" 
-          data-job-id="{{ job.job_id }}" 
-          data-status="{{ job.status|lower }}">
-          
-        <div class="listing-header">
-          <h3 class="listing-title">{{ job.job_position }}</h3>
-          <span class="status-chip status-{{ job.status|lower }}">
-              {{ job.status.title() }}
-          </span>
+            <div class="listing-meta">
+              <div class="posted">
+                Posted {{ job['created_at'].strftime('%m/%d/%Y') }}
+              </div>
+              <div class="meta-counts">
+                <span id="applicant-count-{{ job.job_id }}">
+                  <i class="fa-regular fa-user"></i> {{ job.applicant_count }}
+                </span>
+              </div>
+            </div>
 
-        </div>
+            <div class="listing-actions">
+              <button
+                type="button"
+                class="action-btn action-edit"
+                data-job-id="{{ job.job_id }}"
+                data-action="edit"
+              >
+                Edit
+              </button>
 
-        <div class="listing-meta">
-          <div class="posted">
-            Posted {{ job['created_at'].strftime('%m/%d/%Y') }}
+              <button
+                type="button"
+                class="action-btn action-archive"
+                data-job-id="{{ job.job_id }}"
+                data-action="archive"
+              >
+                Archive
+              </button>
+
+              <button
+                type="button"
+                class="action-btn action-delete"
+                data-job-id="{{ job.job_id }}"
+                data-action="delete"
+              >
+                Delete
+              </button>
+            </div>
           </div>
-          <div class="meta-counts">
-          <span id="applicant-count-{{ job.job_id }}">
-              <i class="fa-regular fa-user"></i> {{ job.applicant_count }}
-          </span>
-         </div>
+          {% endfor %}
+
+          <!-- Moved empty state message inside the container -->
+          <p
+            id="noJobsMessage"
+            style="
+              display: none;
+              text-align: center;
+              color: #666;
+              font-size: 1.1rem;
+              width: 100%;
+              grid-column: 1 / -1;
+            "
+          >
+            No job posts found for this category.
+          </p>
         </div>
 
-        <div class="listing-actions">
-        <button type="button" 
-                  class="action-btn action-edit" 
-                  data-job-id="{{ job.job_id }}" 
-                  data-action="edit"> Edit </button>
+        <!-- EDIT JOB MODAL -->
+        <div
+          id="ej_editJobModal"
+          class="ej-modal-overlay"
+          style="display: none"
+        >
+          <div class="ej-modal-content ej-job-edit-modal">
+            <button class="ej-close-modal" aria-label="Close">&times;</button>
+            <h2>Edit Job Vacancy</h2>
 
-          <button type="button" class="action-btn action-archive" 
-                  data-job-id="{{ job.job_id }}" 
-                  data-action="archive">Archive</button>
+            <form id="ej_editJobForm">
+              <input type="hidden" name="ej_job_id" id="ej_editJobId" />
 
-          <button type="button" class="action-btn action-delete" 
-                  data-job-id="{{ job.job_id }}" 
-                  data-action="delete">Delete</button>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
+              <div class="ej-form-row">
+                <div class="ej-form-group">
+                  <label for="ej_editJobTitle">Job Position</label>
+                  <input
+                    type="text"
+                    id="ej_editJobTitle"
+                    name="ej_job_position"
+                    placeholder="Job Position"
+                    required
+                  />
+                </div>
+                <div class="ej-form-group">
+                  <label for="ej_editJobSchedule">Work Schedule</label>
+                  <input
+                    type="text"
+                    id="ej_editJobSchedule"
+                    name="ej_work_schedule"
+                    placeholder="Work Schedule"
+                  />
+                </div>
+              </div>
 
-<!-- EDIT JOB MODAL -->
-<div id="ej_editJobModal" class="ej-modal-overlay" style="display:none;">
-  <div class="ej-modal-content ej-job-edit-modal">
-    <button class="ej-close-modal" aria-label="Close">&times;</button>
-    <h2>Edit Job Vacancy</h2>
+              <div class="ej-form-row ej-three-col">
+                <div class="ej-form-group">
+                  <label for="ej_editJobVacancy">Number of Vacancy</label>
+                  <input
+                    type="number"
+                    id="ej_editJobVacancy"
+                    name="ej_vacancy"
+                    min="1"
+                    value="1"
+                  />
+                </div>
+                <div class="ej-form-group">
+                  <label for="ej_editJobMinSalary">Minimum Salary (₱)</label>
+                  <input
+                    type="number"
+                    id="ej_editJobMinSalary"
+                    name="ej_min_salary"
+                    step="0.01"
+                    value="0.00"
+                  />
+                </div>
+                <div class="ej-form-group">
+                  <label for="ej_editJobMaxSalary">Maximum Salary (₱)</label>
+                  <input
+                    type="number"
+                    id="ej_editJobMaxSalary"
+                    name="ej_max_salary"
+                    step="0.01"
+                    value="0.00"
+                  />
+                </div>
+              </div>
 
-    <form id="ej_editJobForm">
-      <input type="hidden" name="ej_job_id" id="ej_editJobId">
+              <div class="ej-form-group">
+                <label for="ej_editJobDescription">Job Description</label>
+                <textarea
+                  id="ej_editJobDescription"
+                  name="ej_job_description"
+                  rows="4"
+                  placeholder="Description"
+                  required
+                ></textarea>
+              </div>
 
-      <div class="ej-form-row">
-        <div class="ej-form-group">
-          <label for="ej_editJobTitle">Job Position</label>
-          <input type="text" id="ej_editJobTitle" name="ej_job_position" placeholder="Job Position" required>
-        </div>
-        <div class="ej-form-group">
-          <label for="ej_editJobSchedule">Work Schedule</label>
-          <input type="text" id="ej_editJobSchedule" name="ej_work_schedule" placeholder="Work Schedule">
-        </div>
-      </div>
+              <div class="ej-form-group">
+                <label for="ej_editJobQualifications">Qualifications</label>
+                <textarea
+                  id="ej_editJobQualifications"
+                  name="ej_qualifications"
+                  rows="2"
+                  placeholder="Qualifications"
+                ></textarea>
+              </div>
 
-      <div class="ej-form-row ej-three-col">
-        <div class="ej-form-group">
-          <label for="ej_editJobVacancy">Number of Vacancy</label>
-          <input type="number" id="ej_editJobVacancy" name="ej_vacancy" min="1" value="1">
-        </div>
-        <div class="ej-form-group">
-          <label for="ej_editJobMinSalary">Minimum Salary (₱)</label>
-          <input type="number" id="ej_editJobMinSalary" name="ej_min_salary" step="0.01" value="0.00">
-        </div>
-        <div class="ej-form-group">
-          <label for="ej_editJobMaxSalary">Maximum Salary (₱)</label>
-          <input type="number" id="ej_editJobMaxSalary" name="ej_max_salary" step="0.01" value="0.00">
-        </div>
-      </div>
+              <div class="ej-form-group">
+                <label for="ej_editJobStatus">Status</label>
+                <select id="ej_editJobStatus" name="ej_status">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Suspended">Suspended</option>
+                  <option value="Archived">Archived</option>
+                </select>
+              </div>
 
-      <div class="ej-form-group">
-        <label for="ej_editJobDescription">Job Description</label>
-        <textarea id="ej_editJobDescription" name="ej_job_description" rows="4" placeholder="Description" required></textarea>
-      </div>
-
-      <div class="ej-form-group">
-        <label for="ej_editJobQualifications">Qualifications</label>
-        <textarea id="ej_editJobQualifications" name="ej_qualifications" rows="2" placeholder="Qualifications"></textarea>
-      </div>
-
-      <div class="ej-form-group">
-        <label for="ej_editJobStatus">Status</label>
-       <select id="ej_editJobStatus" name="ej_status">
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
-          <option value="Suspended">Suspended</option>
-          <option value="Archived">Archived</option>
-       </select>
-      </div>
-
-      <div class="ej-modal-actions">
-        <button type="button" class="ej-btn-edit-status" id="ej_btnEditStatus">Edit Status</button>
-        <button type="submit" class="ej-btn-save">Save Changes</button>
-      </div>
-    </form>
-  </div>
-</div>
-    <!-- ✅ OPTIONAL: show message if no jobs match filter -->
-    <p id="noJobsMessage" style="display:none; text-align:center; margin-top:1rem; color:#888;">
-      No job posts found for this category.
-    </p>
+              <div class="ej-modal-actions">
+                <button
+                  type="button"
+                  class="ej-btn-edit-status"
+                  id="ej_btnEditStatus"
+                >
+                  Edit Status
+                </button>
+                <button type="submit" class="ej-btn-save">Save Changes</button>
+              </div>
+            </form>
           </div>
-        </main>
-   <!-- Footer -->
+        </div>
+
+        <!-- Added confirmation modal for delete and archive actions -->
+        <!-- CONFIRMATION MODAL -->
+        <div id="confirmModal" class="ej-modal-overlay" style="display: none">
+          <div class="ej-modal-content" style="max-width: 400px">
+            <h2 id="confirmModalTitle">Confirm Action</h2>
+            <p id="confirmModalMessage" style="margin: 20px 0; color: #555">
+              Are you sure you want to proceed?
+            </p>
+            <div class="ej-modal-actions" style="gap: 10px">
+              <button
+                type="button"
+                class="ej-btn-save"
+                id="confirmModalYes"
+                style="background: #8b1515"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                class="ej-btn-edit-status"
+                id="confirmModalNo"
+                style="background: #666"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">

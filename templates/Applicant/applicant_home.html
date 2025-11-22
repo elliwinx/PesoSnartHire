@@ -62,9 +62,7 @@
             class="nav-link-active"
             >Home</a
           >
-          <a
-            href="{{ url_for('applicants.applications') }}"
-            class="nav-link"
+          <a href="{{ url_for('applicants.applications') }}" class="nav-link"
             >Applications</a
           >
           <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
@@ -164,7 +162,14 @@
         <!-- Job Cards -->
         <div class="job-listing-container">
           {% if jobs %} {% for job in jobs %}
-          <div class="job-card" data-industry="{{ job.industry|default('') }}" data-type="{{ job.type_of_recruitment|default('') }}" data-schedule="{{ job.work_schedule|default('') }}" data-title="{{ job.job_position|default('') }}" data-company="{{ job.company_name|default('') }}">
+          <div
+            class="job-card"
+            data-industry="{{ job.industry|default('') }}"
+            data-type="{{ job.type_of_recruitment|default('') }}"
+            data-schedule="{{ job.work_schedule|default('') }}"
+            data-title="{{ job.job_position|default('') }}"
+            data-company="{{ job.company_name|default('') }}"
+          >
             <div class="job-card-top">
               <div class="logo-and-title">
                 <img
@@ -197,8 +202,13 @@
               </p>
 
               <!-- Visible industry and recruitment type for users -->
-              <p class="job-industry-visible"><i class="fa-solid fa-building"></i> {{ job.industry or 'N/A' }}</p>
-              <p class="job-type-visible"><i class="fa-solid fa-briefcase"></i> {{ job.type_of_recruitment or 'Local' }}</p>
+              <p class="job-industry-visible">
+                <i class="fa-solid fa-building"></i> {{ job.industry or 'N/A' }}
+              </p>
+              <p class="job-type-visible">
+                <i class="fa-solid fa-briefcase"></i> {{ job.type_of_recruitment
+                or 'Local' }}
+              </p>
             </div>
 
             <!-- Hidden spans for filtering -->
@@ -246,158 +256,106 @@
         </div>
       </div>
     </section>
-    <!-- Unique Modals -->
-    <!-- Job Details Modal -->
-    <div id="jobDetailsModalUnique" class="modal-unique" style="display: none">
-      <div class="modal-content-unique">
-        <span
-          class="close-unique"
-          style="
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            font-size: 24px;
-            cursor: pointer;
-          "
-          >&times;</span
-        >
-        <!-- Added employment badge container in modal header -->
-        <div id="modal-body-unique" style="padding-bottom: 80px">
-          <!-- Badge will be injected here by JavaScript -->
-        </div>
-        <!-- Updated button layout to match design - Apply and Close buttons at bottom -->
-        <div
-          class="modal-action-buttons"
-          style="
-            display: flex;
-            gap: 12px;
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            width: calc(100% - 40px);
-          "
-        >
-          <button
-            id="modalApplyBtn"
-            class="btn-apply-now" 
-            onclick="sendApplication()"
-            style="
-              cursor: pointer;
-              flex: 1;
-              padding: 12px;
-              background-color: #1b5e20;
-              color: white;
-              border: none;
-              border-radius: 4px;
-              font-weight: 600;
-            "
-          >
-            Apply Now
-          </button>
-          
-          <button
-            id="modalCancelBtn"
-            class="btn btn-cancel"
-            style="
-              cursor: pointer;
-              flex: 1;
-              padding: 12px;
-              background-color: white;
-              color: #333;
-              border: 2px solid #333;
-              border-radius: 4px;
-              font-weight: 600;
-            "
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Confirmation Modal -->
-    <div id="confirmModalUnique" class="custom-modal-unique">
-      <div class="custom-modal-content-unique">
+    <div id="confirmModalUnique" class="modal-overlay" style="display: none">
+      <div class="modal-content-confirm">
         <h2>Confirm Application</h2>
-        <p>Are you sure you want to apply for this job?</p>
-        <div class="modal-buttons">
-          <button onclick="sendApplication()" class="btn-confirm"> Confirm </button>
-          <button id="confirmCancelBtn" class="btn-cancel">Cancel</button>
+        <p>Are you sure you want to apply for this position?</p>
+        <div class="modal-actions-confirm">
+          <button class="btn-confirm">Yes, Apply</button>
+          <button class="btn-cancel-confirm">Cancel</button>
         </div>
       </div>
     </div>
 
-<!-- Report Modal -->
-<div id="reportModalUnique" class="modal-unique">
-  <div class="modal-content-unique">
-    <span class="close-report-unique">&times;</span>
-
-    <div class="modal-job-details-unique">
-
-      <button class="btn-report">!</button>
-
-      <h2>Report Job Post</h2>
-      <p>Please select a reason for your report.</p>
-
-      <select id="reportReasonUnique">
-        <option value="">Reason</option>
-        <option value="Spam">Spam</option>
-        <option value="Scam">Scam</option>
-        <option value="Inappropriate">Inappropriate</option>
-      </select>
-
-      <div class="modal-buttons">
-        <button id="confirmReportUnique" class="confirm-btn">Confirm</button>
-        <button id="cancelReportUnique" class="cancel-btn">Cancel</button>
+    <div id="jobDetailsModalUnique" class="modal-overlay" style="display: none">
+      <div class="modal-content-confirm">
+        <span class="close-unique">&times;</span>
+        <div id="modal-body-unique" class="modal-job-content">
+          <!-- Job content will be inserted here by JavaScript -->
+        </div>
+        <div
+          class="modal-actions-confirm"
+          style="margin-top: 20px; display: flex; gap: 10px"
+        >
+          <button class="btn-confirm" id="modal-apply-btn">Apply Now</button>
+          <button class="btn-cancel-confirm" id="modal-close-btn">Close</button>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<div id="alreadyAppliedToast" 
-     style="
-        display:none; 
-        position:fixed; 
-        top:20px; 
-        left:50%;
-        transform:translateX(-50%);
-        background:#e8babe; 
-        color:#721c24; 
-        padding:12px 20px; 
-        border-radius:6px; 
-        font-weight:600;
-        font-size:16px;
-        box-shadow:0 2px 6px rgba(0,0,0,0.15);
-        z-index:10000;
-     ">
-  You have already applied to this job.
-  <button id="alreadyAppliedClose" 
-          style="
-            margin-left:15px;
-            background:none;
-            border:none;
-            font-weight:700;
-            cursor:pointer;
-            color:#721c24;
-            font-size:16px;
-          ">
-    ✕
-  </button>
-</div>
+    <!-- Report Modal -->
+    <div id="reportModalUnique" class="modal-unique">
+      <div class="modal-content-unique">
+        <span class="close-report-unique">&times;</span>
 
+        <div class="modal-job-details-unique">
+          <button class="btn-report">!</button>
+
+          <h2>Report Job Post</h2>
+          <p>Please select a reason for your report.</p>
+
+          <select id="reportReasonUnique">
+            <option value="">Reason</option>
+            <option value="Spam">Spam</option>
+            <option value="Scam">Scam</option>
+            <option value="Inappropriate">Inappropriate</option>
+          </select>
+
+          <div class="modal-buttons">
+            <button id="confirmReportUnique" class="confirm-btn">
+              Confirm
+            </button>
+            <button id="cancelReportUnique" class="cancel-btn">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="alreadyAppliedToast"
+      style="
+        display: none;
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #e8babe;
+        color: #721c24;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+      "
+    >
+      You have already applied to this job.
+      <button
+        id="alreadyAppliedClose"
+        style="
+          margin-left: 15px;
+          background: none;
+          border: none;
+          font-weight: 700;
+          cursor: pointer;
+          color: #721c24;
+          font-size: 16px;
+        "
+      >
+        ✕
+      </button>
+    </div>
 
     <!-- Success Modal -->
-    <div id="successModalUnique" class="custom-modal-unique">
-      <div class="custom-modal-content-unique">
-        <h2>APPLICATION SENT</h2>
-        <p>
-          Thank you for applying! You can monitor the status of your application
-          on your Applications tab.
-        </p>
-        <button onclick="closeSuccessModal()" class="btn-confirm">
-          Confirm
-        </button>
+    <div id="successModalUnique" class="modal-overlay" style="display: none">
+      <div class="modal-content-confirm">
+        <h2>Application Submitted!</h2>
+        <p>Your application has been successfully submitted.</p>
+        <div class="modal-actions-confirm">
+          <button class="btn-confirm">OK</button>
+        </div>
       </div>
     </div>
 

@@ -1,9 +1,10 @@
 // DOM Elements
 const form = document.getElementById("jobPostForm");
 const addJobVacancyBtn = document.getElementById("addJobVacancy");
-const modal = document.getElementById("successModal");
-const closeModal = document.querySelector(".close");
+const successModal = document.getElementById("successModal");
+const closeSuccessModal = document.querySelector(".close");
 const modalOk = document.getElementById("modalOk");
+const Swal = window.Swal; // Declare the Swal variable
 
 // ========================
 // Form Validation
@@ -27,38 +28,61 @@ function clearError(field) {
 }
 
 function clearAllErrors(form) {
-  form.querySelectorAll(".error-message").forEach(el => {
+  form.querySelectorAll(".error-message").forEach((el) => {
     el.textContent = "";
     el.classList.remove("show");
   });
-  form.querySelectorAll(".error").forEach(el => el.classList.remove("error"));
+  form.querySelectorAll(".error").forEach((el) => el.classList.remove("error"));
 }
 
 function validateForm(form) {
   let isValid = true;
   clearAllErrors(form);
 
-  const jobPosition = form.querySelector('[name="jobPosition"]');
-  const workSchedule = form.querySelector('[name="workSchedule"]');
-  const numVacancy = form.querySelector('[name="numVacancy"]');
-  const minSalary = form.querySelector('[name="minSalary"]');
-  const maxSalary = form.querySelector('[name="maxSalary"]');
-  const jobDescription = form.querySelector('[name="jobDescription"]');
+  const jobPosition = form.querySelector('[name="job_position"]');
+  const workSchedule = form.querySelector('[name="work_schedule"]');
+  const numVacancy = form.querySelector('[name="num_vacancy"]');
+  const minSalary = form.querySelector('[name="min_salary"]');
+  const maxSalary = form.querySelector('[name="max_salary"]');
+  const jobDescription = form.querySelector('[name="job_description"]');
   const qualifications = form.querySelector('[name="qualifications"]');
 
-  if (!jobPosition.value.trim()) { showError(jobPosition, "Job position is required"); isValid = false; }
-  if (!workSchedule.value) { showError(workSchedule, "Work schedule is required"); isValid = false; }
-  if (!numVacancy.value || parseInt(numVacancy.value) < 1) { showError(numVacancy, "Number of vacancy must be at least 1"); isValid = false; }
+  if (!jobPosition.value.trim()) {
+    showError(jobPosition, "Job position is required");
+    isValid = false;
+  }
+  if (!workSchedule.value) {
+    showError(workSchedule, "Work schedule is required");
+    isValid = false;
+  }
+  if (!numVacancy.value || Number.parseInt(numVacancy.value) < 1) {
+    showError(numVacancy, "Number of vacancy must be at least 1");
+    isValid = false;
+  }
 
-  const min = parseFloat(minSalary.value);
-  const max = parseFloat(maxSalary.value);
+  const min = Number.parseFloat(minSalary.value);
+  const max = Number.parseFloat(maxSalary.value);
 
-  if (isNaN(min) || min < 0) { showError(minSalary, "Minimum salary must be ≥ 0"); isValid = false; }
-  if (isNaN(max) || max < 0) { showError(maxSalary, "Maximum salary must be ≥ 0"); isValid = false; }
-  else if (!isNaN(min) && max < min) { showError(maxSalary, "Maximum salary must be ≥ minimum salary"); isValid = false; }
+  if (isNaN(min) || min < 0) {
+    showError(minSalary, "Minimum salary must be ≥ 0");
+    isValid = false;
+  }
+  if (isNaN(max) || max < 0) {
+    showError(maxSalary, "Maximum salary must be ≥ 0");
+    isValid = false;
+  } else if (!isNaN(min) && max < min) {
+    showError(maxSalary, "Maximum salary must be ≥ minimum salary");
+    isValid = false;
+  }
 
-  if (!jobDescription.value.trim()) { showError(jobDescription, "Job description is required"); isValid = false; }
-  if (!qualifications.value.trim()) { showError(qualifications, "Qualifications are required"); isValid = false; }
+  if (!jobDescription.value.trim()) {
+    showError(jobDescription, "Job description is required");
+    isValid = false;
+  }
+  if (!qualifications.value.trim()) {
+    showError(qualifications, "Qualifications are required");
+    isValid = false;
+  }
 
   return isValid;
 }
@@ -67,71 +91,73 @@ function validateForm(form) {
 // Submit Form via AJAX
 // ========================
 document.addEventListener("DOMContentLoaded", () => {
-  document.querySelectorAll(".jobPostForm").forEach(form => {
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
+  document
+    .querySelectorAll(".jobPostForm:not(#createJobForm)")
+    .forEach((form) => {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-      if (!validateForm(form)) return;
+        if (!validateForm(form)) return;
 
-      try {
-        const res = await fetch(form.action, {
-          method: "POST",
-          body: new FormData(form)
-        });
-
-        const data = await res.json();
-
-        if (data.success) {
-          Swal.fire({
-            icon: "success",
-            title: "Success!",
-            text: data.message || "Job post created successfully!"
+        try {
+          const res = await fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
           });
-          form.reset();
-          // reset numVacancy to 1
-          const vacancy = form.querySelector('[name="numVacancy"]');
-          if (vacancy) vacancy.value = 1;
 
-          clearAllErrors(form);
-        } else {
+          const data = await res.json();
+
+          if (data.success) {
+            Swal.fire({
+              icon: "success",
+              title: "Success!",
+              text: data.message || "Job post created successfully!",
+            });
+            form.reset();
+            // reset numVacancy to 1
+            const vacancy = form.querySelector('[name="num_vacancy"]');
+            if (vacancy) vacancy.value = 1;
+
+            clearAllErrors(form);
+          } else {
+            Swal.fire({
+              icon: "error",
+              title: "Error!",
+              text: data.error || data.message || "Failed to save job post.",
+            });
+          }
+        } catch (err) {
+          console.error(err);
           Swal.fire({
             icon: "error",
             title: "Error!",
-            text: data.error || data.message || "Failed to save job post."
+            text: "An error occurred while saving the job post.",
           });
         }
-      } catch (err) {
-        console.error(err);
-        Swal.fire({
-          icon: "error",
-          title: "Error!",
-          text: "An error occurred while saving the job post."
-        });
+      });
+
+      // Real-time salary validation
+      const minSalary = form.querySelector('[name="min_salary"]');
+      const maxSalary = form.querySelector('[name="max_salary"]');
+      if (minSalary && maxSalary) {
+        const salaryCheck = () => {
+          const min = Number.parseFloat(minSalary.value);
+          const max = Number.parseFloat(maxSalary.value);
+          if (!isNaN(min) && !isNaN(max) && max < min) {
+            showError(maxSalary, "Maximum salary must be ≥ minimum salary");
+          } else {
+            clearError(maxSalary);
+          }
+        };
+        minSalary.addEventListener("input", salaryCheck);
+        maxSalary.addEventListener("input", salaryCheck);
       }
-    });
 
-    // Real-time salary validation
-    const minSalary = form.querySelector('[name="minSalary"]');
-    const maxSalary = form.querySelector('[name="maxSalary"]');
-    if (minSalary && maxSalary) {
-      const salaryCheck = () => {
-        const min = parseFloat(minSalary.value);
-        const max = parseFloat(maxSalary.value);
-        if (!isNaN(min) && !isNaN(max) && max < min) {
-          showError(maxSalary, "Maximum salary must be ≥ minimum salary");
-        } else {
-          clearError(maxSalary);
-        }
-      };
-      minSalary.addEventListener("input", salaryCheck);
-      maxSalary.addEventListener("input", salaryCheck);
-    }
-
-    // Clear individual field error on input
-    form.querySelectorAll("input, select, textarea").forEach(field => {
-      field.addEventListener("input", () => clearError(field));
+      // Clear individual field error on input
+      form.querySelectorAll("input, select, textarea").forEach((field) => {
+        field.addEventListener("input", () => clearError(field));
+      });
     });
-  });
 });
 
 // ========================
@@ -142,16 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!addJobVacancyBtn) return;
 
   addJobVacancyBtn.addEventListener("click", () => {
-
-    // SweetAlert popup
-    Swal.fire({
-      title: "Success!",
-      text: "New Job Vacancy section added!",
-      icon: "success",
-      confirmButtonText: "OK",
-      confirmButtonColor: "#3B82F6",
-    });
-
     const container = document.getElementById("jobFormContainer");
     if (!container) return;
 
@@ -162,13 +178,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const clone = original.cloneNode(true);
 
     // Reset all input, textarea, select fields
-    clone.querySelectorAll("input, textarea, select").forEach(field => {
+    clone.querySelectorAll("input, textarea, select").forEach((field) => {
       field.value = "";
       field.removeAttribute("id"); // remove duplicate IDs para walang conflict
     });
 
     // Clear all error messages
-    clone.querySelectorAll(".error-message").forEach(err => {
+    clone.querySelectorAll(".error-message").forEach((err) => {
       err.textContent = "";
     });
 
@@ -180,106 +196,41 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-
 // ========================
 // Modal Controls
 // ========================
-closeModal.addEventListener("click", () => {
-  modal.style.display = "none";
-});
+if (closeSuccessModal && successModal) {
+  closeSuccessModal.addEventListener("click", () => {
+    successModal.style.display = "none";
+  });
+}
 
-modalOk.addEventListener("click", () => {
-  modal.style.display = "none";
-});
+if (modalOk && successModal) {
+  modalOk.addEventListener("click", () => {
+    successModal.style.display = "none";
+  });
+}
 
 window.addEventListener("click", (e) => {
-  if (e.target === modal) modal.style.display = "none";
+  if (successModal && e.target === successModal)
+    successModal.style.display = "none";
 });
 
 // ========================
-// Real-time Salary Validation
+// FILTER JOB CARDS BY STATUS
 // ========================
-document.addEventListener("DOMContentLoaded", () => {
-  const minSalaryInput = document.getElementById("minSalary");
-  const maxSalaryInput = document.getElementById("maxSalary");
-
-  if (minSalaryInput && maxSalaryInput) {
-    minSalaryInput.addEventListener("input", () => {
-      const minSalary = Number.parseFloat(minSalaryInput.value);
-      const maxSalary = Number.parseFloat(maxSalaryInput.value);
-      if (!isNaN(minSalary) && !isNaN(maxSalary) && maxSalary < minSalary) {
-        showError("maxSalary", "Maximum salary must be ≥ minimum salary");
-      } else {
-        clearError("maxSalary");
-      }
-    });
-
-    maxSalaryInput.addEventListener("input", () => {
-      const maxSalary = Number.parseFloat(maxSalaryInput.value);
-      const minSalary = Number.parseFloat(minSalaryInput.value);
-      if (!isNaN(minSalary) && !isNaN(maxSalary) && maxSalary < minSalary) {
-        showError("maxSalary", "Maximum salary must be ≥ minimum salary");
-      } else {
-        clearError("maxSalary");
-      }
-    });
-  }
-});
-
-
-document.addEventListener("DOMContentLoaded", () => {
-  const minSalaryInput = document.getElementById("minSalary");
-  const maxSalaryInput = document.getElementById("maxSalary");
-
-  if (minSalaryInput && maxSalaryInput) {
-    minSalaryInput.addEventListener("input", () => {
-      const minSalary = parseFloat(minSalaryInput.value);
-      const maxSalary = parseFloat(maxSalaryInput.value);
-
-      if (!isNaN(minSalary) && !isNaN(maxSalary) && maxSalary < minSalary) {
-        showError("maxSalary", "Maximum salary must be ≥ minimum salary");
-      } else {
-        clearError("maxSalary");
-      }
-    });
-
-    maxSalaryInput.addEventListener("input", () => {
-      const minSalary = parseFloat(minSalaryInput.value);
-      const maxSalary = parseFloat(maxSalaryInput.value);
-
-      if (!isNaN(minSalary) && !isNaN(maxSalary) && maxSalary < minSalary) {
-        showError("maxSalary", "Maximum salary must be ≥ minimum salary");
-      } else {
-        clearError("maxSalary");
-      }
-    });
-  }
-});
-
-// Clear individual field errors on input
-document.querySelectorAll("input, select, textarea").forEach((field) => {
-  field.addEventListener("input", function () {
-    if (this.classList.contains("error")) clearError(this.id);
-  });
-});
-
 document.addEventListener("DOMContentLoaded", () => {
   const tabs = document.querySelectorAll(".tab-group button");
   const jobCards = document.querySelectorAll(".listing-card");
 
-  // Normalize strings for consistency
   const normalize = (value) => value?.trim().toLowerCase();
 
-  // ========================
-  // FILTER JOB CARDS BY STATUS
-  // ========================
   const applyFilter = (filter) => {
     const normalizedFilter = normalize(filter);
 
     jobCards.forEach((card) => {
       let status = normalize(card.dataset.status);
 
-      // Handle cases where backend might send "archive" instead of "archived"
       if (status === "archive") status = "archived";
 
       if (
@@ -293,20 +244,23 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // OPTIONAL: show message if no job matches filter
     const visibleCount = [...jobCards].filter(
       (c) => c.style.display !== "none"
     ).length;
-
+    const container = document.querySelector(".listing-container");
     const noResultMsg = document.getElementById("noJobsMessage");
+
     if (noResultMsg) {
-      noResultMsg.style.display = visibleCount === 0 ? "block" : "none";
+      if (visibleCount === 0) {
+        noResultMsg.style.display = "block";
+        if (container) container.classList.add("empty-state");
+      } else {
+        noResultMsg.style.display = "none";
+        if (container) container.classList.remove("empty-state");
+      }
     }
   };
 
-  // ========================
-  // HANDLE TAB CLICKS
-  // ========================
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       tabs.forEach((x) => x.classList.remove("active"));
@@ -315,10 +269,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Default: show all
   applyFilter("all");
 
-  // Apply visual style to inactive/archived
   jobCards.forEach((card) => {
     const status = normalize(card.dataset.status);
     if (status === "inactive" || status === "archived") {
@@ -345,44 +297,93 @@ function hideLoader() {
 }
 
 // ========================
-// JOB POST ACTION BUTTONS
+// CONFIRMATION MODAL
+// ========================
+function showConfirmModal(title, message) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("confirmModal");
+    const modalTitle = document.getElementById("confirmModalTitle");
+    const modalMessage = document.getElementById("confirmModalMessage");
+    const yesBtn = document.getElementById("confirmModalYes");
+    const noBtn = document.getElementById("confirmModalNo");
+
+    if (!modal) {
+      resolve(false);
+      return;
+    }
+
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    modal.style.display = "block";
+
+    const handleYes = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const handleNo = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    const cleanup = () => {
+      modal.style.display = "none";
+      yesBtn.removeEventListener("click", handleYes);
+      noBtn.removeEventListener("click", handleNo);
+      window.removeEventListener("click", handleWindowClick);
+    };
+
+    const handleWindowClick = (e) => {
+      if (e.target === modal) {
+        cleanup();
+        resolve(false);
+      }
+    };
+
+    yesBtn.addEventListener("click", handleYes);
+    noBtn.addEventListener("click", handleNo);
+    window.addEventListener("click", handleWindowClick);
+  });
+}
+
+// ========================
+// JOB POST ACTION BUTTONS (Edit, Archive, Delete)
 // ========================
 document.addEventListener("DOMContentLoaded", () => {
   document
-  .querySelectorAll(".listing-actions .action-btn")
-  .forEach((button) => {
-    button.addEventListener("click", function () {
-      const jobId = this.dataset.jobId;
-      const action = this.dataset.action;
+    .querySelectorAll(".listing-actions .action-btn")
+    .forEach((button) => {
+      button.addEventListener("click", async function () {
+        const jobId = this.dataset.jobId;
+        const action = this.dataset.action;
 
-      // For "edit", just open the modal (handled separately)
-      if (action === "edit") return;
+        if (action === "edit") return;
 
-      const actionTexts = {
-        archive: {
-          confirm: "archive this job post",
-          loader: "Archiving job post...",
-        },
-        delete: {
-          confirm: "delete this job post",
-          loader: "Deleting job post...",
-        },
-      };
+        const actionTexts = {
+          archive: {
+            title: "Archive Job Post",
+            confirm:
+              "Are you sure you want to archive this job post? It will no longer be visible to applicants.",
+            loader: "Archiving job post...",
+          },
+          delete: {
+            title: "Delete Job Post",
+            confirm:
+              "Are you sure you want to delete this job post? This action cannot be undone.",
+            loader: "Deleting job post...",
+          },
+        };
 
-      const actionText = actionTexts[action]?.confirm || "";
-      const loaderText =
-        actionTexts[action]?.loader || "Processing — please wait...";
+        const actionConfig = actionTexts[action];
+        if (!actionConfig) return;
 
-      Swal.fire({
-        title: "Are you sure?",
-        text: `You are about to ${actionText}.`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonText: "Yes, continue",
-        cancelButtonText: "Cancel",
-      }).then((result) => {
-        if (result.isConfirmed) {
-          showLoader(loaderText);
+        const confirmed = await showConfirmModal(
+          actionConfig.title,
+          actionConfig.confirm
+        );
+
+        if (confirmed) {
+          showLoader(actionConfig.loader);
 
           fetch(`/employers/job/${action}/${jobId}`, {
             method: "POST",
@@ -398,27 +399,29 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 1500);
               } else {
                 hideLoader();
-                Swal.fire("Error", data.message, "error");
+                alert("Error: " + data.message);
               }
             })
             .catch(() => {
               hideLoader();
-              Swal.fire("Error", "Request failed.", "error");
+              alert("Error: Request failed.");
             });
         }
       });
     });
-  });
 });
 
+// ========================
+// Edit Job Modal Controls
+// ========================
 document.addEventListener("DOMContentLoaded", () => {
   const editModal = document.getElementById("ej_editJobModal");
-  if (!editModal) return; // stop if modal not on page
+  if (!editModal) return;
 
   const closeBtn = editModal.querySelector(".ej-close-modal");
   const editForm = document.getElementById("ej_editJobForm");
 
-  document.querySelectorAll(".action-edit").forEach(btn => {
+  document.querySelectorAll(".action-edit").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const jobId = btn.dataset.jobId;
       showLoader("Loading job details...");
@@ -431,97 +434,148 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.success && data.job) {
           const job = data.job;
           document.getElementById("ej_editJobId").value = job.job_id;
-          document.getElementById("ej_editJobTitle").value = job.job_position || '';
-          document.getElementById("ej_editJobSchedule").value = job.work_schedule || '';
+          document.getElementById("ej_editJobTitle").value =
+            job.job_position || "";
+          document.getElementById("ej_editJobSchedule").value =
+            job.work_schedule || "";
           document.getElementById("ej_editJobVacancy").value = job.vacancy || 1;
-          document.getElementById("ej_editJobMinSalary").value = job.min_salary || 0;
-          document.getElementById("ej_editJobMaxSalary").value = job.max_salary || 0;
-          document.getElementById("ej_editJobDescription").value = job.job_description || '';
-          document.getElementById("ej_editJobQualifications").value = job.qualifications || '';
-          document.getElementById("ej_editJobStatus").value = job.status || 'Active';
+          document.getElementById("ej_editJobMinSalary").value =
+            job.min_salary || 0;
+          document.getElementById("ej_editJobMaxSalary").value =
+            job.max_salary || 0;
+          document.getElementById("ej_editJobDescription").value =
+            job.job_description || "";
+          document.getElementById("ej_editJobQualifications").value =
+            job.qualifications || "";
+          const statusValue = job.status
+            ? job.status.charAt(0).toUpperCase() +
+              job.status.slice(1).toLowerCase()
+            : "Active";
+          document.getElementById("ej_editJobStatus").value = statusValue;
           editModal.style.display = "block";
         } else {
-          Swal.fire("Error", data.message || "Unable to load job details.", "error");
+          alert("Error: " + (data.message || "Unable to load job details."));
         }
       } catch (err) {
         hideLoader();
         console.error(err);
-        Swal.fire("Error", "Unable to load job details.", "error");
+        alert("Error: Unable to load job details.");
       }
     });
   });
 
-  closeBtn.addEventListener("click", () => editModal.style.display = "none");
-  window.addEventListener("click", e => { if (e.target === editModal) editModal.style.display = "none"; });
-
-  editForm.addEventListener("submit", async e => {
-  e.preventDefault();
-  const fd = new FormData(editForm);
-  const jobId = fd.get("ej_job_id");
-  showLoader("Saving changes...");
-
-  try {
-    const res = await fetch(`/employers/job/${jobId}/update`, { method: "POST", body: fd });
-    const result = await res.json();
-    hideLoader();
-
-    if (result.success) {
-      // ✅ Hide the modal overlay first
-      editModal.style.display = "none";
-
-      // Show SweetAlert only
-      Swal.fire("Saved", "Job updated successfully!", "success").then(() => {
-        location.reload(); // reload job list or page
-      });
-    } else {
-      Swal.fire("Error", result.message || "Update failed.", "error");
-    }
-  } catch (err) {
-    hideLoader();
-    console.error(err);
-    Swal.fire("Error", "Request failed.", "error");
+  if (closeBtn) {
+    closeBtn.addEventListener(
+      "click",
+      () => (editModal.style.display = "none")
+    );
   }
-});
+
+  window.addEventListener("click", (e) => {
+    if (e.target === editModal) editModal.style.display = "none";
+  });
+
+  if (editForm) {
+    editForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(editForm);
+      const jobId = fd.get("ej_job_id");
+      showLoader("Saving changes...");
+
+      try {
+        const res = await fetch(`/employers/job/${jobId}/update`, {
+          method: "POST",
+          body: fd,
+        });
+        const result = await res.json();
+        hideLoader();
+
+        if (result.success) {
+          editModal.style.display = "none";
+          alert("Success: Job updated successfully!");
+          location.reload();
+        } else {
+          alert("Error: " + (result.message || "Update failed."));
+        }
+      } catch (err) {
+        hideLoader();
+        console.error(err);
+        alert("Error: Request failed.");
+      }
+    });
+  }
 
   const statusBtn = document.getElementById("ej_btnEditStatus");
   if (statusBtn) {
     statusBtn.addEventListener("click", () => {
       const sel = document.getElementById("ej_editJobStatus");
-      sel.value = (sel.value === "Archived") ? "Active" : "Archived";
+      sel.value = sel.value === "Archived" ? "Active" : "Archived";
     });
   }
 });
 
+// ========================
+// Create Job Form Submission
+// ========================
 document.addEventListener("DOMContentLoaded", () => {
-    const form = document.getElementById("createJobForm");
-    if (!form) return;
+  const createJobForm = document.getElementById("createJobForm");
+  if (!createJobForm) return;
 
-    form.addEventListener("submit", async function (e) {
-        e.preventDefault();  
+  // Flag to prevent double submission
+  let isSubmitting = false;
 
-        const formData = new FormData(form);
+  createJobForm.addEventListener("submit", (e) => {
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      e.preventDefault();
+      return;
+    }
 
-        const response = await fetch(form.action, {
-            method: "POST",
-            body: formData
-        });
+    // Validate form
+    if (!validateForm(createJobForm)) {
+      e.preventDefault();
+      return;
+    }
 
-        const result = await response.json();
+    // Check salary validation
+    const minSalary = Number.parseFloat(
+      createJobForm.querySelector('[name="min_salary"]')?.value
+    );
+    const maxSalary = Number.parseFloat(
+      createJobForm.querySelector('[name="max_salary"]')?.value
+    );
 
-        if (result.success) {
-            Swal.fire({
-                icon: "success",
-                title: "Success!",
-                text: result.message
-            });
-            form.reset();
-        } else {
-            Swal.fire({
-                icon: "error",
-                title: "Error!",
-                text: result.message
-            });
-        }
-    });
+    if (!isNaN(minSalary) && !isNaN(maxSalary) && maxSalary < minSalary) {
+      e.preventDefault();
+      const maxSalaryField = createJobForm.querySelector('[name="max_salary"]');
+      showError(maxSalaryField, "Maximum salary must be ≥ minimum salary");
+      return;
+    }
+
+    // Set flag and allow form to submit naturally
+    isSubmitting = true;
+    showLoader("Creating job post...");
+  });
+
+  // Real-time salary validation
+  const minSalaryInput = createJobForm.querySelector('[name="min_salary"]');
+  const maxSalaryInput = createJobForm.querySelector('[name="max_salary"]');
+  if (minSalaryInput && maxSalaryInput) {
+    const salaryCheck = () => {
+      const min = Number.parseFloat(minSalaryInput.value);
+      const max = Number.parseFloat(maxSalaryInput.value);
+      if (!isNaN(min) && !isNaN(max) && max < min) {
+        showError(maxSalaryInput, "Maximum salary must be ≥ minimum salary");
+      } else {
+        clearError(maxSalaryInput);
+      }
+    };
+    minSalaryInput.addEventListener("input", salaryCheck);
+    maxSalaryInput.addEventListener("input", salaryCheck);
+  }
+
+  // Clear individual field error on input
+  createJobForm.querySelectorAll("input, select, textarea").forEach((field) => {
+    field.addEventListener("input", () => clearError(field));
+  });
 });
-
