@@ -636,17 +636,42 @@ def mark_applicant_notification_read(notif_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@applicants_bp.route('/terms')
+@applicants_bp.route("/terms", methods=["GET", "POST"])
 def applicants_terms():
-    """Render Terms & Conditions for applicants.
-    This endpoint exists so templates can call url_for('applicants.applicants_terms').
-    """
-    try:
-        return render_template('Landing_Page/t_and_c_applicants.html')
-    except Exception as e:
-        print('[v0] Failed to render applicants terms page:', e)
-        # Fallback: render simple text page
-        return "Terms and Conditions (applicants)"
+    if request.method == "POST":
+        if not request.form.get("accepted_terms"):
+            flash("You must accept the Terms and Conditions to proceed.", "error")
+            return redirect(url_for("applicants.applicants_terms"))
+
+        session["accepted_terms"] = True
+        session["accepted_terms_at"] = datetime.utcnow().isoformat()
+        session["accepted_terms_for"] = "applicant"
+
+        return redirect(url_for("applicants.register"))
+
+    return render_template("Landing_Page/t_and_c_applicants.html")
+
+
+@applicants_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    """Render and process applicant registration form."""
+    if request.method == 'POST':
+        print(f"[v0] Applicant registration form submitted")
+
+        result = register_applicant(request.form, request.files)
+        if result is None:
+            success, message = False, "Registration failed unexpectedly."
+        else:
+            success, message = result
+
+        flash(message, "success" if success else "danger")
+
+        if success:
+            return redirect(url_for('home'))
+        else:
+            return redirect(url_for('applicants.register'))
+
+    return render_template('Landing_Page/applicant_registration.html')
 
 
 @applicants_bp.route('/account-security', methods=['GET', 'POST'])
