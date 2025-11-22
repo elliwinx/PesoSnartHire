@@ -717,90 +717,79 @@ async function renderApplications() {
     }
 
     applicationsList.innerHTML = applications
-      .map(
-        (app) => `
-      <div class="application-card" data-status="${
-        app.status?.toLowerCase() || "pending"
-      }">
-        <h3>${app.jobTitle || "N/A"}</h3>
-        <p>${app.companyName || "Company"}</p>
-        <p>Applied on: ${new Date(app.date).toLocaleDateString()}</p>
-      </div>
-    `
-      )
+      .map((app) => {
+        const statusText = app.status || "Applied";
+        const statusKey = (statusText || "").toString().toLowerCase();
+        let badgeClass = "badge-default";
+        if (statusKey.includes("pending") || statusKey === "applied") badgeClass = "badge-pending";
+        else if (statusKey.includes("shortlist")) badgeClass = "badge-shortlisted";
+        else if (statusKey.includes("interview")) badgeClass = "badge-interview";
+        else if (statusKey.includes("hired")) badgeClass = "badge-hired";
+        else if (statusKey.includes("reject")) badgeClass = "badge-rejected";
+
+        const canCancel = ["pending", "applied"].includes(statusKey);
+
+        return `
+          <div class="application-card" data-app-id="${app.id}">
+            <div class="application-info">
+              <h3 class="app-job">${app.jobTitle || "N/A"}</h3>
+              <p class="app-company">${app.companyName || ""} ${app.location ? '• ' + app.location : ''}</p>
+              <small class="app-date">${new Date(app.date).toLocaleString()}</small>
+            </div>
+            <div class="application-meta">
+              <span class="status-badge ${badgeClass}">${statusText}</span>
+              ${canCancel ? `<button class="btn btn-cancel-app" data-app-id="${app.id}">Cancel</button>` : ''}
+            </div>
+          </div>
+        `;
+      })
       .join("");
 
-    const tabButtons = Array.from(
-      document.querySelectorAll(".tab-group button")
-    );
-    const cards = Array.from(
-      applicationsList.querySelectorAll(".application-card")
-    );
-
-    function filterCards(filter) {
-      cards.forEach((card) => {
-        const status = card.dataset.status || "";
-        card.style.display =
-          filter === "all" || status === filter ? "flex" : "none";
-      });
-    }
-
-    tabButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        tabButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        filterCards(btn.dataset.filter || "all");
-      });
-    });
-
-    const initialBtn =
-      tabButtons.find((b) => b.classList.contains("active")) || tabButtons[0];
-    if (initialBtn) initialBtn.click();
+    // Attach click handler for application cards (view details) and cancel buttons
+    // Use event delegation instead of attaching many listeners
   } catch (err) {
     console.error("Failed to load applications:", err);
+    applicationsList.innerHTML = `<div class="empty-state"><p>Error loading applications.</p></div>`;
   }
 }
 
-document.addEventListener("DOMContentLoaded", renderApplications);
-
-async function deleteApplication(appId) {
-  if (!confirm("Are you sure you want to delete this application?")) return;
-
-  try {
-    const res = await fetch(`/applicants/api/delete-application/${appId}`, {
-      method: "DELETE",
-      credentials: "same-origin",
-    });
-    const data = await res.json();
-    if (data.success) {
-      showFlash("Application deleted successfully.", "success");
-      renderApplications();
-    } else {
-      showFlash(data.message || "Failed to delete application.", "danger");
+// Delegated handler for cancel button and clicking a card
+document.addEventListener('click', async function (e) {
+  const cancelBtn = e.target.closest('.btn-cancel-app');
+  if (cancelBtn) {
+    e.preventDefault();
+    const appId = cancelBtn.dataset.appId;
+    if (!appId) return;
+    if (!confirm('Are you sure you want to cancel this application?')) return;
+    try {
+      const res = await fetch(`/applicants/api/delete-application/${appId}`, {
+        method: 'DELETE',
+        credentials: 'same-origin'
+      });
+      const data = await res.json();
+      if (data.success) {
+        // refresh list
+        if (typeof renderApplications === 'function') renderApplications();
+        showFlash('Application cancelled.', 'success');
+        // Optionally update job counts if on employer view
+        try {
+          if (window.fetchJobCounts) window.fetchJobCounts();
+        } catch (e) {}
+      } else {
+        showFlash(data.message || 'Failed to cancel application', 'danger');
+      }
+    } catch (err) {
+      console.error('Cancel error', err);
+      showFlash('Error cancelling application', 'danger');
     }
-  } catch (err) {
-    console.error("Error deleting application:", err);
-    showFlash("Error deleting application.", "danger");
-  }
-}
-
-document.addEventListener("click", function (e) {
-  // OPEN CONFIRMATION MODAL
-  if (e.target.id === "modal-apply-btn") {
-    const modal = document.getElementById("confirmModalUnique");
-    modal.style.display = "flex";
+    return;
   }
 
-  // CANCEL BUTTON
-  if (e.target.id === "confirmCancel") {
-    const modal = document.getElementById("confirmModalUnique");
-    modal.style.display = "none";
-  }
-
-  // YES APPLY BUTTON
-  if (e.target.id === "confirmYes") {
-    console.log("Proceed with application!");
-    const modal = document.getElementById("confirmModalUnique");
-    modal.style.display = "none";
+  // Click on application card to view job or details (if you want to redirect)
+  const card = e.target.closest('.application-card');
+  if (card && !e.target.closest('.btn-cancel-app')) {
+    const appId = card.dataset.appId;
+    // Try to open job page — fetch job id from server is not directly available here.
+    // If you want to redirect to job detail, implement data-job-id in API response and use it.
   }
 });
