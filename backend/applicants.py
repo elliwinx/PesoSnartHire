@@ -1100,18 +1100,7 @@ def applicants_terms():
 
 
 @applicants_bp.route('/register', methods=['GET', 'POST'])
-@applicants_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    """Render and process applicant registration form."""
-    if request.method == 'POST':
-        print(f"[v0] Applicant registration form submitted")
-
-        result = register_applicant(request.form, request.files)
-        if result is None:
-            success, message = False, "Registration failed unexpectedly."
-        else:
-            success, message = result
-
     """Render and process applicant registration form."""
     if request.method == 'POST':
         print(f"[v0] Applicant registration form submitted")
@@ -1128,13 +1117,6 @@ def register():
             return redirect(url_for('home'))
         else:
             return redirect(url_for('applicants.register'))
-
-        if success:
-            return redirect(url_for('home'))
-        else:
-            return redirect(url_for('applicants.register'))
-
-    return render_template('Landing_Page/applicant_registration.html')
 
     return render_template('Landing_Page/applicant_registration.html')
 
