@@ -72,12 +72,50 @@
         {% else %}
         <ul>
           {% for app in applications %}
-          <li>Job ID: {{ app.job_id }} — Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</li>
+          <li>
+            Job ID: {{ app.job_id }} — Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}
+            <div class="app-status">
+              <span class="status-label">Status: <strong id="status-{{ app.id }}">{{ app.status or 'Pending' }}</strong></span>
+              <select data-app-id="{{ app.id }}" class="status-select">
+                <option value="Pending" {% if app.status == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="For Interview" {% if app.status == 'For Interview' %}selected{% endif %}>For Interview</option>
+                <option value="Shortlisted" {% if app.status == 'Shortlisted' %}selected{% endif %}>Shortlisted</option>
+                <option value="Hired" {% if app.status == 'Hired' %}selected{% endif %}>Hired</option>
+                <option value="Rejected" {% if app.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+              </select>
+            </div>
+          </li>
           {% endfor %}
         </ul>
         {% endif %}
       </section>
+
     </main>
+
+    <script>
+      document.addEventListener('change', async (e) => {
+        const sel = e.target.closest('.status-select');
+        if (!sel) return;
+        const appId = sel.dataset.appId;
+        const newStatus = sel.value;
+        try {
+          const res = await fetch(`/employers/api/applications/${appId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+          });
+          const data = await res.json();
+          if (data.success) {
+            document.getElementById(`status-${appId}`).textContent = data.new_status;
+          } else {
+            alert(data.message || 'Failed to update status');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error updating status');
+        }
+      });
+    </script>
 
     <footer class="footer">
       <div class="container">

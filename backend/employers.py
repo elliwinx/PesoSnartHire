@@ -1261,7 +1261,7 @@ def view_applicant(applicant_id):
         applications = run_query(
             conn,
             """
-            SELECT a.id AS id, a.job_id, a.applied_at, j.job_position
+            SELECT a.id AS id, a.job_id, a.status AS status, a.applied_at, j.job_position
             FROM applications a
             JOIN jobs j ON a.job_id = j.job_id
             WHERE a.applicant_id = %s
@@ -1276,5 +1276,74 @@ def view_applicant(applicant_id):
         print(f"[v0] Error loading applicant profile: {e}")
         flash('Failed to load applicant profile.', 'danger')
         return redirect(url_for('employers.application_management'))
+    finally:
+        conn.close()
+
+
+@employers_bp.route('/api/applications/<int:application_id>/status', methods=['POST'])
+def update_application_status(application_id):
+    """Allow employer to update an application's status (with permission check).
+    Records change in applications_history table.
+    Expected JSON: { "status": "Hired" }
+    """
+    if 'employer_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+
+    employer_id = session['employer_id']
+    data = request.get_json() or {}
+    new_status = data.get('status')
+    allowed_statuses = ['Pending', 'Hired', 'Shortlisted', 'Rejected', 'For Interview']
+
+    if not new_status or new_status not in allowed_statuses:
+        return jsonify({'success': False, 'message': 'Invalid status'}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'DB connection failed'}), 500
+
+    try:
+        # Fetch application and verify ownership via job -> employer
+        app_row = run_query(conn, "SELECT a.id, a.job_id, a.status, j.employer_id FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s", (application_id,), fetch='one')
+        if not app_row:
+            return jsonify({'success': False, 'message': 'Application not found'}), 404
+
+        if app_row.get('employer_id') != employer_id:
+            return jsonify({'success': False, 'message': 'Permission denied'}), 403
+
+        old_status = app_row.get('status') or 'Pending'
+
+        # Update applications table
+        run_query(conn, "UPDATE applications SET status = %s WHERE id = %s", (new_status, application_id))
+
+        # Ensure applications_history table exists (best-effort)
+        try:
+            run_query(conn, """
+                CREATE TABLE IF NOT EXISTS applications_history (
+                    history_id INT AUTO_INCREMENT PRIMARY KEY,
+                    application_id INT NOT NULL,
+                    old_status VARCHAR(50),
+                    new_status VARCHAR(50),
+                    changed_by INT,
+                    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    note TEXT,
+                    INDEX(application_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+            """)
+        except Exception as e:
+            # non-fatal: continue
+            print('[v0] applications_history create check failed:', e)
+
+        # Insert history record
+        run_query(conn, "INSERT INTO applications_history (application_id, old_status, new_status, changed_by) VALUES (%s, %s, %s, %s)", (application_id, old_status, new_status, employer_id))
+
+        conn.commit()
+
+        return jsonify({'success': True, 'message': 'Status updated', 'new_status': new_status})
+
+    except Exception as e:
+        print('[v0] Error updating application status:', e)
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
     finally:
         conn.close()
