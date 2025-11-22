@@ -1,11 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, current_app
-<<<<<<< HEAD
 from datetime import datetime, timedelta, date
-=======
-from datetime import datetime
-import os
-import json
->>>>>>> feature-job-post
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from db_connection import create_connection, run_query
@@ -1631,14 +1625,8 @@ def reactivate_employer_account():
         cursor.close()
         conn.close()
 
-<<<<<<< HEAD
 
 # ===== Job Posting Route =====
-=======
-# ===== Job Posting Route =====
-
-
->>>>>>> feature-job-post
 @employers_bp.route("/create_job", methods=["POST"])
 def create_job():
     if "employer_id" not in session:
@@ -2011,12 +1999,8 @@ def mark_notification_read_by_id(notification_id):
         return jsonify({"success": False}), 500
 
     try:
-<<<<<<< HEAD
         run_query(conn, "UPDATE notifications SET is_read = 1 WHERE notification_id = %s AND employer_id = %s",
                   (notification_id, employer_id))
-=======
-        run_query(conn, "UPDATE notifications SET is_read = 1 WHERE notification_id = %s AND employer_id = %s", (notification_id, employer_id))
->>>>>>> feature-job-post
         conn.commit()
         return jsonify({"success": True})
     except Exception as e:
@@ -2042,12 +2026,8 @@ def job_applicants(job_id):
 
     try:
         # ensure job belongs to this employer
-<<<<<<< HEAD
         job = run_query(conn, "SELECT * FROM jobs WHERE job_id = %s AND employer_id = %s",
                         (job_id, employer_id), fetch='one')
-=======
-        job = run_query(conn, "SELECT * FROM jobs WHERE job_id = %s AND employer_id = %s", (job_id, employer_id), fetch='one')
->>>>>>> feature-job-post
         if not job:
             flash('Job not found or you do not have permission to view it.', 'danger')
             return redirect(url_for('employers.application_management'))
@@ -2098,12 +2078,8 @@ def view_applicant(applicant_id):
         return redirect(url_for('employers.application_management'))
 
     try:
-<<<<<<< HEAD
         applicant = run_query(
             conn, "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,), fetch='one')
-=======
-        applicant = run_query(conn, "SELECT * FROM applicants WHERE applicant_id = %s", (applicant_id,), fetch='one')
->>>>>>> feature-job-post
         if not applicant:
             flash('Applicant not found.', 'danger')
             return redirect(url_for('employers.application_management'))
@@ -2142,12 +2118,8 @@ def update_application_status(application_id):
     employer_id = session['employer_id']
     data = request.get_json() or {}
     new_status = data.get('status')
-<<<<<<< HEAD
     allowed_statuses = ['Pending', 'Hired',
                         'Shortlisted', 'Rejected', 'For Interview']
-=======
-    allowed_statuses = ['Pending', 'Hired', 'Shortlisted', 'Rejected', 'For Interview']
->>>>>>> feature-job-post
 
     if not new_status or new_status not in allowed_statuses:
         return jsonify({'success': False, 'message': 'Invalid status'}), 400
@@ -2159,12 +2131,8 @@ def update_application_status(application_id):
     try:
         # Fetch application and verify ownership via job -> employer
         # include applicant_id and job_position so we can notify the applicant
-<<<<<<< HEAD
         app_row = run_query(
             conn, "SELECT a.id, a.job_id, a.applicant_id, a.status, j.employer_id, j.job_position FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s", (application_id,), fetch='one')
-=======
-        app_row = run_query(conn, "SELECT a.id, a.job_id, a.applicant_id, a.status, j.employer_id, j.job_position FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s", (application_id,), fetch='one')
->>>>>>> feature-job-post
         if not app_row:
             return jsonify({'success': False, 'message': 'Application not found'}), 404
 
@@ -2174,12 +2142,8 @@ def update_application_status(application_id):
         old_status = app_row.get('status') or 'Pending'
 
         # Update applications table
-<<<<<<< HEAD
         run_query(conn, "UPDATE applications SET status = %s WHERE id = %s",
                   (new_status, application_id))
-=======
-        run_query(conn, "UPDATE applications SET status = %s WHERE id = %s", (new_status, application_id))
->>>>>>> feature-job-post
 
         # Ensure applications_history table exists (best-effort)
         try:
@@ -2200,12 +2164,8 @@ def update_application_status(application_id):
             print('[v0] applications_history create check failed:', e)
 
         # Insert history record
-<<<<<<< HEAD
         run_query(conn, "INSERT INTO applications_history (application_id, old_status, new_status, changed_by) VALUES (%s, %s, %s, %s)",
                   (application_id, old_status, new_status, employer_id))
-=======
-        run_query(conn, "INSERT INTO applications_history (application_id, old_status, new_status, changed_by) VALUES (%s, %s, %s, %s)", (application_id, old_status, new_status, employer_id))
->>>>>>> feature-job-post
 
         conn.commit()
 
@@ -2240,11 +2200,6 @@ def update_application_status(application_id):
 @employers_bp.route('/api/job_counts', methods=['GET'])
 def get_job_counts():
     """Return a mapping of job_id -> application_count for the logged-in employer.
-<<<<<<< HEAD
-
-=======
-    
->>>>>>> feature-job-post
     FIXED: Now counts ACTUAL applications from the applications table
     instead of returning the stale 'application_count' column.
     """
@@ -2258,22 +2213,13 @@ def get_job_counts():
 
     try:
         rows = run_query(
-<<<<<<< HEAD
             conn,
-=======
-            conn, 
->>>>>>> feature-job-post
             """SELECT j.job_id, COUNT(a.id) AS applicant_count
                FROM jobs j
                LEFT JOIN applications a ON j.job_id = a.job_id
                WHERE j.employer_id = %s AND j.status != 'deleted'
-<<<<<<< HEAD
                GROUP BY j.job_id""",
             (employer_id,),
-=======
-               GROUP BY j.job_id""", 
-            (employer_id,), 
->>>>>>> feature-job-post
             fetch='all'
         )
         conn.close()
