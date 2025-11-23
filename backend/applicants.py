@@ -494,8 +494,8 @@ def forced_password_change():
         hashed_password = generate_password_hash(new_password)
         run_query(
             conn,
-            """UPDATE applicants 
-               SET password_hash = %s, must_change_password = 0 
+            """UPDATE applicants
+               SET password_hash = %s, must_change_password = 0
                WHERE applicant_id = %s""",
             (hashed_password, applicant_id)
         )
@@ -544,23 +544,23 @@ def applicant_home():
         jobs = run_query(
             conn,
             """
-            SELECT 
-                jobs.job_id, 
-                jobs.job_position, 
-                jobs.work_schedule, 
+            SELECT
+                jobs.job_id,
+                jobs.job_position,
+                jobs.work_schedule,
                 jobs.num_vacancy,
-                jobs.min_salary, 
-                jobs.max_salary, 
-                jobs.job_description, 
-                jobs.qualifications, 
+                jobs.min_salary,
+                jobs.max_salary,
+                jobs.job_description,
+                jobs.qualifications,
                 jobs.created_at,
                 employers.employer_name AS company_name,
                 employers.company_logo_path,
                 employers.industry AS industry,
                 employers.recruitment_type AS type_of_recruitment,
                 employers.city AS location,
-                (SELECT COUNT(*) FROM applications 
-                 WHERE applications.job_id = jobs.job_id 
+                (SELECT COUNT(*) FROM applications
+                 WHERE applications.job_id = jobs.job_id
                  AND applications.applicant_id = %s) as has_applied
             FROM jobs
             LEFT JOIN employers ON jobs.employer_id = employers.employer_id
@@ -603,9 +603,9 @@ def apply_job(job_id):
 
         job_details = run_query(
             conn,
-            """SELECT j.job_position, j.employer_id, e.employer_name 
-               FROM jobs j 
-               JOIN employers e ON j.employer_id = e.employer_id 
+            """SELECT j.job_position, j.employer_id, e.employer_name
+               FROM jobs j
+               JOIN employers e ON j.employer_id = e.employer_id
                WHERE j.job_id = %s""",
             (job_id,),
             fetch="one"
@@ -657,7 +657,7 @@ def apply_job(job_id):
                 try:
                     run_query(
                         conn,
-                        "UPDATE employers SET applicant_count = applicant_count + 1 WHERE employer_id = %s",
+                        "UPDATE employers SET applicant_count = application_count + 1 WHERE employer_id = %s",
                         (employer_id,)
                     )
                 except Exception:
@@ -879,9 +879,7 @@ def applications_page():
 
 @applicants_bp.route('/api/applications')
 def api_applications():
-    """Return JSON list of applications for the logged-in applicant.
-    Fields match what the frontend expects: id, job_id, jobTitle, companyName, location, date, status
-    """
+    """Return JSON list of applications for the logged-in applicant."""
     if 'applicant_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'}), 401
 
@@ -891,18 +889,20 @@ def api_applications():
         return jsonify({'success': False, 'message': 'DB connection failed'}), 500
 
     try:
-        # Try to select common id column names (application_id or id)
+        # Get filter from query params (default to 'all')
+        filter_status = request.args.get('filter', 'all').lower()
+
         rows = run_query(
             conn,
             """
             SELECT
-                a.id AS id,
+                a.id,
                 a.job_id,
-                j.job_position AS jobTitle,
-                e.employer_name AS companyName,
-                e.city AS location,
-                a.applied_at AS date,
-                COALESCE(a.status, 'Applied') AS status
+                j.job_position,
+                e.employer_name,
+                e.city,
+                a.applied_at,
+                COALESCE(a.status, 'Pending') AS status
             FROM applications a
             LEFT JOIN jobs j ON a.job_id = j.job_id
             LEFT JOIN employers e ON j.employer_id = e.employer_id
@@ -913,29 +913,112 @@ def api_applications():
             fetch='all'
         ) or []
 
-        # Normalize date to ISO strings for client-side Date parsing
         apps = []
         for r in rows:
-            d = r.get('date')
+            d = r.get('applied_at')
             if hasattr(d, 'isoformat'):
                 date_str = d.isoformat()
             else:
                 date_str = str(d) if d is not None else None
 
-            apps.append({
+            app_data = {
                 'id': r.get('id'),
-                'jobId': r.get('job_id'),
-                'jobTitle': r.get('jobTitle') or r.get('job_position') or 'N/A',
-                'companyName': r.get('companyName') or '',
-                'location': r.get('location') or '',
-                'date': date_str,
-                'status': r.get('status') or 'Applied'
-            })
+                'job_position': r.get('job_position') or 'N/A',
+                'employer_name': r.get('employer_name') or 'N/A',
+                'location': r.get('city') or '',
+                'applied_at': date_str,
+                'status': r.get('status') or 'Pending'
+            }
 
-        return jsonify(apps)
+            # Apply filter
+            if filter_status == 'all' or filter_status == '':
+                apps.append(app_data)
+            elif app_data['status'].lower().replace(' ', '-') == filter_status:
+                apps.append(app_data)
+
+        return jsonify({'applications': apps, 'success': True})
     except Exception as e:
         print('[v0] Error fetching applications:', e)
         return jsonify({'success': False, 'message': 'Failed to load applications'}), 500
+    finally:
+        conn.close()
+
+
+@applicants_bp.route('/api/applications/<int:application_id>')
+def api_get_application_details(application_id):
+    """Return full details for a single application including job info."""
+    if 'applicant_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+
+    applicant_id = session['applicant_id']
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'DB connection failed'}), 500
+
+    try:
+        # Get application details with full job and employer info
+        row = run_query(
+            conn,
+            """
+            SELECT
+                a.id,
+                a.job_id,
+                a.applied_at,
+                COALESCE(a.status, 'Pending') AS status,
+                j.job_position,
+                j.job_description,
+                j.qualifications,
+                j.work_schedule,
+                j.min_salary,
+                j.max_salary,
+                j.num_vacancy,
+                e.employer_name,
+                e.city,
+                e.company_logo_path
+            FROM applications a
+            LEFT JOIN jobs j ON a.job_id = j.job_id
+            LEFT JOIN employers e ON j.employer_id = e.employer_id
+            WHERE a.id = %s AND a.applicant_id = %s
+            """,
+            (application_id, applicant_id),
+            fetch='one'
+        )
+
+        if not row:
+            print('[v0] Application not found')
+            return jsonify({'success': False, 'message': 'Application not found'}), 404
+
+        # Format salary range
+        min_salary = row.get('min_salary', 0)
+        max_salary = row.get('max_salary', 0)
+        salary_range = f"₱{min_salary:,.0f} - ₱{max_salary:,.0f}" if min_salary and max_salary else "Not specified"
+
+        # Format applied_at date
+        applied_at = row.get('applied_at')
+        if hasattr(applied_at, 'isoformat'):
+            applied_date_str = applied_at.isoformat()
+        else:
+            applied_date_str = str(applied_at) if applied_at else None
+
+        application = {
+            'id': row.get('id'),
+            'job_position': row.get('job_position') or 'N/A',
+            'employer_name': row.get('employer_name') or 'N/A',
+            'location': row.get('city') or 'Not specified',
+            'job_description': row.get('job_description') or 'No description available.',
+            'qualifications': row.get('qualifications') or 'Not specified',
+            'work_schedule': row.get('work_schedule', 'Not specified').replace('-', ' ').title(),
+            'salary_range': salary_range,
+            'num_vacancy': row.get('num_vacancy', 0),
+            'applied_at': applied_date_str,
+            'status': row.get('status') or 'Pending'
+        }
+
+        return jsonify({'success': True, 'application': application})
+
+    except Exception as e:
+        print(f'[v0] Error fetching application details: {e}')
+        return jsonify({'success': False, 'message': f'Error loading details: {str(e)}'}), 500
     finally:
         conn.close()
 
@@ -1050,7 +1133,7 @@ def submit_reupload():
         run_query(
             conn,
             """
-            UPDATE applicants 
+            UPDATE applicants
             SET recommendation_letter_path = %s, recommendation_letter_expiry = %s, recommendation_letter_uploaded_at = %s, recommendation_warning_sent = %s, status = 'Pending', is_active = 0
             WHERE applicant_id = %s
             """,

@@ -334,6 +334,14 @@ body {
   color: #fff;
 }
 
+.btn-apply:hover,
+.btn-details:hover,
+.apply-form button:hover {
+  background: white;
+  color: #006341;
+  border: 1px solid #006341;
+}
+
 .apply-form {
   margin: 0;
   padding: 0;
@@ -463,7 +471,7 @@ body {
   background: #fff;
   padding: 20px;
   border-radius: 10px;
-  width: 600px;
+  width: 400px;
   max-width: 90%;
   max-height: 80vh;
   overflow-y: auto;
@@ -479,7 +487,17 @@ body {
   right: 15px;
   font-size: 24px;
   cursor: pointer;
-  color: #333;
+  color: #000;
+}
+
+.modal-content-unique .close-unique:hover,
+.modal-content-unique .close-report-unique:hover {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #000000;
 }
 
 /* All contents centered (used by your report modal) */
@@ -524,7 +542,7 @@ body {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 2px solid #000;
+  border: 2px solid #000000;
   background: transparent;
   font-size: 17px;
   display: flex;
@@ -533,11 +551,17 @@ body {
   cursor: pointer;
 }
 
+.btn-report:hover {
+  background: #7b1113;
+  color: white;
+  border: 1px solid white;
+}
+
 /* Confirm + Cancel buttons row */
 .modal-buttons {
   display: flex;
   justify-content: center;
-  gap: 15px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -632,11 +656,38 @@ body {
 
 .modal-content {
   background: #fff;
-  padding: 30px;
+  padding: 20px;
   border-radius: 10px;
-  width: 430px;
-  text-align: center;
+  width: 800px;
+  max-width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
   position: relative;
+  margin: 100px auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content p {
+  white-space: pre-line;
+}
+
+.app-cancel-btn {
+  background-color: #7b1114;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.app-cancel-btn:hover {
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+}
+
+.detail-group {
+  margin-left: 8px;
 }
 
 .close-report {
@@ -648,7 +699,7 @@ body {
 }
 
 .modal-buttons button {
-  margin: 10px 5px;
+  margin: 10px 0;
   width: 120px;
   padding: 10px;
   border: none;
@@ -877,7 +928,8 @@ body {
   background-color: #ebebeb;
   max-width: 1200px;
   justify-content: center;
-  margin: 0 auto;
+  margin: 0 auto 40px auto;
+  border-radius: 10px;
 }
 
 /* Card */
@@ -1598,8 +1650,6 @@ div:where(.swal2-icon).swal2-warning {
   border-radius: 6px;
 }
 
-/* Adding proper modal styling for confirmation and details modals */
-
 /* Confirmation Modal Overlay */
 .modal-overlay {
   position: fixed;
@@ -1626,7 +1676,7 @@ div:where(.swal2-icon).swal2-warning {
 }
 
 .modal-content-confirm h2 {
-  color: #8b1515;
+  color: #006341;
   margin: 0 0 15px 0;
   font-size: 1.5rem;
 }
@@ -1636,6 +1686,66 @@ div:where(.swal2-icon).swal2-warning {
   margin-bottom: 25px;
   font-size: 1rem;
   line-height: 1.5;
+  white-space: pre-line;
+}
+
+.confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none; /* hidden by default */
+  justify-content: center;
+  align-items: center;
+  z-index: 2147483647;
+}
+
+.confirm-box {
+  background: white;
+  padding: 20px 25px;
+  width: 350px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.confirm-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-yes {
+  background: #7b1113;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-yes:hover {
+  background: white;
+  border: 1px solid #7b1113;
+  color: #7b1113;
+}
+
+.btn-no {
+  background: white;
+  color: #333;
+  padding: 8px 14px;
+  border: 1px solid #333;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.btn-no:hover {
+  background: #333;
+  border: 1px solid #333;
+  color: white;
 }
 
 /* Confirmation Modal Actions */
@@ -1646,7 +1756,7 @@ div:where(.swal2-icon).swal2-warning {
 }
 
 .modal-actions-confirm .btn-confirm {
-  background: #8b1515;
+  background: #006341;
   color: #fff;
   border: none;
   padding: 12px 28px;
@@ -1658,13 +1768,15 @@ div:where(.swal2-icon).swal2-warning {
 }
 
 .modal-actions-confirm .btn-confirm:hover {
-  background: #a01818;
+  background: white;
+  border: 1px solid #006341;
+  color: #006341;
 }
 
 .modal-actions-confirm .btn-cancel-confirm {
-  background: #666;
-  color: #fff;
-  border: none;
+  background: white;
+  color: #000000;
+  border: 1px solid #000000;
   padding: 12px 28px;
   border-radius: 8px;
   font-size: 1rem;
@@ -1676,7 +1788,9 @@ div:where(.swal2-icon).swal2-warning {
 }
 
 .modal-actions-confirm .btn-cancel-confirm:hover {
-  background: #555;
+  background: #000000;
+  color: white;
+  border: 1px solid white;
 }
 
 /* Job Details Modal */
@@ -2003,7 +2117,7 @@ div:where(.swal2-icon).swal2-warning {
   margin-bottom: 15px;
 }
 
-.custom-modal .modal-content {
+.custom-modal {
   background: #fff;
   padding: 2rem;
   border-radius: 8px;

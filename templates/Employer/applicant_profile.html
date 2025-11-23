@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ applicant.first_name }} {{ applicant.last_name }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/employer.css') }}" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/employer.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
   </head>
   <body>
     <header class="header">
@@ -39,7 +56,7 @@
       </div>
     </header>
 
-        <section class="hero">
+    <section class="hero">
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
@@ -58,158 +75,196 @@
       </div>
     </section>
 
-    <main class="container">
-      <div class="back-button" style="margin: 12px 0;">
-        <a href="javascript:history.back()"><i class="fa-solid fa-arrow-left"></i> Back</a>
-      </div>
-
-      <div class="profile-header">
-        <div class="profile-pic">
-          {% if applicant.profile_pic_path %}
-          <img src="{{ url_for('static', filename=applicant.profile_pic_path) }}" alt="Profile Picture" />
-          {% else %}
-          <img src="{{ url_for('static', filename='Assets/default-avatar.png') }}" alt="Default Profile" />
-          {% endif %}
+    <section class="account-and-security">
+      <div class="container">
+        <div class="left">
+          <div class="back-button" style="margin: 12px 0;">
+            <a href="javascript:void(0);" onclick="window.history.back();"><i class="fa-solid fa-arrow-left"></i></a>
         </div>
-        <div class="profile-details">
-          <h2>{{ applicant.first_name }} {% if applicant.middle_name %}{{ applicant.middle_name }} {% endif %}{{ applicant.last_name }}</h2>
-          <p><strong>Applicant Code:</strong> {{ applicant.applicant_code or 'N/A' }}</p>
-          <p><strong>Status:</strong> {{ applicant.status or 'N/A' }}</p>
         </div>
-      </div>
-
-      <div class="section">
-        <h3>Personal Information</h3>
-        <p><strong>Age:</strong> {{ applicant.age or 'N/A' }}</p>
-        <p><strong>Sex:</strong> {{ applicant.sex or 'N/A' }}</p>
-        <p><strong>Phone:</strong> {{ applicant.phone or 'N/A' }}</p>
-        <p><strong>Email:</strong> {{ applicant.email or 'N/A' }}</p>
-      </div>
-
-      <div class="section">
-        <h3>Address</h3>
-        <p><strong>Province:</strong> {{ applicant.province or 'N/A' }}</p>
-        <p><strong>City:</strong> {{ applicant.city or 'N/A' }}</p>
-        <p><strong>Barangay:</strong> {{ applicant.barangay or 'N/A' }}</p>
-      </div>
-
-      <div class="section">
-        <h3>Education</h3>
-        <p>{{ applicant.education or 'N/A' }}</p>
-      </div>
-
-      {% if applicant.is_pwd %}
-      <div class="section">
-        <h3>Person with Disability</h3>
-        <p><strong>Type:</strong> {{ applicant.pwd_type or 'N/A' }}</p>
-      </div>
-      {% endif %}
-
-      {% if applicant.has_work_exp %}
-      <div class="section">
-        <h3>Work Experience</h3>
-        <p><strong>Years of Experience:</strong> {{ applicant.years_experience or 'N/A' }}</p>
-      </div>
-      {% endif %}
-
-      <div class="section">
-        <h3>Reason for Registering</h3>
-        <p>{{ applicant.registration_reason or 'N/A' }}</p>
-      </div>
-
-      <div class="section documents">
-        <h3>Documents</h3>
-        <ul>
-          {% if applicant.resume_path %}
-          <li><a href="{{ url_for('static', filename=applicant.resume_path) }}" target="_blank">Resume</a></li>
-          {% endif %}
-          {% if not applicant.is_from_lipa and applicant.recommendation_letter_path %}
-          <li><a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}" target="_blank">Recommendation Letter</a></li>
-          {% endif %}
-        </ul>
-      </div>
-
-      <div class="section">
-        <h3>System Info</h3>
-        <p><strong>Registered At:</strong> {{ applicant.created_at }}</p>
-        <p><strong>Updated At:</strong> {{ applicant.updated_at }}</p>
-      </div>
-
-      <!-- Employer: Applications list with per-application status control -->
-      <div class="section">
-        <h3>Applications</h3>
-        {% if not applications or applications|length == 0 %}
-        <p class="empty-msg">No application records found.</p>
-        {% else %}
-        <div class="applications-list">
-          {% for app in applications %}
-          <!-- Added data-job-id attribute to allow filtering by Job ID -->
-          <div class="application-row" data-job-id="{{ app.job_id }}" style="margin-bottom:12px; padding:8px; border:1px solid #eee;">
-            <div>
-              <strong>Job:</strong> {{ app.job_position or ('Job ID: ' ~ app.job_id) }}
-              <div><small>Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</small></div>
-            </div>
-            <div style="margin-top:8px;">
-              <span>Status: <strong id="status-{{ app.id }}">{{ app.status or 'Pending' }}</strong></span>
-              <select data-app-id="{{ app.id }}" class="status-select">
-                <option value="Pending" {% if app.status == 'Pending' %}selected{% endif %}>Pending</option>
-                <option value="Accepted" {% if app.status == 'Accepted' %}selected{% endif %}>Accepted</option>
-                <option value="Rejected" {% if app.status == 'Rejected' %}selected{% endif %}>Rejected</option>
-              </select>
-            </div>
+        <div class="right">
+          <i class="fa-solid fa-bars" id="menuToggle"></i>
+          <div class="dropdown-menu" id="dropdownMenu">
+            <a href="#" id="reportAccountBtn">Report Account</a>
           </div>
-          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <div class="profile-container">
+      <div class="container">
+        <div class="profile-header">
+          <div class="profile-pic">
+            {% if applicant.profile_pic_path %}
+            <img src="{{ url_for('static', filename=applicant.profile_pic_path) }}" alt="Profile Picture" />
+            {% else %}
+            <img src="{{ url_for('static', filename='Assets/default-avatar.png') }}" alt="Default Profile" />
+            {% endif %}
+          </div>
+          <div class="profile-details">
+            <h2>{{ applicant.first_name }} {% if applicant.middle_name %}{{ applicant.middle_name }} {% endif %}{{ applicant.last_name }}</h2>
+            <p><strong>Applicant Code:</strong> {{ applicant.applicant_code or 'N/A' }}</p>
+            <p><strong>Status:</strong> {{ applicant.status or 'N/A' }}</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Personal Information</h3>
+          <p><strong>Age:</strong> {{ applicant.age or 'N/A' }}</p>
+          <p><strong>Sex:</strong> {{ applicant.sex or 'N/A' }}</p>
+          <p><strong>Phone:</strong> {{ applicant.phone or 'N/A' }}</p>
+          <p><strong>Email:</strong> {{ applicant.email or 'N/A' }}</p>
+        </div>
+
+        <div class="section">
+          <h3>Address</h3>
+          <p><strong>Province:</strong> {{ applicant.province or 'N/A' }}</p>
+          <p><strong>City:</strong> {{ applicant.city or 'N/A' }}</p>
+          <p><strong>Barangay:</strong> {{ applicant.barangay or 'N/A' }}</p>
+        </div>
+
+        <div class="section">
+          <h3>Education</h3>
+          <p>{{ applicant.education or 'N/A' }}</p>
+        </div>
+
+        {% if applicant.is_pwd %}
+        <div class="section">
+          <h3>Person with Disability</h3>
+          <p><strong>Type:</strong> {{ applicant.pwd_type or 'N/A' }}</p>
         </div>
         {% endif %}
+
+        {% if applicant.has_work_exp %}
+        <div class="section">
+          <h3>Work Experience</h3>
+          <p><strong>Years of Experience:</strong> {{ applicant.years_experience or 'N/A' }}</p>
+        </div>
+        {% endif %}
+
+        <div class="section">
+          <h3>Reason for Registering</h3>
+          <p>{{ applicant.registration_reason or 'N/A' }}</p>
+        </div>
+
+        <div class="section documents">
+          <h3>Documents</h3>
+          <ul>
+            {% if applicant.resume_path %}
+            <li><a href="{{ url_for('static', filename=applicant.resume_path) }}" target="_blank">Resume</a></li>
+            {% endif %}
+            {% if not applicant.is_from_lipa and applicant.recommendation_letter_path %}
+            <li><a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}" target="_blank">Recommendation Letter</a></li>
+            {% endif %}
+          </ul>
+        </div>
+
+        <div class="section">
+          <h3>System Info</h3>
+          <p><strong>Registered At:</strong> {{ applicant.created_at }}</p>
+          <p><strong>Updated At:</strong> {{ applicant.updated_at }}</p>
+        </div>
+
+        <!-- Employer: Applications list with per-application status control -->
+        <div class="section">
+          <h3>Applications</h3>
+          {% if not applications or applications|length == 0 %}
+          <p class="empty-msg">No application records found.</p>
+          {% else %}
+          <div class="applications-list">
+            {% for app in applications %}
+            <!-- Added data-job-id attribute to allow filtering by Job ID -->
+            <div class="application-row" data-job-id="{{ app.job_id }}">
+              <div>
+                <strong>Job:</strong> {{ app.job_position or ('Job ID: ' ~ app.job_id) }}
+                <div><small>Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</small></div>
+              </div>
+
+              <div style="margin-top:8px;">
+                <span>Status: <strong id="status-{{ app.id }}">{{ app.status or 'Pending' }}</strong></span>
+
+                <select data-app-id="{{ app.id }}" class="status-select">
+                  <option value="Pending" {% if app.status == 'Pending' %}selected{% endif %}>Pending</option>
+                  <option value="Accepted" {% if app.status == 'Hired' %}selected{% endif %}>Hired</option>
+                  <option value="Rejected" {% if app.status == 'Shortlisted' %}selected{% endif %}>Shortlisted</option>
+                  <option value="Accepted" {% if app.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
       </div>
+    </div>
 
-    </main>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const params = new URLSearchParams(window.location.search);
+        const filterJobId = params.get('job_id');
 
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const params = new URLSearchParams(window.location.search);
-    const filterJobId = params.get('job_id');
-
-    if (filterJobId) {
-      const rows = document.querySelectorAll('.application-row');
-      let visibleCount = 0;
-      
-      rows.forEach(row => {
-        if (row.dataset.jobId !== filterJobId) {
-          row.style.display = 'none';
-        } else {
-          row.style.display = 'block';
-          row.style.border = '2px solid #8b1515'; // Highlight the relevant application
-          row.style.backgroundColor = '#fff5f5';
-          visibleCount++;
+        if (filterJobId) {
+          const rows = document.querySelectorAll('.application-row');
+          let visibleCount = 0;
+          
+          rows.forEach(row => {
+            if (row.dataset.jobId !== filterJobId) {
+              row.style.display = 'none';
+            } else {
+              row.style.display = 'block';
+              row.style.border = '1px solid #d0d7de';  
+              row.style.backgroundColor = 'white';   
+              row.style.borderRadius = '10px';         
+              row.style.padding = '8px';               
+              row.style.transition = '0.2s ease';      
+              row.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+              visibleCount++;
+            }
+          });
         }
       });
-    }
-  });
 
-  document.addEventListener('change', async (e) => {
-    const sel = e.target.closest('.status-select');
-    if (!sel) return;
-    const appId = sel.dataset.appId;
-    const newStatus = sel.value;
-    try {
-      const res = await fetch(`/employers/api/applications/${appId}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+      document.addEventListener('change', async (e) => {
+        const sel = e.target.closest('.status-select');
+        if (!sel) return;
+        const appId = sel.dataset.appId;
+        const newStatus = sel.value;
+        try {
+          const res = await fetch(`/employers/api/applications/${appId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+          });
+          const data = await res.json();
+          if (data.success) {
+            document.getElementById(`status-${appId}`).textContent = data.new_status;
+          } else {
+            alert(data.message || 'Failed to update status');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Error updating status');
+        }
       });
-      const data = await res.json();
-      if (data.success) {
-        document.getElementById(`status-${appId}`).textContent = data.new_status;
-      } else {
-        alert(data.message || 'Failed to update status');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error updating status');
-    }
-  });
-</script>
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const menuToggle = document.getElementById("menuToggle");
+        const dropdownMenu = document.getElementById("dropdownMenu");
+
+        // Toggle dropdown on click
+        menuToggle.addEventListener("click", (event) => {
+          event.stopPropagation(); // prevents from closing immediately
+          dropdownMenu.classList.toggle("show");
+        });
+
+        // Close when clicking outside
+        document.addEventListener("click", (event) => {
+          if (!dropdownMenu.contains(event.target) && event.target !== menuToggle) {
+            dropdownMenu.classList.remove("show");
+          }
+        });
+      });
+    </script>
 
     <footer class="footer">
       <div class="container">
@@ -275,5 +330,9 @@
         </div>
       </div>
     </footer>
+        <!-- Global loader partial -->
+    {% include 'partials/loader.html' %}
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>
 </html>

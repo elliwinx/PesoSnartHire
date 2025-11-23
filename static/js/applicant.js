@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     menuToggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      const isOpen = dropdownMenu.classList.toggle("show");
+      const isOpen = dropdownMenu.toggleClass("show");
       dropdownMenu.classList.toggle("open", isOpen);
       dropdownMenu.style.display = isOpen ? "block" : "none";
       menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -953,10 +953,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ==================== APPLICATION TAB FILTER ====================
-  const tabGroup = document.querySelector(".tab-group");
+  // The original code for this section had a redeclaration of tabGroup, which is now fixed.
+  let tabGroup = document.querySelector(".tab-group");
   if (tabGroup) {
     const tabButtons = Array.from(tabGroup.querySelectorAll("button"));
-    const cards = Array.from(document.querySelectorAll(".application-card"));
+    const cards = Array.from(document.querySelectorAll(".application-card")); // This line might not be needed for the filter logic itself, but kept for context.
 
     function setActiveButton(activeBtn) {
       tabButtons.forEach((b) => b.classList.toggle("active", b === activeBtn));
@@ -1341,9 +1342,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // ==================== RENDER APPLICATIONS ====================
   // ========== ADDED FUNCTIONS FOR APPLICATION MANAGEMENT ==========
 
+  // PART 2: Fix renderApplications in applicant.js
   window.renderApplications = async (filter = "all") => {
     const container = document.getElementById("applicationsList");
     if (!container) return;
+
+    console.log("[v0] renderApplications called with filter:", filter);
 
     try {
       container.innerHTML = '<div class="loader">Loading applications...</div>';
@@ -1351,10 +1355,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(
         `/applicants/api/applications?filter=${filter}`
       );
+
+      console.log("[v0] API response status:", response.status);
+
       if (!response.ok) throw new Error("Failed to fetch applications");
 
       const data = await response.json();
+      console.log("[v0] API response data:", data);
+
       const applications = data.applications || [];
+      console.log("[v0] Applications array length:", applications.length);
 
       if (applications.length === 0) {
         container.innerHTML = '<p class="empty-msg">No applications found.</p>';
@@ -1364,27 +1374,36 @@ document.addEventListener("DOMContentLoaded", () => {
       container.innerHTML = applications
         .map((app) => {
           const statusClass = app.status.toLowerCase().replace(/\s+/g, "-");
+          console.log(
+            "[v0] Rendering application:",
+            app.job_position,
+            "Status:",
+            app.status,
+            "StatusClass:",
+            statusClass
+          );
+
           return `
-          <div class="application-card" onclick="viewApplicationDetails(${
+        <div class="application-card" data-status="${statusClass}" onclick="viewApplicationDetails(${
             app.id
           })" style="cursor: pointer;">
-            <div class="app-header">
-              <h3>${app.job_position}</h3>
-              <span class="status-badge ${statusClass}">${app.status}</span>
-            </div>
-            <div class="app-body">
-              <p><strong>Company:</strong> ${app.employer_name || "N/A"}</p>
-              <p><strong>Applied:</strong> ${new Date(
-                app.applied_at
-              ).toLocaleDateString()}</p>
-              <p class="click-hint" style="font-size: 0.8rem; color: #666; margin-top: 8px;">Click to view details</p>
-            </div>
+          <div class="app-header">
+            <h3>${app.job_position}</h3>
+            <span class="status-badge ${statusClass}">${app.status}</span>
           </div>
-        `;
+          <div class="app-body">
+            <p><strong>Company:</strong> ${app.employer_name || "N/A"}</p>
+            <p><strong>Applied:</strong> ${new Date(
+              app.applied_at
+            ).toLocaleDateString()}</p>
+            <p class="click-hint" style="font-size: 0.8rem; color: #666; margin-top: 8px;">Click to view details</p>
+          </div>
+        </div>
+      `;
         })
         .join("");
     } catch (error) {
-      console.error("Error rendering applications:", error);
+      console.error("[v0] Error rendering applications:", error);
       container.innerHTML =
         '<p class="error-msg">Failed to load applications. Please try again.</p>';
     }
@@ -1395,19 +1414,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const content = document.getElementById("applicationDetailsContent");
     const actions = document.getElementById("applicationModalActions");
 
-    if (!modal || !content) return;
+    if (!modal || !content) {
+      console.log("[v0] Modal elements not found");
+      return;
+    }
 
     content.innerHTML = '<div class="loader">Loading details...</div>';
     actions.innerHTML = "";
     modal.style.display = "block";
 
     try {
+      console.log("[v0] Fetching application details for ID:", applicationId);
       const response = await fetch(
         `/applicants/api/applications/${applicationId}`
       );
-      if (!response.ok) throw new Error("Failed to load details");
+
+      console.log("[v0] Response status:", response.status);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log("[v0] Error response:", errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
 
       const data = await response.json();
+      console.log("[v0] Application data received:", data);
+
+      if (!data.success || !data.application) {
+        throw new Error(data.message || "Invalid response format");
+      }
+
       const app = data.application;
 
       content.innerHTML = `
@@ -1417,25 +1452,32 @@ document.addEventListener("DOMContentLoaded", () => {
         }</p>
         
         <div class="detail-group" style="margin: 15px 0;">
-          <p><strong>Status:</strong> <span class="status-badge ${app.status.toLowerCase()}">${
-        app.status
-      }</span></p>
+          <p><strong>Status:</strong> <span class="status-badge ${app.status
+            .toLowerCase()
+            .replace(/\s+/g, "-")}">${app.status}</span></p>
           <p><strong>Applied On:</strong> ${new Date(
             app.applied_at
           ).toLocaleString()}</p>
-          <p><strong>Location:</strong> ${app.location || "N/A"}</p>
-          <p><strong>Salary:</strong> ${app.salary_range || "N/A"}</p>
+          <p><strong>Location:</strong> ${app.location}</p>
+          <p><strong>Work Schedule:</strong> ${app.work_schedule}</p>
+          <p><strong>Salary:</strong> ${app.salary_range}</p>
+          <p><strong>Vacancies:</strong> ${app.num_vacancy}</p>
         </div>
 
         <div class="job-description" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
           <h4>Job Description</h4>
-          <p>${app.job_description || "No description available."}</p>
+          <p>${app.job_description}</p>
+        </div>
+
+        <div class="qualifications" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 15px;">
+          <h4>Qualifications</h4>
+          <p>${app.qualifications}</p>
         </div>
       `;
 
       if (app.status === "Pending") {
         actions.innerHTML = `
-          <button onclick="cancelApplication(${app.id})" class="btn btn-danger" style="background-color: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
+          <button onclick="window.cancelApplication(${app.id})" class="app-cancel-btn">
             Cancel Application
           </button>
         `;
@@ -1443,43 +1485,34 @@ document.addEventListener("DOMContentLoaded", () => {
         actions.innerHTML = "";
       }
     } catch (error) {
-      console.error(error);
-      content.innerHTML = '<p class="error">Failed to load details.</p>';
+      console.error("[v0] Error in viewApplicationDetails:", error);
+      content.innerHTML = `<p class="error" style="color: #dc3545;">Failed to load details: ${error.message}</p>`;
     }
   };
 
-  window.cancelApplication = async (applicationId) => {
-    if (
-      !confirm(
-        "Are you sure you want to cancel this application? This action cannot be undone."
-      )
-    )
-      return;
+  window.cancelApplication = (applicationId) => {
+    const modal = document.getElementById("cancelConfirmModal");
+    modal.style.display = "flex";
 
-    try {
-      const response = await fetch(
-        `/applicants/api/applications/${applicationId}/cancel`,
-        {
-          method: "POST",
+    // When YES is clicked
+    document.getElementById("confirmCancelYes").onclick = () => {
+      modal.style.display = "none";
+      proceedCancel(applicationId); // <-- call function below
+    };
+
+    // When NO is clicked
+    document.getElementById("confirmCancelNo").onclick = () => {
+      modal.style.display = "none";
+    };
+
+    document
+      .getElementById("cancelConfirmModal")
+      .addEventListener("click", function (e) {
+        // If ang na-click ay mismong overlay (hindi yung inner box)
+        if (e.target === this) {
+          this.style.display = "none";
         }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert("Application cancelled successfully.");
-        document.getElementById("applicationDetailsModal").style.display =
-          "none";
-        if (typeof window.renderApplications === "function") {
-          window.renderApplications();
-        }
-      } else {
-        alert(data.message || "Failed to cancel application.");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("An error occurred.");
-    }
+      });
   };
 
   document.addEventListener("click", (event) => {
@@ -1492,4 +1525,36 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
   // END OF ADDED FUNCTIONS FOR APPLICATION MANAGEMENT
+
+  // ==================== APPLICATION TAB FILTER UPDATE ====================
+  // Re-selecting tabGroup here to fix lint/suspicious/noRedeclare
+  tabGroup = document.querySelector(".tab-group");
+  if (tabGroup) {
+    const tabButtons = Array.from(tabGroup.querySelectorAll("button"));
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const filter = btn.dataset.filter || "all";
+        console.log("[v0] Tab clicked with filter:", filter);
+
+        // Set active button
+        tabButtons.forEach((b) => b.classList.toggle("active", b === btn));
+
+        if (typeof window.renderApplications === "function") {
+          window.renderApplications(filter);
+        }
+        btn.focus();
+      });
+    });
+
+    // Load initial applications
+    const initialBtn =
+      tabButtons.find((b) => b.classList.contains("active")) || tabButtons[0];
+    if (initialBtn) {
+      tabButtons.forEach((b) => b.classList.toggle("active", b === initialBtn));
+      if (typeof window.renderApplications === "function") {
+        window.renderApplications(initialBtn.dataset.filter || "all");
+      }
+    }
+  }
 });

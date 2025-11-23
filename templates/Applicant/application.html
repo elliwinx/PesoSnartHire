@@ -39,7 +39,7 @@
             >Applications</a
           >
           <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Real-Time Notifications</a
+            >Notifications</a
           >
           <a
             href="{{ url_for('applicants.account_security') }}"
@@ -158,7 +158,6 @@
 
     <div id="applicationDetailsModal" class="modal" style="display: none">
       <div class="modal-content">
-        <span class="close-modal">&times;</span>
         <div id="applicationDetailsContent">
           <!-- Content will be injected by JS -->
         </div>
@@ -168,6 +167,22 @@
           style="margin-top: 20px; text-align: right"
         >
           <!-- Cancel button will be injected here if applicable -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Cancel Modal -->
+    <div id="cancelConfirmModal" class="confirm-overlay">
+      <div class="confirm-box">
+        <h3>Cancel Application</h3>
+        <p>
+          Are you sure you want to cancel this application?<br />This action
+          cannot be undone.
+        </p>
+
+        <div class="confirm-actions">
+          <button id="confirmCancelYes" class="btn-yes">Yes, Cancel</button>
+          <button id="confirmCancelNo" class="btn-no">No, Keep It</button>
         </div>
       </div>
     </div>

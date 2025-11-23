@@ -1874,12 +1874,25 @@ def archive_job(job_id):
         return jsonify({"success": False, "message": "DB connection failed"}), 500
 
     try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT status FROM jobs WHERE job_id=%s", (job_id,))
+        result = cursor.fetchone()
+        current_status = result[0] if result else None
+
+        # Toggle between archived and active
+        new_status = 'active' if current_status == 'archived' else 'archived'
+
         run_query(
-            conn, "UPDATE jobs SET status='archived' WHERE job_id=%s", (job_id,))
+            conn, "UPDATE jobs SET status=%s WHERE job_id=%s", (new_status, job_id))
         conn.commit()
-        return jsonify({"success": True, "message": "Job post archived successfully."})
+
+        action = "unarchived" if new_status == 'active' else "archived"
+        flash(f"Job post successfully {action}!", "success")
+
+        return jsonify({"success": True, "message": f"Job post {action} successfully."})
     except Exception as e:
         conn.rollback()
+        flash(f"Error: {str(e)}", "danger")
         return jsonify({"success": False, "message": f"Error: {e}"})
     finally:
         conn.close()

@@ -416,7 +416,7 @@ document
     }
   });
 
-// ✅ Loader control functions
+// Loader control functions
 function showLoader(text = "Processing — please wait...") {
   const loader = document.getElementById("ajaxLoader");
   const loaderText = document.getElementById("ajaxLoaderText");

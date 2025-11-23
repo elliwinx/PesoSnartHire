@@ -34,6 +34,24 @@
     </style>
   </head>
   <body>
+    <!-- Added flash messages section for success/error notifications -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
     <!-- Header -->
     <header class="header">
       <div class="container">
@@ -108,7 +126,7 @@
             data-job-id="{{ job.job_id }}"
             data-status="{{ job.status|lower }}"
             data-href="{{ url_for('employers.job_applicants', job_id=job.job_id) }}"
-            style="cursor: pointer;"
+            style="cursor: pointer"
           >
             <div class="listing-header">
               <h3 class="listing-title">{{ job.job_position }}</h3>
@@ -122,7 +140,10 @@
                 Posted {{ job['created_at'].strftime('%m/%d/%Y') }}
               </div>
               <div class="meta-counts">
-                <span id="applicant-count-{{ job.job_id }}" class="applicant-count-badge">
+                <span
+                  id="applicant-count-{{ job.job_id }}"
+                  class="applicant-count-badge"
+                >
                   <i class="fa-regular fa-user"></i> {{ job.applicant_count }}
                 </span>
               </div>
@@ -269,7 +290,6 @@
                 <select id="ej_editJobStatus" name="ej_status">
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
-                  <option value="Suspended">Suspended</option>
                   <option value="Archived">Archived</option>
                 </select>
               </div>
@@ -318,6 +338,7 @@
         </div>
       </div>
     </main>
+
     <!-- Footer -->
     <footer class="footer">
       <div class="container">
@@ -402,30 +423,32 @@
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
       // Make listing-card clickable to view applicants for that job
-      document.addEventListener('click', function (e) {
-        const card = e.target.closest('.listing-card');
+      document.addEventListener("click", function (e) {
+        const card = e.target.closest(".listing-card");
         if (!card) return;
         const href = card.dataset.href;
         // Ignore clicks on action buttons so they still work
-        if (e.target.closest('.listing-actions')) return;
+        if (e.target.closest(".listing-actions")) return;
         if (href) window.location.href = href;
       });
 
       // Poll job counts and update badges
       async function fetchJobCounts() {
         try {
-          const res = await fetch('/employers/api/job_counts');
+          const res = await fetch("/employers/api/job_counts");
           if (!res.ok) return;
           const data = await res.json();
           if (!data.success) return;
           const counts = data.counts || {};
-          Object.keys(counts).forEach(jobId => {
+          Object.keys(counts).forEach((jobId) => {
             const el = document.getElementById(`applicant-count-${jobId}`);
             if (el) {
-              const current = parseInt(el.dataset.count || el.textContent.replace(/\D/g,'')) || 0;
+              const current =
+                parseInt(
+                  el.dataset.count || el.textContent.replace(/\D/g, "")
+                ) || 0;
               const updated = counts[jobId];
               if (current !== updated) {
                 el.dataset.count = updated;
@@ -434,7 +457,7 @@
             }
           });
         } catch (err) {
-          console.error('Failed to fetch job counts', err);
+          console.error("Failed to fetch job counts", err);
         }
       }
 

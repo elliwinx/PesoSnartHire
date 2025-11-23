@@ -109,31 +109,18 @@ document.addEventListener("DOMContentLoaded", () => {
           const data = await res.json();
 
           if (data.success) {
-            Swal.fire({
-              icon: "success",
-              title: "Success!",
-              text: data.message || "Job post created successfully!",
-            });
             form.reset();
-            // reset numVacancy to 1
             const vacancy = form.querySelector('[name="num_vacancy"]');
             if (vacancy) vacancy.value = 1;
-
             clearAllErrors(form);
+            location.reload();
           } else {
-            Swal.fire({
-              icon: "error",
-              title: "Error!",
-              text: data.error || data.message || "Failed to save job post.",
-            });
+            const errorMsg =
+              data.error || data.message || "Failed to save job post.";
+            console.error(errorMsg);
           }
         } catch (err) {
           console.error(err);
-          Swal.fire({
-            icon: "error",
-            title: "Error!",
-            text: "An error occurred while saving the job post.",
-          });
         }
       });
 
@@ -368,12 +355,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (action === "edit") return;
 
+        const card = this.closest(".listing-card");
+        const currentStatus = card?.dataset.status?.toLowerCase();
+        const isArchived = currentStatus === "archived";
+
         const actionTexts = {
           archive: {
-            title: "Archive Job Post",
-            confirm:
-              "Are you sure you want to archive this job post? It will no longer be visible to applicants.",
-            loader: "Archiving job post...",
+            title: isArchived ? "Unarchive Job Post" : "Archive Job Post",
+            confirm: isArchived
+              ? "Are you sure you want to unarchive this job post? It will be visible to applicants again."
+              : "Are you sure you want to archive this job post? It will no longer be visible to applicants.",
+            loader: isArchived
+              ? "Unarchiving job post..."
+              : "Archiving job post...",
           },
           delete: {
             title: "Delete Job Post",
@@ -408,12 +402,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 1500);
               } else {
                 hideLoader();
-                alert("Error: " + data.message);
+                location.reload();
               }
             })
             .catch(() => {
               hideLoader();
-              alert("Error: Request failed.");
+              location.reload();
             });
         }
       });
@@ -463,12 +457,12 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("ej_editJobStatus").value = statusValue;
           editModal.style.display = "block";
         } else {
-          alert("Error: " + (data.message || "Unable to load job details."));
+          console.error(data.message || "Unable to load job details.");
+          hideLoader();
         }
       } catch (err) {
         hideLoader();
         console.error(err);
-        alert("Error: Unable to load job details.");
       }
     });
   });
@@ -501,15 +495,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (result.success) {
           editModal.style.display = "none";
-          alert("Success: Job updated successfully!");
           location.reload();
         } else {
-          alert("Error: " + (result.message || "Update failed."));
+          console.error(result.message || "Update failed.");
         }
       } catch (err) {
         hideLoader();
         console.error(err);
-        alert("Error: Request failed.");
       }
     });
   }
@@ -730,3 +722,54 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initial validation run
   validatePasswords();
 });
+
+// ========================
+// Initialize Archive Button Text Based on Status
+// ========================
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".listing-card").forEach((card) => {
+    const status = card.dataset.status?.toLowerCase();
+    const archiveBtn = card.querySelector(".action-archive");
+    if (archiveBtn && status === "archived") {
+      archiveBtn.textContent = "Unarchive";
+    }
+  });
+});
+
+// ----------------------------
+// SEARCH + STATUS FILTER
+// ----------------------------
+
+function filterApplicants() {
+  const searchValue = document.getElementById("searchBar").value.toLowerCase();
+  const statusValue = document.getElementById("statusFilter").value;
+
+  // All applicant cards
+  const cards = document.querySelectorAll(".applicant-card");
+
+  cards.forEach((card) => {
+    const name = card.querySelector("h3").innerText.toLowerCase();
+    const status = card.querySelector(".status-badge").innerText.trim();
+
+    // Search logic
+    const matchesSearch = name.includes(searchValue);
+
+    // Status logic
+    const matchesStatus = statusValue === "" || status === statusValue;
+
+    // Show or hide
+    if (matchesSearch && matchesStatus) {
+      card.style.display = "block";
+    } else {
+      card.style.display = "none";
+    }
+  });
+}
+
+// Trigger on typing / dropdown change
+document
+  .getElementById("searchBar")
+  .addEventListener("keyup", filterApplicants);
+document
+  .getElementById("statusFilter")
+  .addEventListener("change", filterApplicants);
