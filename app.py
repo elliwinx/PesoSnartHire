@@ -39,10 +39,11 @@ app.config["MAIL_DEFAULT_SENDER"] = "samonteralphmatthew@gmail.com"
 
 mail.init_app(app)
 
-
 # =========================================================
 # CUSTOM JINJA FILTER — "timeago"
 # =========================================================
+
+
 def time_ago(dt):
     if not dt:
         return "some time ago"
@@ -66,12 +67,15 @@ def time_ago(dt):
     else:
         return dt.strftime("%b %d, %Y")
 
+
 # Register the filter
 app.jinja_env.filters["timeago"] = time_ago
 
 # =========================================================
 # STEP 3 — Make RECAPTCHA key available in templates
 # =========================================================
+
+
 @app.context_processor
 def inject_recaptcha_key():
     return {"RECAPTCHA_SITE_KEY": app.config.get("RECAPTCHA_SITE_KEY")}
@@ -154,6 +158,18 @@ def flash_message():
 @app.route("/terms-and-conditions")
 def terms_and_conditions():
     return render_template("Landing_Page/t_and_c_general.html")
+
+
+@app.route("/contact/success")
+def contact_success():
+    flash("Your message has been sent successfully!", "success")
+    return redirect(url_for("home"))
+
+
+@app.route("/contact/error")
+def contact_error():
+    flash("Failed to send message. Please try again.", "error")
+    return redirect(url_for("home"))
 
 
 # =========================================================
