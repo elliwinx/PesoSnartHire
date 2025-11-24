@@ -505,6 +505,35 @@ def applicants_view_all():
 
     return render_template("Admin/applicants_view_all.html", applicants=applicants)
 
+@admin_bp.route("/applicants/for-reported-acc")
+def applicants_reported_acc():
+    """Show applicants with reported accounts"""
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+
+    try:
+        conn = create_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT a.applicant_id, a.first_name, a.middle_name, a.last_name,
+                   a.created_at AS applicant_created_at, a.status, a.is_from_lipa,
+                   r.created_at AS report_created_at, r.reason
+            FROM applicants a
+            JOIN job_reports r ON a.applicant_id = r.applicant_id
+            ORDER BY r.created_at DESC
+        """)
+        applicants = cursor.fetchall()
+
+    except Exception as e:
+        print("DB ERROR:", e)
+        applicants = []
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return render_template("Admin/applicants_for_reported_acc.html", applicants=applicants)
 
 @admin_bp.route("/applicants/<int:applicant_id>")
 def view_applicant(applicant_id):
@@ -1427,3 +1456,4 @@ def reject_recruitment_type_change(employer_id):
             conn.rollback()
             conn.close()
         return jsonify({"success": False, "message": str(e)}), 500
+

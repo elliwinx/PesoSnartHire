@@ -2168,8 +2168,8 @@ input[type="password"]:focus {
 }
 
 .status-option-btn:hover {
-  border-color: #007bff;
-  background-color: #f0f7ff;
+  border-color: #7b1113;
+  background-color: #fde2e2;
   transform: translateY(-2px);
 }
 
@@ -2180,17 +2180,20 @@ input[type="password"]:focus {
 .edit-status-btn {
   margin-left: 10px;
   padding: 6px 12px;
-  background-color: #007bff;
+  background-color: #7b1113;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s;
   font-size: 14px;
+  width: 97%;
 }
 
 .edit-status-btn:hover {
-  background-color: #0056b3;
+  background-color: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
 }
 
 @media (max-width: 600px) {

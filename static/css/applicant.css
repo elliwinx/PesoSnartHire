@@ -427,6 +427,7 @@ body {
   font-weight: 600;
   color: #000;
   white-space: nowrap;
+  margin-right: 15px;
 }
 
 .modal-actions-confirm {
@@ -658,17 +659,13 @@ body {
   background: #fff;
   padding: 20px;
   border-radius: 10px;
-  width: 800px;
+  width: 600px;
   max-width: 90%;
   max-height: 80vh;
   overflow-y: auto;
   position: relative;
   margin: 100px auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.modal-content p {
-  white-space: pre-line;
 }
 
 .app-cancel-btn {
@@ -934,8 +931,6 @@ body {
 
 /* Card */
 .application-card {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
   border: 1px solid #d6d6d6;
   border-radius: 8px;
@@ -975,6 +970,40 @@ body {
   margin: 0;
   color: #9ca3af;
   font-size: 0.88rem;
+}
+
+.app-header, .app-body {
+  margin-right: 20px;
+  margin-left: 20px;
+}
+
+#applicationDetailsContent {
+  padding: 20px;
+  border-radius: 8px;
+  background: #F4F4F4;
+}
+
+/* Parent flex container */
+.header-row {
+  display: flex;
+  justify-content: space-between; /* h2 left, status right */
+  align-items: center; /* vertically aligned */
+  margin-bottom: 10px;
+}
+
+/* Optional: status paragraph adjustments */
+.header-row .status {
+  margin: 0; /* remove default p margin */
+  white-space: nowrap; /* prevent wrapping */
+}
+
+/* Style for badge */
+.status-badge.pending {
+  background-color: #7B7B7B;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.9rem;
 }
 
 /* Status pill */
@@ -1686,7 +1715,6 @@ div:where(.swal2-icon).swal2-warning {
   margin-bottom: 25px;
   font-size: 1rem;
   line-height: 1.5;
-  white-space: pre-line;
 }
 
 .confirm-overlay {

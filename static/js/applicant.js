@@ -1387,16 +1387,17 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="application-card" data-status="${statusClass}" onclick="viewApplicationDetails(${
             app.id
           })" style="cursor: pointer;">
-          <div class="app-header">
-            <h3>${app.job_position}</h3>
-            <span class="status-badge ${statusClass}">${app.status}</span>
-          </div>
+        <div class="app-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h3> ${app.job_position}</h3>
+          <span class="status-badge ${statusClass}">${app.status}</span>
+        </div>
+
           <div class="app-body">
-            <p><strong>Company:</strong> ${app.employer_name || "N/A"}</p>
-            <p><strong>Applied:</strong> ${new Date(
+            <p><strong>${app.employer_name || "N/A"}</strong> </p>
+            <p>Applied on</strong> ${new Date(
               app.applied_at
             ).toLocaleDateString()}</p>
-            <p class="click-hint" style="font-size: 0.8rem; color: #666; margin-top: 8px;">Click to view details</p>
+            <p class="click-hint" style="font-size: 0.8rem; color: #666; margin-top: 8px;"></p>
           </div>
         </div>
       `;
@@ -1446,48 +1447,37 @@ document.addEventListener("DOMContentLoaded", () => {
       const app = data.application;
 
       content.innerHTML = `
-        <h2>${app.job_position}</h2>
-        <p class="company-name"><strong>Company:</strong> ${
-          app.employer_name
-        }</p>
+        <div class="header-row" id="header-row-${app.id}">
+          <h2>Current Application Status</h2>
+          <p class="status">
+            <strong>Status:</strong>
+            <span class="status-badge ${app.status
+              .toLowerCase()
+              .replace(/\s+/g, "-")}">${app.status}</span>
+          </p>
+        </div>
+          <p><strong>Application Information:</strong></p>
         
-        <div class="detail-group" style="margin: 15px 0;">
-          <p><strong>Status:</strong> <span class="status-badge ${app.status
-            .toLowerCase()
-            .replace(/\s+/g, "-")}">${app.status}</span></p>
-          <p><strong>Applied On:</strong> ${new Date(
-            app.applied_at
-          ).toLocaleString()}</p>
-          <p><strong>Location:</strong> ${app.location}</p>
-          <p><strong>Work Schedule:</strong> ${app.work_schedule}</p>
-          <p><strong>Salary:</strong> ${app.salary_range}</p>
-          <p><strong>Vacancies:</strong> ${app.num_vacancy}</p>
-        </div>
-
-        <div class="job-description" style="background: #f9f9f9; padding: 15px; border-radius: 8px;">
-          <h4>Job Description</h4>
-          <p>${app.job_description}</p>
-        </div>
-
-        <div class="qualifications" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 15px;">
-          <h4>Qualifications</h4>
-          <p>${app.qualifications}</p>
+        <div class="detail-group" style="margin: 2px 0;">
+          <p> ${app.job_position}</p>
+          <p> ${app.employer_name}</p>
+          <p> ${app.location}</p>
+          <p>Applied On ${new Date(app.applied_at).toLocaleDateString()}</p>
         </div>
       `;
-
       if (app.status === "Pending") {
-        actions.innerHTML = `
-          <button onclick="window.cancelApplication(${app.id})" class="app-cancel-btn">
-            Cancel Application
-          </button>
-        `;
-      } else {
-        actions.innerHTML = "";
+          actions.innerHTML = `
+            <button onclick="window.cancelApplication(${app.id})" class="app-cancel-btn">
+              Cancel Application
+            </button>
+          `;
+        } else {
+          actions.innerHTML = "";
+        }
+      } catch (error) {
+        console.error("[v0] Error in viewApplicationDetails:", error);
+        content.innerHTML = `<p class="error" style="color: #dc3545;">Failed to load details: ${error.message}</p>`;
       }
-    } catch (error) {
-      console.error("[v0] Error in viewApplicationDetails:", error);
-      content.innerHTML = `<p class="error" style="color: #dc3545;">Failed to load details: ${error.message}</p>`;
-    }
   };
 
   window.cancelApplication = (applicationId) => {

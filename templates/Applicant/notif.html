@@ -42,8 +42,8 @@
             class="nav-link"
             >Applications</a
           >
-          <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Real-Time Notifications</a
+          <a href="{{ url_for('applicants.notifications') }}" class="nav-link-active"
+            >Notifications</a
           >
           <a
             href="{{ url_for('applicants.account_security') }}"
@@ -194,13 +194,12 @@
       <div
         class="modal-content"
         style="
-          background: #fff;
-          margin: 5% auto;
-          padding: 25px;
-          border-radius: 12px;
-          width: 90%;
-          max-width: 700px;
-          position: relative;
+        background: #fff;
+        border-radius: 12px;
+        padding: 30px;
+        width: 50%;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        text-align: center;
         "
       >
         <span

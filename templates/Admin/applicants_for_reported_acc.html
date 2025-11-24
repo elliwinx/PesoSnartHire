@@ -1,9 +1,18 @@
+<style>
+  .action-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: flex-start;
+    align-items: center;
+  }
+</style>
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Applicants - Admin Dashboard</title>
+    <title>Reported Post - Applicants</title>
     <link
       rel="icon"
       type="image/png"
@@ -17,7 +26,6 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Styles -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/admin.css') }}"
@@ -28,7 +36,6 @@
     />
   </head>
   <body>
-    <!--Flash of Welcome Back Message-->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
@@ -46,7 +53,7 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
-    <!-- Header -->
+
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -83,57 +90,9 @@
       </div>
     </header>
 
-    <section class="hero">
-      <div class="hero-background">
-        <img
-          src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
-        />
-      </div>
-      <div class="hero-content">
-        <div class="container">
-          <h1 class="hero-title">Welcome, Administrator!</h1>
-          <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here's what we have today</p>
-        </div>
-      </div>
-    </section>
 
-    <!-- Job Vacancies -->
-    <section class="analytics-dashboard">
-      <div class="container">
-        <h2>Applicants Management</h2>
-        <p>
-          Manage applicant accounts, verify credentials, and oversee application
-          activities
-        </p>
-      </div>
-    </section>
 
-    <!-- Updated buttons to navigate to proper pages -->
-    <div class="tab-group">
-      <!-- Fixed onclick syntax to avoid template conflicts -->
-      <button
-        data-url="{{ url_for('admin.applicants_for_approval') }}"
-        onclick="window.location.href=this.getAttribute('data-url')"
-      >
-        Accounts for Approval
-      </button>
-      <button
-        data-url="{{ url_for('admin.applicants_view_all') }}"
-        onclick="window.location.href=this.getAttribute('data-url')"
-      >
-        View All Applicants
-      </button>
-      <button
-        data-url="{{ url_for('admin.applicants_for_reported_acc') }}"
-        onclick="window.location.href=this.getAttribute('data-url')"
-      >
-        Reported Accounts
-      </button>
-    </div>
 
-    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -173,7 +132,7 @@
                   target="_blank"
                   ><i class="devicon-facebook-plain"></i
                 ></a>
-                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -199,11 +158,15 @@
       </div>
     </footer>
 
-    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
-    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <!--<script>
+      function editStatus(applicantId) {
+        // Redirect to applicant profile where edit status modal will open
+        window.location.href = "/admin/applicants/" + applicantId;
+    }-->
+    </script>
   </body>
 </html>

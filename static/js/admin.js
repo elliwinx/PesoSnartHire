@@ -115,107 +115,151 @@ function showFlashMessage(message, type = "success") {
   setTimeout(() => alertDiv.remove(), 3000);
 }
 
-// ========== STATUS MODAL LOGIC ==========
-// Modal action buttons inside the status modal use class "status-btn" in templates
+// ================= STATUS MODAL LOGIC =================
 const statusModal = document.getElementById("statusModal");
-// Only select status buttons that carry a data-action attribute inside the status modal
-// This avoids binding action handlers to cancel/other modal controls that share the same class
 const statusButtons = statusModal
   ? Array.from(statusModal.querySelectorAll(".status-btn[data-action]"))
-  : Array.from(document.querySelectorAll(".status-btn[data-action]"));
-const documentSelectionModal = document.getElementById(
-  "documentSelectionModal"
-);
+  : [];
+const editStatusBtns = document.querySelectorAll(".edit-status-btn, #editStatusBtn");
+const closeModalBtn = document.getElementById("closeModal");
+
+// Document selection modal
+const documentSelectionModal = document.getElementById("documentSelectionModal");
 const confirmDocumentBtn = document.getElementById("confirmDocumentBtn");
-const documentSelect = null;
+const cancelDocumentBtn = document.getElementById("cancelDocumentBtn");
 const documentCheckboxList = document.getElementById("documentCheckboxList");
+
 let selectedDocument = null;
 let selectedDocuments = [];
 
-// Open status modal when clicking any edit-status button (employer or applicant)
-document.querySelectorAll(".edit-status-btn, #editStatusBtn").forEach((btn) => {
+// ---------- Open Status Modal ----------
+editStatusBtns.forEach((btn) => {
   btn.addEventListener("click", (e) => {
     e.preventDefault();
 
     // Clear previous dataset
-    delete statusModal.dataset.employerId;
-    delete statusModal.dataset.applicantId;
-    delete statusModal.dataset.recruitmentType;
+    ["employerId", "applicantId", "recruitmentType", "changePending"].forEach(
+      (attr) => delete statusModal.dataset[attr]
+    );
 
-    // Prefer explicit data attributes on the button, otherwise search closest container
-    const employerId =
-      btn.getAttribute("data-employer-id") ||
-      (btn.closest("[data-employer-id]") || {}).dataset?.employerId;
-    const applicantId =
-      btn.getAttribute("data-applicant-id") ||
-      (btn.closest("[data-applicant-id]") || {}).dataset?.applicantId;
-    const recruitmentType =
-      btn.getAttribute("data-recruitment-type") ||
-      (btn.closest("[data-recruitment-type]") || {}).dataset?.recruitmentType;
-    const changePending =
-      btn.getAttribute("data-change-pending") ||
-      (btn.closest("[data-change-pending]") || {}).dataset?.changePending;
+    // Populate modal dataset from button or closest container
+    const getDataset = (key) =>
+      btn.getAttribute(`data-${key}`) || (btn.closest(`[data-${key}]`)?.dataset?.[key]);
 
-    if (changePending !== undefined)
-      statusModal.dataset.changePending = changePending;
-    if (employerId) statusModal.dataset.employerId = employerId;
-    if (applicantId) statusModal.dataset.applicantId = applicantId;
-    if (recruitmentType) statusModal.dataset.recruitmentType = recruitmentType;
+    ["employerId", "applicantId", "recruitmentType", "changePending"].forEach((key) => {
+      const value = getDataset(key);
+      if (value !== undefined) statusModal.dataset[key] = value;
+    });
 
     // Show modal
     statusModal.style.display = "flex";
   });
 });
 
-// When confirm is clicked, read the selected value from the select element
+// ---------- Close Modal ----------
+if (closeModalBtn) {
+  closeModalBtn.addEventListener("click", () => (statusModal.style.display = "none"));
+}
+
+// Close modal on outside click
+window.addEventListener("click", (e) => {
+  if (e.target === statusModal) statusModal.style.display = "none";
+  if (e.target === documentSelectionModal) documentSelectionModal.style.display = "none";
+});
+
+// ---------- Handle Status Button Clicks ----------
+statusButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const action = btn.dataset.action;
+
+    if (action === "reupload") {
+      // Open document selection modal
+      if (documentSelectionModal) documentSelectionModal.style.display = "flex";
+    } else {
+      updateStatus(action);
+    }
+  });
+});
+
+// ---------- Document Selection ----------
 if (confirmDocumentBtn) {
   confirmDocumentBtn.addEventListener("click", () => {
     if (!documentCheckboxList)
       return showFlashMessage("Document selector not available", "danger");
 
-    // Collect all checked inputs inside the checkbox list
     const checked = Array.from(
       documentCheckboxList.querySelectorAll("input[type=checkbox]:checked")
     ).map((cb) => cb.value);
 
-    if (!checked || checked.length === 0)
+    if (!checked.length)
       return showFlashMessage("Please select at least one document", "warning");
 
     selectedDocuments = checked;
     selectedDocument = checked.length === 1 ? checked[0] : null;
+
     statusModal.dataset.selectedDocument = selectedDocument;
     documentSelectionModal.style.display = "none";
+
     proceedWithReupload();
   });
 }
 
-const cancelDocumentBtn = document.getElementById("cancelDocumentBtn");
 if (cancelDocumentBtn) {
   cancelDocumentBtn.addEventListener("click", () => {
     if (documentSelectionModal) documentSelectionModal.style.display = "none";
   });
 }
 
-// Close modal button
-const closeModalBtn = document.getElementById("closeModal");
-if (closeModalBtn && statusModal) {
-  closeModalBtn.addEventListener("click", () => {
-    statusModal.style.display = "none";
-  });
-}
+// ---------- Functions ----------
+function updateStatus(action) {
+  const entityId = statusModal.dataset.employerId || statusModal.dataset.applicantId;
+  const recruitmentType = statusModal.dataset.recruitmentType;
 
-// Ensure documentSelectionModal is defined before usage
-if (typeof documentSelectionModal === "undefined" || !documentSelectionModal) {
-  // Create a no-op object so later code can call .style without throwing
-  window.documentSelectionModal = { style: { display: "none" } };
+  let endpoint = null;
+  if (statusModal.dataset.employerId) {
+    endpoint =
+      recruitmentType === "Local"
+        ? `/admin/update_local_employer_status/${entityId}`
+        : `/admin/update_international_employer_status/${entityId}`;
+  } else if (statusModal.dataset.applicantId) {
+    endpoint = `/admin/update_nonlipeno_status/${entityId}`;
+  }
+
+  if (!endpoint || !entityId)
+    return showFlashMessage("Error: Could not process request", "danger");
+
+  const payload = { action };
+
+  showLoader("Processing — please wait...");
+
+  fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      hideLoader();
+      if (data.success) {
+        showFlashAboveModal(data.message || "Status updated successfully", "success");
+        statusModal.style.display = "none";
+        setTimeout(() => location.reload(), 900);
+      } else {
+        showFlashAboveModal("Error: " + (data.message || "Failed to update status"), "danger");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      hideLoader();
+      showInlineFlash("Something went wrong while updating status", "danger");
+    });
 }
 
 function proceedWithReupload() {
-  const entityId =
-    statusModal.dataset.employerId || statusModal.dataset.applicantId;
+  const entityId = statusModal.dataset.employerId || statusModal.dataset.applicantId;
   const recruitmentType = statusModal.dataset.recruitmentType;
-  let endpoint = null;
 
+  let endpoint = null;
   if (statusModal.dataset.employerId) {
     endpoint =
       recruitmentType === "Local"
@@ -230,15 +274,11 @@ function proceedWithReupload() {
 
   const payload = {
     action: "reupload",
-    document_name:
-      selectedDocuments && selectedDocuments.length
-        ? selectedDocuments
-        : selectedDocument,
+    document_name: selectedDocuments.length ? selectedDocuments : selectedDocument,
   };
 
   console.debug("[admin.js] reupload payload:", payload);
 
-  // Show loader
   showLoader("Processing — sending email...");
 
   fetch(endpoint, {
@@ -250,26 +290,17 @@ function proceedWithReupload() {
     .then((data) => {
       hideLoader();
       if (data.success) {
-        showFlashAboveModal(
-          data.message || "Request sent successfully",
-          "success"
-        );
+        showFlashAboveModal(data.message || "Request sent successfully", "success");
         statusModal.style.display = "none";
         setTimeout(() => location.reload(), 900);
       } else {
-        showFlashAboveModal(
-          "Error: " + (data.message || "Failed to request reupload"),
-          "danger"
-        );
+        showFlashAboveModal("Error: " + (data.message || "Failed to request reupload"), "danger");
       }
     })
     .catch((err) => {
       console.error(err);
       hideLoader();
-      showInlineFlash(
-        "Something went wrong while requesting reupload",
-        "danger"
-      );
+      showInlineFlash("Something went wrong while requesting reupload", "danger");
     });
 }
 
