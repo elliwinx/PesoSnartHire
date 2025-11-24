@@ -4,7 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{ applicant.first_name }} {{ applicant.last_name }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/employer.css') }}" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/employer.css') }}"
+    />
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -78,9 +81,11 @@
     <section class="account-and-security">
       <div class="container">
         <div class="left">
-          <div class="back-button" style="margin: 12px 0;">
-            <a href="javascript:void(0);" onclick="window.history.back();"><i class="fa-solid fa-arrow-left"></i></a>
-        </div>
+          <div class="back-button" style="margin: 12px 0">
+            <a href="javascript:void(0);" onclick="window.history.back();"
+              ><i class="fa-solid fa-arrow-left"></i
+            ></a>
+          </div>
         </div>
         <div class="right">
           <i class="fa-solid fa-bars" id="menuToggle"></i>
@@ -96,14 +101,26 @@
         <div class="profile-header">
           <div class="profile-pic">
             {% if applicant.profile_pic_path %}
-            <img src="{{ url_for('static', filename=applicant.profile_pic_path) }}" alt="Profile Picture" />
+            <img
+              src="{{ url_for('static', filename=applicant.profile_pic_path) }}"
+              alt="Profile Picture"
+            />
             {% else %}
-            <img src="{{ url_for('static', filename='Assets/default-avatar.png') }}" alt="Default Profile" />
+            <img
+              src="{{ url_for('static', filename='Assets/default-avatar.png') }}"
+              alt="Default Profile"
+            />
             {% endif %}
           </div>
           <div class="profile-details">
-            <h2>{{ applicant.first_name }} {% if applicant.middle_name %}{{ applicant.middle_name }} {% endif %}{{ applicant.last_name }}</h2>
-            <p><strong>Applicant Code:</strong> {{ applicant.applicant_code or 'N/A' }}</p>
+            <h2>
+              {{ applicant.first_name }} {% if applicant.middle_name %}{{
+              applicant.middle_name }} {% endif %}{{ applicant.last_name }}
+            </h2>
+            <p>
+              <strong>Applicant Code:</strong> {{ applicant.applicant_code or
+              'N/A' }}
+            </p>
             <p><strong>Status:</strong> {{ applicant.status or 'N/A' }}</p>
           </div>
         </div>
@@ -133,12 +150,13 @@
           <h3>Person with Disability</h3>
           <p><strong>Type:</strong> {{ applicant.pwd_type or 'N/A' }}</p>
         </div>
-        {% endif %}
-
-        {% if applicant.has_work_exp %}
+        {% endif %} {% if applicant.has_work_exp %}
         <div class="section">
           <h3>Work Experience</h3>
-          <p><strong>Years of Experience:</strong> {{ applicant.years_experience or 'N/A' }}</p>
+          <p>
+            <strong>Years of Experience:</strong> {{ applicant.years_experience
+            or 'N/A' }}
+          </p>
         </div>
         {% endif %}
 
@@ -151,10 +169,22 @@
           <h3>Documents</h3>
           <ul>
             {% if applicant.resume_path %}
-            <li><a href="{{ url_for('static', filename=applicant.resume_path) }}" target="_blank">Resume</a></li>
-            {% endif %}
-            {% if not applicant.is_from_lipa and applicant.recommendation_letter_path %}
-            <li><a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}" target="_blank">Recommendation Letter</a></li>
+            <li>
+              <a
+                href="{{ url_for('static', filename=applicant.resume_path) }}"
+                target="_blank"
+                >Resume</a
+              >
+            </li>
+            {% endif %} {% if not applicant.is_from_lipa and
+            applicant.recommendation_letter_path %}
+            <li>
+              <a
+                href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}"
+                target="_blank"
+                >Recommendation Letter</a
+              >
+            </li>
             {% endif %}
           </ul>
         </div>
@@ -173,22 +203,35 @@
           {% else %}
           <div class="applications-list">
             {% for app in applications %}
-            <!-- Added data-job-id attribute to allow filtering by Job ID -->
-            <div class="application-row" data-job-id="{{ app.job_id }}">
+            <!-- Added data-app-id for modal functionality -->
+            <div
+              class="application-row"
+              data-job-id="{{ app.job_id }}"
+              data-app-id="{{ app.id }}"
+            >
               <div>
-                <strong>Job:</strong> {{ app.job_position or ('Job ID: ' ~ app.job_id) }}
-                <div><small>Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p') }}</small></div>
+                <strong>Job:</strong> {{ app.job_position or ('Job ID: ' ~
+                app.job_id) }}
+                <div>
+                  <small
+                    >Applied at: {{ app.applied_at.strftime('%m/%d/%Y %I:%M %p')
+                    }}</small
+                  >
+                </div>
               </div>
 
-              <div style="margin-top:8px;">
-                <span>Status: <strong id="status-{{ app.id }}">{{ app.status or 'Pending' }}</strong></span>
+              <div style="margin-top: 8px">
+                <span
+                  >Status:
+                  <strong id="status-{{ app.id }}"
+                    >{{ app.status or 'Pending' }}</strong
+                  ></span
+                >
 
-                <select data-app-id="{{ app.id }}" class="status-select">
-                  <option value="Pending" {% if app.status == 'Pending' %}selected{% endif %}>Pending</option>
-                  <option value="Accepted" {% if app.status == 'Hired' %}selected{% endif %}>Hired</option>
-                  <option value="Rejected" {% if app.status == 'Shortlisted' %}selected{% endif %}>Shortlisted</option>
-                  <option value="Accepted" {% if app.status == 'Rejected' %}selected{% endif %}>Rejected</option>
-                </select>
+                <!-- Replaced dropdown with Edit Status button -->
+                <button class="edit-status-btn" data-app-id="{{ app.id }}">
+                  <i class="fa-solid fa-pencil"></i> Edit Status
+                </button>
               </div>
             </div>
             {% endfor %}
@@ -198,52 +241,92 @@
       </div>
     </div>
 
+    <div id="statusModal" class="status-modal" style="display: none">
+      <div class="status-modal-content">
+        <div class="status-modal-header">
+          <h3>Update Application Status</h3>
+          <button class="status-modal-close" id="closeStatusModal">
+            &times;
+          </button>
+        </div>
+        <div class="status-modal-body">
+          <p>Select the new status for this application:</p>
+          <div class="status-options">
+            <button class="status-option-btn" data-status="Pending">
+              <i class="fa-solid fa-hourglass-end"></i>
+              <span>Pending</span>
+            </button>
+            <button class="status-option-btn" data-status="Shortlisted">
+              <i class="fa-solid fa-star"></i>
+              <span>Shortlisted</span>
+            </button>
+            <button class="status-option-btn" data-status="For Interview">
+              <i class="fa-solid fa-calendar"></i>
+              <span>For Interview</span>
+            </button>
+            <button class="status-option-btn" data-status="Hired">
+              <i class="fa-solid fa-check-circle"></i>
+              <span>Hired</span>
+            </button>
+            <button class="status-option-btn" data-status="Rejected">
+              <i class="fa-solid fa-times-circle"></i>
+              <span>Rejected</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener("DOMContentLoaded", function () {
         const params = new URLSearchParams(window.location.search);
-        const filterJobId = params.get('job_id');
+        const filterJobId = params.get("job_id");
 
         if (filterJobId) {
-          const rows = document.querySelectorAll('.application-row');
+          const rows = document.querySelectorAll(".application-row");
           let visibleCount = 0;
-          
-          rows.forEach(row => {
+
+          rows.forEach((row) => {
             if (row.dataset.jobId !== filterJobId) {
-              row.style.display = 'none';
+              row.style.display = "none";
             } else {
-              row.style.display = 'block';
-              row.style.border = '1px solid #d0d7de';  
-              row.style.backgroundColor = 'white';   
-              row.style.borderRadius = '10px';         
-              row.style.padding = '8px';               
-              row.style.transition = '0.2s ease';      
-              row.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)';
+              row.style.display = "block";
+              row.style.border = "1px solid #d0d7de";
+              row.style.backgroundColor = "white";
+              row.style.borderRadius = "10px";
+              row.style.padding = "8px";
+              row.style.transition = "0.2s ease";
+              row.style.boxShadow = "0 2px 6px rgba(0,0,0,0.08)";
               visibleCount++;
             }
           });
         }
       });
 
-      document.addEventListener('change', async (e) => {
-        const sel = e.target.closest('.status-select');
+      document.addEventListener("change", async (e) => {
+        const sel = e.target.closest(".status-select");
         if (!sel) return;
         const appId = sel.dataset.appId;
         const newStatus = sel.value;
         try {
-          const res = await fetch(`/employers/api/applications/${appId}/status`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus })
-          });
+          const res = await fetch(
+            `/employers/api/applications/${appId}/status`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: newStatus }),
+            }
+          );
           const data = await res.json();
           if (data.success) {
-            document.getElementById(`status-${appId}`).textContent = data.new_status;
+            document.getElementById(`status-${appId}`).textContent =
+              data.new_status;
           } else {
-            alert(data.message || 'Failed to update status');
+            alert(data.message || "Failed to update status");
           }
         } catch (err) {
           console.error(err);
-          alert('Error updating status');
+          alert("Error updating status");
         }
       });
 
@@ -259,10 +342,78 @@
 
         // Close when clicking outside
         document.addEventListener("click", (event) => {
-          if (!dropdownMenu.contains(event.target) && event.target !== menuToggle) {
+          if (
+            !dropdownMenu.contains(event.target) &&
+            event.target !== menuToggle
+          ) {
             dropdownMenu.classList.remove("show");
           }
         });
+      });
+
+      let currentApplicationId = null;
+
+      // Open modal when Edit Status button is clicked
+      document.addEventListener("click", function (e) {
+        const editBtn = e.target.closest(".edit-status-btn");
+        if (editBtn) {
+          currentApplicationId = editBtn.dataset.appId;
+          document.getElementById("statusModal").style.display = "flex";
+        }
+      });
+
+      // Close modal
+      document
+        .getElementById("closeStatusModal")
+        .addEventListener("click", function () {
+          document.getElementById("statusModal").style.display = "none";
+          currentApplicationId = null;
+        });
+
+      // Close modal when clicking outside
+      document
+        .getElementById("statusModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            this.style.display = "none";
+            currentApplicationId = null;
+          }
+        });
+
+      // Handle status option selection
+      document.addEventListener("click", async function (e) {
+        const statusBtn = e.target.closest(".status-option-btn");
+        if (!statusBtn || !currentApplicationId) return;
+
+        const newStatus = statusBtn.dataset.status;
+
+        try {
+          const res = await fetch(
+            `/employers/api/applications/${currentApplicationId}/status`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ status: newStatus }),
+            }
+          );
+          const data = await res.json();
+          if (data.success) {
+            document.getElementById(
+              `status-${currentApplicationId}`
+            ).textContent = data.new_status;
+            document.getElementById("statusModal").style.display = "none";
+            currentApplicationId = null;
+            // Optional: Show success message
+            alert(
+              "Status updated successfully and applicant has been notified!"
+            );
+          } else {
+            alert(data.message || "Failed to update status");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Error updating status");
+        }
       });
     </script>
 
@@ -330,7 +481,7 @@
         </div>
       </div>
     </footer>
-        <!-- Global loader partial -->
+    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>

@@ -131,9 +131,10 @@
           >
             <option value="">All Status</option>
             <option value="Pending">Pending</option>
-            <option value="Accepted">Accepted</option>
-            <option value="Rejected">Rejected</option>
+            <option value="For Interview">For Interview</option>
             <option value="Shortlisted">Shortlisted</option>
+            <option value="Hired">Hired</option>
+            <option value="Rejected">Rejected</option>
           </select>
         </div>
       </div>
@@ -257,5 +258,6 @@
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/applicant-list-refresh.js') }}"></script>
   </body>
 </html>

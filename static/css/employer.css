@@ -2071,6 +2071,139 @@ input[type="password"]:focus {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
+.status-modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.status-modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 600px;
+  width: 90%;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.status-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 15px;
+}
+
+.status-modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.status-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #999;
+}
+
+.status-modal-close:hover {
+  color: #333;
+}
+
+.status-modal-body {
+  padding: 10px 0;
+}
+
+.status-modal-body p {
+  margin: 0 0 20px 0;
+  color: #666;
+  font-weight: 500;
+}
+
+.status-options {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.status-options > * {
+  flex: 1;
+}
+
+.status-option-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 8px;
+}
+
+.status-option-btn:hover {
+  border-color: #007bff;
+  background-color: #f0f7ff;
+  transform: translateY(-2px);
+}
+
+.status-option-btn i {
+  font-size: 20px;
+}
+
+.edit-status-btn {
+  margin-left: 10px;
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+}
+
+.edit-status-btn:hover {
+  background-color: #0056b3;
+}
+
+@media (max-width: 600px) {
+  .status-options {
+    grid-template-columns: 1fr;
+  }
+
+  .status-modal-content {
+    width: 95%;
+    padding: 20px;
+  }
+}
+
 /* Responsive grid columns for smaller screens */
 @media (max-width: 1024px) {
   .four-columns {

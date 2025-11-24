@@ -1763,42 +1763,74 @@ def auto_deactivate_jobs():
 # -------------------------
 
 
-@employers_bp.route("/job/<int:job_id>/json")
-def get_job_json(job_id):
+@employers_bp.route('/api/job/<int:job_id>/applicants')
+def get_job_applicants_api(job_id):
+    """API endpoint to fetch fresh applicant list data as JSON."""
+    if 'employer_id' not in session:
+        return {'error': 'Unauthorized'}, 401
+
+    employer_id = session['employer_id']
     conn = create_connection()
     if not conn:
-        return jsonify({"success": False, "message": "DB connection failed."}), 500
+        return {'error': 'Database connection failed'}, 500
 
     try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT job_id,
-                   job_position,
-                   job_description,
-                   status,
-                   work_schedule,
-                   num_vacancy AS vacancy,  -- alias to match your JS
-                   min_salary,
-                   max_salary,
-                   qualifications
-            FROM jobs
-            WHERE job_id = %s
-        """, (job_id,))
-        job = cursor.fetchone()
-        cursor.close()
-
+        # Verify job belongs to this employer
+        job = run_query(conn, "SELECT * FROM jobs WHERE job_id = %s AND employer_id = %s",
+                        (job_id, employer_id), fetch='one')
         if not job:
-            return jsonify({"success": False, "message": "Job not found."}), 404
+            return {'error': 'Job not found'}, 404
 
-        return jsonify({"success": True, "job": job})
+        print("DEBUG SESSION employer_id:", session.get("employer_id"))
+        print("DEBUG Expected employer_id:", employer_id)
+        print("DEBUG job_id:", job_id)
 
+        # Get fresh applicants data from database
+        applicants = run_query(
+            conn,
+            """
+            SELECT
+              a.id AS id,
+              a.applicant_id,
+              a.status,
+              ap.first_name,
+              ap.last_name,
+              ap.profile_pic_path,
+              ap.email,
+              ap.phone,
+              ap.city
+            FROM applications a
+            JOIN applicants ap ON a.applicant_id = ap.applicant_id
+            WHERE a.job_id = %s
+            ORDER BY a.applied_at DESC
+            """,
+            (job_id,),
+            fetch='all'
+        )
+
+        # Convert to list of dicts for JSON response
+        applicants_list = []
+        for app in applicants:
+            applicants_list.append({
+                'id': app['id'],
+                'applicant_id': app['applicant_id'],
+                'status': app['status'],
+                'first_name': app['first_name'],
+                'last_name': app['last_name'],
+                'profile_pic_path': app['profile_pic_path'],
+                'email': app['email'],
+                'phone': app['phone'],
+                'city': app['city']
+            })
+
+        return {'applicants': applicants_list}, 200
     except Exception as e:
-        current_app.logger.exception(
-            f"Failed to fetch job JSON for job_id={job_id}: {e}")
-        return jsonify({"success": False, "message": f"Failed to load job: {str(e)}"}), 500
+        print(f"Error fetching applicants: {str(e)}")
+        return {'error': str(e)}, 500
     finally:
         if conn:
             conn.close()
+
 
 # -------------------------
 # Update job via modal POST
