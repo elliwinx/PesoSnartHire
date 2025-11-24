@@ -431,8 +431,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const res = await fetch(`/employers/job/${jobId}/json`);
+
+        if (!res.ok) {
+          throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
+        }
+
         const data = await res.json();
         hideLoader();
+
+        console.log("[v0] Job data received:", data);
 
         if (data.success && data.job) {
           const job = data.job;
@@ -441,7 +448,8 @@ document.addEventListener("DOMContentLoaded", () => {
             job.job_position || "";
           document.getElementById("ej_editJobSchedule").value =
             job.work_schedule || "";
-          document.getElementById("ej_editJobVacancy").value = job.vacancy || 1;
+          document.getElementById("ej_editJobVacancy").value =
+            job.num_vacancy || 1;
           document.getElementById("ej_editJobMinSalary").value =
             job.min_salary || 0;
           document.getElementById("ej_editJobMaxSalary").value =
@@ -457,12 +465,15 @@ document.addEventListener("DOMContentLoaded", () => {
           document.getElementById("ej_editJobStatus").value = statusValue;
           editModal.style.display = "block";
         } else {
-          console.error(data.message || "Unable to load job details.");
+          const errorMsg = data.message || "Unable to load job details.";
+          console.error("[v0] API Error:", errorMsg);
+          alert("Error: " + errorMsg);
           hideLoader();
         }
       } catch (err) {
         hideLoader();
-        console.error(err);
+        console.error("[v0] Fetch Error:", err.message);
+        alert("Failed to load job details: " + err.message);
       }
     });
   });

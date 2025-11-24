@@ -12,6 +12,7 @@ from dateutil.relativedelta import relativedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import json
+import traceback
 
 employers_bp = Blueprint("employers", __name__)
 
@@ -1758,9 +1759,60 @@ def auto_deactivate_jobs():
     conn.close()
     return "Auto deactivation complete."
 
+
 # -------------------------
 # Return job JSON for modal
 # -------------------------
+@employers_bp.route("/job/<int:job_id>/json", methods=['GET'])
+def get_job_json(job_id):
+    """Fetch job details as JSON for edit modal (AJAX endpoint)."""
+    if 'employer_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+
+    employer_id = session['employer_id']
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed'}), 500
+
+    try:
+        query = """SELECT job_id, job_position, num_vacancy, min_salary, max_salary, 
+                          job_description, qualifications, work_schedule, status 
+                   FROM jobs WHERE job_id = %s"""
+        job = run_query(conn, query, (job_id,), fetch='one')
+
+        if not job:
+            return jsonify({'success': False, 'message': 'Job not found'}), 404
+
+        # Convert database row to dictionary
+        if hasattr(job, 'keys'):
+            job_dict = dict(job)
+        elif isinstance(job, dict):
+            job_dict = job
+        else:
+            job_dict = {}
+
+        return jsonify({
+            'success': True,
+            'job': {
+                'job_id': job_dict.get('job_id'),
+                'job_position': job_dict.get('job_position'),
+                'num_vacancy': job_dict.get('num_vacancy'),
+                'min_salary': float(job_dict.get('min_salary', 0)),
+                'max_salary': float(job_dict.get('max_salary', 0)),
+                'job_description': job_dict.get('job_description'),
+                'qualifications': job_dict.get('qualifications'),
+                'work_schedule': job_dict.get('work_schedule'),
+                'status': job_dict.get('status')
+            }
+        })
+    except Exception as e:
+        error_trace = traceback.format_exc()
+        print(f"[v0] Error fetching job JSON: {str(e)}")
+        print(f"[v0] Traceback: {error_trace}")
+        return jsonify({'success': False, 'message': f"Error: {str(e)}"}), 500
+    finally:
+        if conn:
+            conn.close()
 
 
 @employers_bp.route('/api/job/<int:job_id>/applicants')
@@ -2060,8 +2112,7 @@ def mark_notification_read_by_id(notification_id):
 def job_applicants(job_id):
     """Show list of applicants who applied to a given job (employer only)."""
     if 'employer_id' not in session:
-        flash('Please log in to access this page.', 'warning')
-        return redirect(url_for('home'))
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
 
     employer_id = session['employer_id']
     conn = create_connection()
