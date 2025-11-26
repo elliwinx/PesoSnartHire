@@ -793,6 +793,17 @@ body {
   color: #7b1113;
 }
 
+@media (max-width: 640px) {
+  .profile-header {
+    flex-direction: column;
+  }
+
+  .profile-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
 /* Modal */
 .modal {
   display: none;
@@ -1908,6 +1919,33 @@ input[type="password"]:focus {
 .profile-details strong {
   font-weight: 600;
   color: black;
+}
+
+.profile-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-start;
+}
+
+.report-account-chip {
+  border: 1px solid #c53030;
+  background: rgba(197, 48, 48, 0.08);
+  color: #b91c1c;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.report-account-chip:hover {
+  background: #b91c1c;
+  color: #fff;
+  border-color: transparent;
 }
 
 .section {

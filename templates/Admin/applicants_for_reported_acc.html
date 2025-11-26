@@ -1,12 +1,4 @@
-<style>
-  .action-buttons {
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-    justify-content: flex-start;
-    align-items: center;
-  }
-</style>
+<!-- Use this corrected HTML template -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -34,6 +26,234 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
+    <style>
+      .job-review-modal .modal-dialog {
+        max-width: 1020px;
+      }
+      .job-modal-shell {
+        border: none;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+      }
+      .job-modal-header {
+        position: relative;
+        padding: 2rem;
+        background: linear-gradient(135deg, #0f172a, #1d4ed8);
+        color: #f8fafc;
+        display: flex;
+        gap: 1.5rem;
+        align-items: flex-start;
+      }
+      .job-modal-header .btn-close {
+        position: absolute;
+        top: 1.25rem;
+        right: 1.25rem;
+        filter: invert(1);
+        opacity: 0.8;
+      }
+      .job-modal-header .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-bottom: 0.25rem;
+      }
+      .job-modal-header h2 {
+        margin: 0;
+        font-size: clamp(1.5rem, 2vw, 2rem);
+        color: #fff;
+      }
+      .job-modal-badges {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+      }
+      .job-status-chip,
+      .job-type-chip,
+      .job-schedule-chip {
+        border-radius: 999px;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .job-status-chip {
+        background: rgba(16, 185, 129, 0.15);
+        color: #bbf7d0;
+      }
+      .job-status-chip.status-active {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+      }
+      .job-status-chip.status-suspended {
+        background: rgba(248, 113, 113, 0.18);
+        color: #fecaca;
+      }
+      .job-status-chip.status-pending {
+        background: rgba(251, 191, 36, 0.2);
+        color: #fde68a;
+      }
+      .job-status-chip.status-rejected {
+        background: rgba(248, 113, 113, 0.18);
+        color: #fecaca;
+      }
+      .job-type-chip {
+        background: rgba(59, 130, 246, 0.2);
+        color: #bfdbfe;
+      }
+      .job-schedule-chip {
+        background: rgba(248, 250, 252, 0.15);
+        color: #e2e8f0;
+      }
+      .job-modal-salary-chip {
+        margin-left: auto;
+        background: rgba(15, 23, 42, 0.45);
+        padding: 1rem 1.25rem;
+        border-radius: 1rem;
+        min-width: 200px;
+        text-align: right;
+      }
+      .job-modal-salary-chip span {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        opacity: 0.8;
+      }
+      .job-modal-salary-chip strong {
+        display: block;
+        font-size: 1.1rem;
+        margin-top: 0.15rem;
+      }
+      .job-modal-body {
+        padding: 2rem;
+        background: #f8fafc;
+      }
+      .job-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+      }
+      .job-info-card {
+        padding: 1rem;
+        background: #fff;
+        border-radius: 1rem;
+        box-shadow: 0 8px 15px rgba(15, 23, 42, 0.07);
+        min-height: 110px;
+      }
+      .job-info-card .label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+        display: block;
+        margin-bottom: 0.35rem;
+      }
+      .job-info-card p {
+        margin: 0;
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .job-longform {
+        margin-top: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .job-collapsible {
+        background: #fff;
+        border-radius: 1rem;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+      }
+      .job-collapsible summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 1rem 1.25rem;
+        background: #f1f5f9;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .job-collapsible[open] summary i.fa-chevron-down {
+        transform: rotate(180deg);
+      }
+      .job-collapsible summary::-webkit-details-marker {
+        display: none;
+      }
+      .job-collapsible p,
+      .job-collapsible ul {
+        padding: 1.25rem;
+        margin: 0;
+        font-size: 0.95rem;
+        color: #1e293b;
+      }
+      .job-collapsible ul {
+        list-style: disc;
+        padding-left: 2.5rem;
+      }
+      .job-collapsible ul li {
+        margin-bottom: 0.35rem;
+      }
+      .job-action-footer {
+        background: #fff;
+        border-top: 1px solid #e2e8f0;
+        padding: 1.5rem 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .job-action-toolbar {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .job-action-btn {
+        border: none;
+        border-radius: 999px;
+        padding: 0.65rem 1.35rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #fff;
+      }
+      .job-approve {
+        background: #10b981;
+      }
+      .job-reject {
+        background: #ef4444;
+      }
+      .job-suspend {
+        background: #f97316;
+      }
+      .job-action-feedback {
+        flex: 1 1 250px;
+        color: #64748b;
+      }
+      @media (max-width: 768px) {
+        .job-modal-header {
+          flex-direction: column;
+        }
+        .job-modal-salary-chip {
+          align-self: stretch;
+          text-align: left;
+        }
+        .job-action-footer {
+          flex-direction: column;
+        }
+        .job-action-toolbar {
+          width: 100%;
+          flex-direction: column;
+        }
+        .job-action-toolbar .btn,
+        .job-action-btn {
+          width: 100%;
+          justify-content: center;
+        }
+      }
+    </style>
   </head>
   <body>
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
@@ -90,8 +310,122 @@
       </div>
     </header>
 
+    <section class="hero">
+      <div class="hero-background">
+        <img
+          src="{{ url_for('static', filename='Assets/background.png') }}"
+          alt="New City Hall of Lipa City"
+        />
+      </div>
+      <div class="hero-content">
+        <div class="container">
+          <h1 class="hero-title">Welcome, Administrator!</h1>
+          <p class="hero-description">Here's what we have today</p>
+        </div>
+      </div>
+    </section>
 
+    <div class="table-container">
+      <div class="back-button">
+        <a href="javascript:void(0);" onclick="window.history.back();">
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
+      </div>
 
+      <div class="table-header">
+        <h2>Reported Job Posts</h2>
+        <p>Review and manage job posts that have been reported by users</p>
+      </div>
+
+      <!-- Added missing notificationList container for notifications.js -->
+      <div id="notificationList" class="notification-list" style="display: none;"></div>
+
+    <div class="table-wrapper">
+        {% if job_reports %}
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Job Title</th>
+            <th>Employer Name</th>
+            <th>Reported By</th>
+            <th>Date Reported</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+            {% for report in job_reports %}
+            <tr data-report-id="{{ report.report_id }}">
+            <td>{{ report.job_title }}</td>
+            <td>{{ report.employer_name }}</td>
+              <td>{{ report.reported_by_name }}</td>
+            <td>{{ report.reported_at.strftime("%Y-%m-%d %H:%M") if report.reported_at else '' }}</td>
+              <td>
+                <span class="reason-chip" title="{{ report.reason }}">{{ report.reason }}</span>
+                {% if report.details %}
+                <p class="reason-detail-text">{{ report.details }}</p>
+                {% endif %}
+              </td>
+              <td>
+                {% set status = report.status or 'Pending' %}
+                {% if status == 'Approved' %}
+                <span class="badge bg-success">{{ status }}</span>
+                {% elif status == 'Rejected' %}
+                <span class="badge bg-danger">{{ status }}</span>
+                {% elif status == 'Confirmed' %}
+                <span class="badge bg-success">{{ status }}</span>
+                {% elif status == 'Suspended' %}
+                <span class="badge bg-secondary">{{ status }}</span>
+                {% elif status == 'Archived' %}
+                <span class="badge bg-dark">{{ status }}</span>
+                {% else %}
+                <span class="badge bg-warning text-dark">{{ status }}</span>
+                {% endif %}
+            </td>
+
+              <td class="table-actions">
+                {% if report.job_id %}
+                    <button class="btn btn-sm btn-primary view-job-btn" 
+                          data-job-id="{{ report.job_id }}"
+                          data-report-id="{{ report.report_id }}">
+                    <i class="fa-solid fa-eye"></i> View Job
+                    </button>
+                {% else %}
+                  <button class="btn btn-sm btn-secondary" disabled>
+                    <i class="fa-solid fa-eye-slash"></i> Job Removed
+                  </button>
+                {% endif %}
+
+                {% if report.employer_id %}
+                    <a href="{{ url_for('admin.view_employer', employer_id=report.employer_id) }}" 
+                      class="btn btn-sm btn-info">
+                    <i class="fa-solid fa-user-tie"></i> Employer
+                    </a>
+                {% else %}
+                  <button class="btn btn-sm btn-secondary" disabled>
+                    <i class="fa-solid fa-user-slash"></i>
+                  </button>
+                {% endif %}
+
+                <button 
+                  class="btn btn-sm btn-outline-warning edit-status-btn"
+                  data-report-id="{{ report.report_id }}">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit Status
+                </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
+        {% else %}
+        <p class="empty-state">No reported job posts at the moment.</p>
+        {% endif %}
+    </div>
+
+    </div>
 
     <footer class="footer">
       <div class="container">
@@ -158,15 +492,109 @@
       </div>
     </footer>
 
+    <!-- View Job Modal -->
+    <div class="modal fade job-review-modal" id="viewJobModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content job-modal-shell">
+          <div class="job-modal-header">
+            <div class="job-header-text">
+              <p class="eyebrow">Reported job post</p>
+              <h2 id="modalJobTitle">Job Title</h2>
+              <div class="job-modal-badges">
+                <span id="modalJobStatus" class="badge job-status-chip">Pending</span>
+                <span id="modalEmploymentType" class="badge job-type-chip">—</span>
+                <span id="modalWorkSchedule" class="badge job-schedule-chip">—</span>
+              </div>
+            </div>
+            <div class="job-modal-salary-chip">
+              <span>Salary range</span>
+              <strong id="modalSalary">Not specified</strong>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+
+          <div class="modal-body job-modal-body">
+            <div class="job-info-grid">
+              <article class="job-info-card">
+                <span class="label">Employer</span>
+                <p id="modalEmployerName">—</p>
+              </article>
+              <article class="job-info-card">
+                <span class="label">Location</span>
+                <p id="modalLocation">—</p>
+              </article>
+              <article class="job-info-card">
+                <span class="label">Employment Type</span>
+                <p id="modalEmploymentTypeValue">—</p>
+              </article>
+              <article class="job-info-card">
+                <span class="label">Work Schedule</span>
+                <p id="modalWorkScheduleValue">—</p>
+              </article>
+              <article class="job-info-card">
+                <span class="label">Posted On</span>
+                <p id="modalPostedDate">—</p>
+              </article>
+              <article class="job-info-card">
+                <span class="label">Current Status</span>
+                <p id="modalJobStatusValue">—</p>
+              </article>
+            </div>
+
+            <div class="job-longform">
+              <details class="job-collapsible" open>
+                <summary>
+                  <span><i class="fa-solid fa-align-left"></i> Description</span>
+                  <i class="fa-solid fa-chevron-down"></i>
+                </summary>
+            <p id="modalDescription"></p>
+              </details>
+
+              <details class="job-collapsible" open>
+                <summary>
+                  <span><i class="fa-solid fa-list-check"></i> Qualifications / Requirements</span>
+                  <i class="fa-solid fa-chevron-down"></i>
+                </summary>
+            <ul id="modalRequirements"></ul>
+              </details>
+            </div>
+          </div>
+
+          <div class="modal-footer job-action-footer">
+            <div class="job-action-feedback">
+              <span id="jobActionFeedback" class="text-muted small"></span>
+            </div>
+            <div class="job-action-toolbar">
+              <button type="button" class="btn job-action-btn job-suspend" data-job-action="confirm">
+                <i class="fa-solid fa-ban"></i> Suspend Job
+              </button>
+              <button type="button" class="btn job-action-btn job-reject" data-job-action="reject">
+                <i class="fa-solid fa-xmark"></i> Reject Report
+              </button>
+              <a
+                id="modalEmployerLink"
+                class="btn btn-outline-secondary"
+                href="#"
+                target="_blank"
+                rel="noopener"
+                style="display: none"
+              >
+                <i class="fa-solid fa-user-tie"></i> View Employer
+              </a>
+            </div>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     {% include 'partials/loader.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ url_for('static', filename='js/report-modal') }}"></script>
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <!--<script>
-      function editStatus(applicantId) {
-        // Redirect to applicant profile where edit status modal will open
-        window.location.href = "/admin/applicants/" + applicantId;
-    }-->
-    </script>
   </body>
 </html>

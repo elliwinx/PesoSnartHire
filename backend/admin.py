@@ -1,11 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import check_password_hash, generate_password_hash
 from db_connection import create_connection, run_query
-from .notifications import get_notifications, mark_notification_read, get_unread_count
+from .notifications import get_notifications, mark_notification_read, get_unread_count, create_notification
 from .recruitment_change_handler import revert_recruitment_type_change
 from extensions import mail
 from flask_mail import Message
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 import json
 import os
@@ -505,35 +505,526 @@ def applicants_view_all():
 
     return render_template("Admin/applicants_view_all.html", applicants=applicants)
 
-@admin_bp.route("/applicants/for-reported-acc")
-def applicants_reported_acc():
-    """Show applicants with reported accounts"""
+
+@admin_bp.route('/applicants_for_reported_acc')
+def applicants_for_reported_acc():
+    """Show job posts reported by applicants for moderation."""
+    if "admin_id" not in session:
+        return redirect(url_for("admin.login"))
+    
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed", "danger")
+        return redirect(url_for("admin.admin_home"))
+    
+    job_reports = []
+    
+    try:
+        cursor = conn.cursor(dictionary=True)
+
+        # Fetch job reports only (correct schema using created_at)
+        cursor.execute("""
+            SELECT 
+                jr.id AS report_id,
+                jr.applicant_id,
+                jr.job_id,
+                jr.reason,
+                jr.details,
+                jr.created_at AS reported_at,
+
+                CONCAT(
+                    COALESCE(reporter.first_name, 'Unknown'), ' ',
+                    COALESCE(reporter.middle_name, ''), ' ',
+                    COALESCE(reporter.last_name, 'Applicant')
+                ) AS reported_by_name,
+
+                COALESCE(j.job_position, 'Deleted Job') AS job_title,
+                COALESCE(e.employer_name, 'Unknown Employer') AS employer_name,
+
+                e.employer_id,
+                COALESCE(jr.status, 'Pending') AS status,
+                j.status AS job_status
+            FROM job_reports jr
+            LEFT JOIN applicants reporter ON jr.applicant_id = reporter.applicant_id
+            LEFT JOIN jobs j ON jr.job_id = j.job_id
+            LEFT JOIN employers e ON j.employer_id = e.employer_id
+            ORDER BY jr.created_at DESC;
+        """)
+
+        job_reports = cursor.fetchall() or []
+
+        cursor.close()
+
+    except Exception as e:
+        print(f"[ERROR fetching reported job posts: {str(e)}]")
+        flash(f"Error loading reported job posts: {str(e)}", "danger")
+
+    finally:
+        conn.close()
+    
+    return render_template(
+        'Admin/applicants_for_reported_acc.html', 
+        job_reports=job_reports
+    )
+
+
+@admin_bp.route("/reported_applicants")
+def reported_applicants():
     if "admin_id" not in session:
         return redirect(url_for("admin.login"))
 
+    conn = create_connection()
+    if not conn:
+        flash("Database connection failed", "danger")
+        return redirect(url_for("admin.employers_management"))
+
     try:
-        conn = create_connection()
         cursor = conn.cursor(dictionary=True)
-
         cursor.execute("""
-            SELECT a.applicant_id, a.first_name, a.middle_name, a.last_name,
-                   a.created_at AS applicant_created_at, a.status, a.is_from_lipa,
-                   r.created_at AS report_created_at, r.reason
-            FROM applicants a
-            JOIN job_reports r ON a.applicant_id = r.applicant_id
-            ORDER BY r.created_at DESC
+            SELECT 
+                ar.id AS report_id,
+                ar.applicant_id,
+                ar.employer_id,
+                ar.job_id,
+                ar.reason,
+                ar.details,
+                ar.created_at AS reported_at,
+
+                CONCAT(
+                    COALESCE(app.first_name, 'Unknown'), ' ',
+                    COALESCE(app.last_name, 'Applicant')
+                ) AS applicant_name,
+
+                COALESCE(emp.employer_name, 'Unknown Employer') AS employer_name,
+                emp.email AS employer_email,
+                COALESCE(job.job_position, 'N/A') AS job_title,
+                COALESCE(ar.status, 'Pending') AS status
+            FROM applicant_reports ar
+            LEFT JOIN applicants app ON ar.applicant_id = app.applicant_id
+            LEFT JOIN employers emp ON ar.employer_id = emp.employer_id
+            LEFT JOIN jobs job ON ar.job_id = job.job_id
+            ORDER BY ar.created_at DESC;
         """)
-        applicants = cursor.fetchall()
+        reports = cursor.fetchall() or []
+        cursor.close()
+    except Exception as exc:
+        print(f"[v1] Failed to load applicant reports: {exc}")
+        reports = []
+        flash("Unable to load reported applicants.", "danger")
+    finally:
+        conn.close()
 
-    except Exception as e:
-        print("DB ERROR:", e)
-        applicants = []
+    return render_template(
+        "Admin/reported_applicants.html",
+        reports=reports
+    )
 
+
+@admin_bp.route("/get_job_details/<int:job_id>")
+def get_job_details(job_id):
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT 
+            j.job_id,
+            j.job_position,
+            j.job_description,
+            j.qualifications,
+            j.work_schedule,
+            j.min_salary,
+            j.max_salary,
+            j.status,
+            j.requirements,
+            j.employment_type,
+            j.created_at,
+            e.employer_name,
+            e.city,
+            e.province,
+            e.employer_id
+        FROM jobs j
+        LEFT JOIN employers e ON j.employer_id = e.employer_id
+        WHERE j.job_id=%s
+    """, (job_id,))
+    job = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not job:
+        return jsonify({"success": False, "message": "Job not found"}), 404
+
+    raw_requirements = job.get('requirements') or job.get('qualifications') or ""
+    requirements = [
+        req.strip() for req in raw_requirements.replace("\r", "").split("\n")
+        if req.strip()
+    ]
+    if not requirements and raw_requirements:
+        requirements = [req.strip() for req in raw_requirements.split(",") if req.strip()]
+
+    payload = {
+        "id": job.get("job_id"),
+        "title": job.get("job_position"),
+        "description": job.get("job_description"),
+        "employment_type": job.get("employment_type") or job.get("work_schedule"),
+        "work_schedule": job.get("work_schedule"),
+        "requirements": requirements,
+        "min_salary": job.get("min_salary"),
+        "max_salary": job.get("max_salary"),
+        "status": job.get("status"),
+        "posted_at": job.get("created_at").isoformat() if job.get("created_at") else None,
+        "employer_name": job.get("employer_name"),
+        "location": ", ".join(filter(None, [job.get("city"), job.get("province")])),
+        "employer_id": job.get("employer_id")
+    }
+
+    return jsonify({"success": True, "job": payload})
+
+
+
+def safe_send_email(subject, recipient, body):
+    if not recipient:
+        return
+    try:
+        msg = Message(subject=subject, recipients=[recipient], html=body)
+        mail.send(msg)
+    except Exception as exc:
+        print(f"[v1] Failed to send email to {recipient}: {exc}")
+
+
+
+def ensure_job_report_details_column(cursor):
+    cursor.execute("SHOW COLUMNS FROM job_reports LIKE 'details'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE job_reports ADD COLUMN details TEXT NULL AFTER reason")
+
+
+@admin_bp.route("/job_reports/<int:report_id>/action", methods=['POST'])
+def handle_job_report_action(report_id):
+    if "admin_id" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+    moderator_note = data.get("moderator_note", "").strip()
+
+    valid_actions = {"confirm", "reject"}
+    if action not in valid_actions:
+        return jsonify({"success": False, "message": "Invalid action"}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT 
+                jr.id,
+                jr.job_id,
+                jr.reason,
+                jr.details,
+                jr.applicant_id AS reporter_id,
+                j.job_position,
+                j.employer_id,
+                e.employer_name,
+                e.email AS employer_email,
+                a.email AS reporter_email,
+                CONCAT(COALESCE(a.first_name, ''), ' ', COALESCE(a.last_name, '')) AS reporter_name
+            FROM job_reports jr
+            LEFT JOIN jobs j ON jr.job_id = j.job_id
+            LEFT JOIN employers e ON j.employer_id = e.employer_id
+            LEFT JOIN applicants a ON jr.applicant_id = a.applicant_id
+            WHERE jr.id = %s
+        """, (report_id,))
+        report = cursor.fetchone()
+
+        if not report:
+            return jsonify({"success": False, "message": "Report not found"}), 404
+
+        job_id = report.get("job_id")
+        job_position = report.get("job_position", "Job")
+        employer_id = report.get("employer_id")
+
+        if action == "confirm":
+            cursor.execute(
+                "UPDATE jobs SET status = %s WHERE job_id = %s",
+                ("suspended", job_id)
+            )
+            cursor.execute(
+                "UPDATE job_reports SET status = %s, updated_at = NOW() WHERE id = %s",
+                ("Confirmed", report_id)
+            )
+            cursor.execute(
+                "UPDATE applications SET status = %s WHERE job_id = %s",
+                ("Withdrawn", job_id)
+            )
+            cursor.execute("""
+                SELECT DISTINCT a.applicant_id, a.email, a.first_name, a.last_name
+                FROM applications ap
+                JOIN applicants a ON ap.applicant_id = a.applicant_id
+                WHERE ap.job_id = %s
+            """, (job_id,))
+            impacted_applicants = cursor.fetchall() or []
+
+            conn.commit()
+
+            for applicant in impacted_applicants:
+                create_notification(
+                    notification_type="job_application",
+                    title="Application withdrawn",
+                    message=f"Your application for {job_position} was withdrawn because the job post was suspended.",
+                    applicant_id=applicant["applicant_id"],
+                    related_ids=[job_id]
+                )
+                safe_send_email(
+                    "Application withdrawn",
+                    applicant.get("email"),
+                    f"<p>Hi {applicant.get('first_name','Applicant')},</p>"
+                    f"<p>The job post for <strong>{job_position}</strong> was suspended after our investigation. "
+                    "Your application has been withdrawn automatically.</p>"
+                )
+
+            if employer_id:
+                create_notification(
+                    notification_type="employer_reported",
+                    title="Job post suspended",
+                    message=f"{job_position} was suspended after confirming a report.",
+                    employer_id=employer_id,
+                    related_ids=[job_id]
+                )
+            safe_send_email(
+                "Job post suspended",
+                report.get("employer_email"),
+                f"<p>Hi {report.get('employer_name','Employer')},</p>"
+                f"<p>Your job post <strong>{job_position}</strong> was suspended permanently after confirming a report.</p>"
+            )
+
+            if report.get("reporter_id"):
+                create_notification(
+                    notification_type="applicant_reported",
+                    title="Report confirmed",
+                    message=f"Thanks for reporting {job_position}. We suspended the job post after review.",
+                    applicant_id=report["reporter_id"],
+                    related_ids=[job_id]
+                )
+                safe_send_email(
+                    "Report confirmed",
+                    report.get("reporter_email"),
+                    f"<p>Hi {report.get('reporter_name','Applicant')},</p>"
+                    f"<p>Your report for <strong>{job_position}</strong> has been confirmed. "
+                    "The job post is now suspended.</p>"
+                )
+
+            return jsonify({
+                "success": True,
+                "message": f"{job_position} was suspended and all applications were withdrawn.",
+                "job_status": "suspended",
+                "report_status": "Confirmed"
+            })
+
+        # Reject branch
+        cursor.execute(
+            "UPDATE job_reports SET status = %s, updated_at = NOW() WHERE id = %s",
+            ("Rejected", report_id)
+        )
+        conn.commit()
+
+        if report.get("reporter_id"):
+            create_notification(
+                notification_type="applicant_reported",
+                title="Report rejected",
+                message="We reviewed your report and found no violation.",
+                applicant_id=report["reporter_id"],
+                related_ids=[job_id]
+            )
+            safe_send_email(
+                "Report rejected",
+                report.get("reporter_email"),
+                f"<p>Hi {report.get('reporter_name','Applicant')},</p>"
+                f"<p>Your report for <strong>{job_position}</strong> was rejected. "
+                "Our moderators did not find sufficient evidence.</p>"
+                f"{f'<p>Moderator note: {moderator_note}</p>' if moderator_note else ''}"
+            )
+
+        return jsonify({
+            "success": True,
+            "message": "Report rejected and reporter notified.",
+            "job_status": None,
+            "report_status": "Rejected"
+        })
+    except Exception as exc:
+        conn.rollback()
+        print(f"[v1] Failed to update job report {report_id}: {exc}")
+        return jsonify({"success": False, "message": "Failed to update job status"}), 500
     finally:
         cursor.close()
         conn.close()
 
-    return render_template("Admin/applicants_for_reported_acc.html", applicants=applicants)
+
+def ensure_applicant_suspension_column(cursor):
+    cursor.execute("SHOW COLUMNS FROM applicants LIKE 'suspension_end_at'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE applicants ADD COLUMN suspension_end_at DATETIME NULL AFTER updated_at")
+
+
+@admin_bp.route("/applicant_reports/<int:report_id>/action", methods=['POST'])
+def handle_applicant_report_action(report_id):
+    """Moderate reported applicants (confirm/reject)."""
+    if "admin_id" not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    action = data.get("action")
+    moderator_note = data.get("moderator_note", "").strip()
+    suspension_days = int(data.get("suspension_days") or 0)
+
+    valid_actions = {"confirm", "reject"}
+    if action not in valid_actions:
+        return jsonify({"success": False, "message": "Invalid action"}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT 
+                ar.id,
+                ar.applicant_id,
+                ar.employer_id,
+                ar.reason,
+                ar.details,
+                ar.status AS report_status,
+                CONCAT(COALESCE(app.first_name, ''), ' ', COALESCE(app.last_name, '')) AS applicant_name,
+                app.email AS applicant_email,
+                emp.employer_name,
+                emp.email AS employer_email
+            FROM applicant_reports ar
+            LEFT JOIN applicants app ON ar.applicant_id = app.applicant_id
+            LEFT JOIN employers emp ON ar.employer_id = emp.employer_id
+            WHERE ar.id = %s
+        """, (report_id,))
+        report = cursor.fetchone()
+
+        if not report:
+            return jsonify({"success": False, "message": "Report not found"}), 404
+
+        applicant_id = report.get("applicant_id")
+        employer_id = report.get("employer_id")
+
+        if action == "confirm":
+            ensure_applicant_suspension_column(cursor)
+            suspension_end = None
+            if suspension_days > 0:
+                suspension_end = datetime.utcnow() + timedelta(days=suspension_days)
+            cursor.execute(
+                "UPDATE applicants SET status = %s, is_active = %s, suspension_end_at = %s, updated_at = NOW() WHERE applicant_id = %s",
+                ("Suspended", 0, suspension_end, applicant_id)
+            )
+            cursor.execute(
+                "UPDATE applications SET status = %s WHERE applicant_id = %s",
+                ("On Hold", applicant_id)
+            )
+            cursor.execute(
+                "UPDATE applicant_reports SET status = %s, updated_at = NOW() WHERE id = %s",
+                ("Confirmed", report_id)
+            )
+            conn.commit()
+
+            create_notification(
+                notification_type="applicant_reported",
+                title="Account suspended",
+                message="Your account was suspended after an employer report.",
+                applicant_id=applicant_id
+            )
+            create_notification(
+                notification_type="employer_reported",
+                title="Report confirmed",
+                message=f"Your report for {report.get('applicant_name','the applicant')} was confirmed.",
+                employer_id=employer_id
+            )
+            safe_send_email(
+                "Account suspended",
+                report.get("applicant_email"),
+                f"<p>Hi {report.get('applicant_name','Applicant')},</p>"
+                "<p>We confirmed the report filed against your account and applied a suspension.</p>"
+                f"{f'<p>The suspension will lift automatically after {suspension_days} day(s).</p>' if suspension_days > 0 else '<p>The suspension is indefinite until further notice.</p>'}"
+            )
+            safe_send_email(
+                "Report confirmed",
+                report.get("employer_email"),
+                f"<p>Hi {report.get('employer_name','Employer')},</p>"
+                "<p>We confirmed the report you filed. The applicant has been suspended.</p>"
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "Applicant suspended and both parties notified.",
+                "applicant_status": "Suspended",
+                "report_status": "Confirmed"
+            })
+
+        # Reject branch
+        cursor.execute(
+            "UPDATE applicant_reports SET status = %s, updated_at = NOW() WHERE id = %s",
+            ("Rejected", report_id)
+        )
+        conn.commit()
+
+        create_notification(
+            notification_type="employer_reported",
+            title="Report rejected",
+            message="We reviewed your report and found no violation.",
+            employer_id=employer_id
+        )
+        safe_send_email(
+            "Report rejected",
+            report.get("employer_email"),
+            "<p>Your report was reviewed but we did not find a violation.</p>"
+            f"{f'<p>Moderator note: {moderator_note}</p>' if moderator_note else ''}"
+        )
+
+        return jsonify({
+            "success": True,
+            "message": "Report rejected and reporter notified.",
+            "applicant_status": None,
+            "report_status": "Rejected"
+        })
+    except Exception as exc:
+        conn.rollback()
+        print(f"[v1] Failed to update applicant report {report_id}: {exc}")
+        return jsonify({"success": False, "message": "Failed to update applicant status."}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@admin_bp.route('/update_report_status', methods=['POST'])
+def update_report_status():
+    if "admin_id" not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    report_id = request.form.get("report_id")
+    new_status = request.form.get("status")
+
+    conn = create_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE job_reports
+        SET status = %s
+        WHERE id = %s
+    """, (new_status, report_id))
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return jsonify({"status": "success", "message": "Status updated!"})
+
 
 @admin_bp.route("/applicants/<int:applicant_id>")
 def view_applicant(applicant_id):
@@ -1456,4 +1947,3 @@ def reject_recruitment_type_change(employer_id):
             conn.rollback()
             conn.close()
         return jsonify({"success": False, "message": str(e)}), 500
-

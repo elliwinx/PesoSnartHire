@@ -1,0 +1,158 @@
+.report-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1600;
+}
+
+.report-modal.show {
+  display: flex;
+}
+
+.report-modal-dialog {
+  background: #fff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 520px;
+  padding: 32px;
+  position: relative;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.25);
+}
+
+.report-modal-title {
+  margin: 0 0 10px 0;
+  font-size: 1.45rem;
+  color: #111827;
+}
+
+.report-helper {
+  color: #6b7280;
+  margin: 0 0 24px 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.report-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.report-modal-close:hover {
+  color: #111827;
+}
+
+.report-modal-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #374151;
+}
+
+.report-modal-form textarea,
+.report-modal-form select {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  margin-bottom: 18px;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.report-modal-form textarea:focus,
+.report-modal-form select:focus {
+  outline: none;
+  border-color: #7b1113;
+  box-shadow: 0 0 0 3px rgba(123, 17, 19, 0.15);
+}
+
+.report-modal-form select:empty {
+  color: #9ca3af;
+}
+
+.report-submit-btn {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7b1113, #b91c1c);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.report-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(123, 17, 19, 0.35);
+}
+
+.report-submit-btn .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: report-spinner 0.8s linear infinite;
+}
+
+.report-modal-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  min-width: 280px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 500;
+  box-shadow: 0 18px 30px rgba(37, 99, 235, 0.3);
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  z-index: 1700;
+}
+
+.report-modal-toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.report-modal-toast.error {
+  background: #dc2626;
+}
+
+@keyframes report-spinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .report-modal-dialog {
+    padding: 24px;
+  }
+}
+

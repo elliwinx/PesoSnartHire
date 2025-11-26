@@ -26,6 +26,10 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/report-modal.css') }}"
+    />
   </head>
   <body
     data-must-change-password="{{ 'true' if session.must_change_password else 'false' }}"
@@ -253,7 +257,19 @@
                 </form>
               </div>
               <div class="right-button">
-                <button class="btn-report" title="Report">!</button>
+                <button
+                  class="btn-report"
+                  title="Report job post"
+                  data-report-trigger
+                  data-report-endpoint="{{ url_for('applicants.report_job', job_id=job.job_id) }}"
+                  data-report-title="Report Job Post"
+                  data-report-helper="Let us know why this job post should be reviewed. Your message goes directly to PESO SmartHire."
+                  data-report-type="job"
+                  data-report-id="{{ job.job_id }}"
+                  data-report-success="Thank you! We'll review this job post soon."
+                >
+                  !
+                </button>
               </div>
             </div>
           </div>
@@ -287,34 +303,6 @@
         >
           <button class="btn-confirm" id="modal-apply-btn">Apply Now</button>
           <button class="btn-cancel-confirm" id="modal-close-btn">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Report Modal -->
-    <div id="reportModalUnique" class="modal-unique">
-      <div class="modal-content-unique">
-        <span class="close-report-unique">&times;</span>
-
-        <div class="modal-job-details-unique">
-          <button class="btn-report">!</button>
-
-          <h2>Report Job Post</h2>
-          <p>Please select a reason for your report.</p>
-
-          <select id="reportReasonUnique">
-            <option value="">Reason</option>
-            <option value="Spam">Spam</option>
-            <option value="Scam">Scam</option>
-            <option value="Inappropriate">Inappropriate</option>
-          </select>
-
-          <div class="modal-buttons">
-            <button id="confirmReportUnique" class="confirm-btn">
-              Confirm
-            </button>
-            <button id="cancelReportUnique" class="cancel-btn">Cancel</button>
-          </div>
         </div>
       </div>
     </div>
@@ -364,6 +352,8 @@
         </div>
       </div>
     </div>
+
+    {% include 'partials/report_modal.html' %}
 
     <!-- Footer -->
     <footer class="footer">
@@ -490,6 +480,7 @@
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/report-modal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>
 </html>

@@ -1,0 +1,65 @@
+<div
+  id="{{ modal_id | default('globalReportModal') }}"
+  class="report-modal"
+  aria-hidden="true"
+>
+  <div class="report-modal-dialog" role="dialog" aria-modal="true">
+    <button
+      type="button"
+      class="report-modal-close"
+      aria-label="Close report modal"
+      data-report-close
+    >
+      &times;
+    </button>
+    <h3 class="report-modal-title" data-report-title>
+      {{ modal_title | default('Submit Report') }}
+    </h3>
+    <p class="report-helper" data-report-helper>
+      {{ modal_helper | default('Provide a short explanation so our moderators can investigate.') }}
+    </p>
+    <form class="report-modal-form" data-report-form>
+      <input type="hidden" name="report_type" />
+      <input type="hidden" name="reported_id" />
+      <input type="hidden" name="context_id" />
+
+      <div class="report-context" data-report-context hidden>
+        <label data-report-context-label for="{{ modal_id | default('globalReportModal') }}Context">
+          Related to
+        </label>
+        <select
+          id="{{ modal_id | default('globalReportModal') }}Context"
+          data-report-context-select
+        ></select>
+      </div>
+
+      <label for="{{ modal_id | default('globalReportModal') }}Reason">
+        Reason
+      </label>
+      <textarea
+        id="{{ modal_id | default('globalReportModal') }}Reason"
+        data-report-reason
+        rows="4"
+        placeholder="Describe what happened..."
+        required
+      ></textarea>
+
+      <label for="{{ modal_id | default('globalReportModal') }}Details">
+        Additional Details (optional)
+      </label>
+      <textarea
+        id="{{ modal_id | default('globalReportModal') }}Details"
+        data-report-details
+        rows="3"
+        placeholder="Add more information or context"
+      ></textarea>
+
+      <button type="submit" class="report-submit-btn">
+        <i class="fa-solid fa-paper-plane"></i>
+        Submit Report
+      </button>
+    </form>
+  </div>
+</div>
+<div class="report-modal-toast" id="{{ modal_id | default('globalReportModal') }}Toast"></div>
+

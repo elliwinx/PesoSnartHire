@@ -2202,6 +2202,104 @@ def view_applicant(applicant_id):
         conn.close()
 
 
+@employers_bp.route("/report_applicant/<int:applicant_id>", methods=["POST"])
+def report_applicant(applicant_id):
+    """Allow employers to report applicants with a reason and optional job context."""
+    if 'employer_id' not in session:
+        return jsonify({'success': False, 'message': 'Please log in to continue.'}), 401
+
+    employer_id = session['employer_id']
+    payload = request.get_json(silent=True) or {}
+    reason = (payload.get("reason") or "").strip()
+    details = (payload.get("details") or "").strip()
+    job_id = payload.get("job_id") or payload.get("context") or payload.get("context_id")
+
+    if len(reason) < 10:
+        return jsonify({'success': False, 'message': 'Please provide at least 10 characters for the reason.'}), 400
+
+    try:
+        job_id = int(job_id) if job_id else None
+    except (TypeError, ValueError):
+        job_id = None
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection failed.'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS applicant_reports (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                applicant_id INT NOT NULL,
+                employer_id INT NOT NULL,
+                job_id INT NULL,
+                reason VARCHAR(255) NOT NULL,
+                details TEXT NULL,
+                status VARCHAR(50) DEFAULT 'Pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX (applicant_id),
+                INDEX (employer_id),
+                INDEX (job_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        """)
+
+        cursor.execute("SELECT employer_name FROM employers WHERE employer_id = %s", (employer_id,))
+        reporter = cursor.fetchone() or {}
+
+        cursor.execute("""
+            SELECT applicant_id, first_name, last_name
+            FROM applicants
+            WHERE applicant_id = %s
+        """, (applicant_id,))
+        applicant = cursor.fetchone()
+        if not applicant:
+            return jsonify({'success': False, 'message': 'Applicant not found.'}), 404
+
+        if job_id:
+            cursor.execute(
+                "SELECT job_id FROM jobs WHERE job_id = %s AND employer_id = %s",
+                (job_id, employer_id)
+            )
+            if not cursor.fetchone():
+                job_id = None
+
+        cursor.execute("""
+            INSERT INTO applicant_reports (applicant_id, employer_id, job_id, reason, details)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            applicant_id,
+            employer_id,
+            job_id,
+            reason,
+            details or None
+        ))
+        conn.commit()
+
+        applicant_name = f"{applicant.get('first_name', '').strip()} {applicant.get('last_name', '').strip()}".strip() or "Applicant"
+        reporter_name = reporter.get("employer_name", "An employer")
+        try:
+            create_notification(
+                notification_type="applicant_reported",
+                title="Applicant reported",
+                message=f"{applicant_name} was reported by {reporter_name}. Reason: {reason}",
+                related_ids=[applicant_id],
+                applicant_id=applicant_id
+            )
+        except Exception as notif_err:
+            print(f"[v1] Failed to log applicant report notification: {notif_err}")
+
+        return jsonify({'success': True, 'message': 'Report submitted. Our admins were notified.'})
+    except Exception as exc:
+        conn.rollback()
+        print(f"[v1] Error reporting applicant: {exc}")
+        return jsonify({'success': False, 'message': 'Unable to submit the report right now.'}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
 @employers_bp.route('/api/applications/<int:application_id>/status', methods=['POST'])
 def update_application_status(application_id):
     """Allow employer to update an application's status (with permission check).

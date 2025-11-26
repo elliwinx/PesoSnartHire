@@ -1,7 +1,58 @@
+def ensure_job_report_details_column(cursor):
+    """Ensure job_reports.details column exists before inserts."""
+    cursor.execute("SHOW COLUMNS FROM job_reports LIKE 'details'")
+    if not cursor.fetchone():
+        cursor.execute("ALTER TABLE job_reports ADD COLUMN details TEXT NULL AFTER reason")
+
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+
+def ensure_applicant_suspension_column(conn):
+    cursor = conn.cursor()
+    cursor.execute("SHOW COLUMNS FROM applicants LIKE 'suspension_end_at'")
+    exists = cursor.fetchone()
+    if not exists:
+        cursor.execute("ALTER TABLE applicants ADD COLUMN suspension_end_at DATETIME NULL AFTER updated_at")
+        conn.commit()
+    cursor.close()
+
+
+def release_expired_suspensions(conn):
+    ensure_applicant_suspension_column(conn)
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT applicant_id, email, first_name, last_name
+        FROM applicants
+        WHERE suspension_end_at IS NOT NULL
+          AND status = 'Suspended'
+          AND suspension_end_at <= NOW()
+    """)
+    rows = cursor.fetchall() or []
+    for row in rows:
+        cursor.execute(
+            "UPDATE applicants SET status = %s, is_active = 1, suspension_end_at = NULL, updated_at = NOW() WHERE applicant_id = %s",
+            ("Active", row["applicant_id"])
+        )
+        create_notification(
+            notification_type="applicant_reported",
+            title="Account restored",
+            message="Your suspension period has ended. You can now access your account.",
+            applicant_id=row["applicant_id"]
+        )
+        try:
+            msg = Message(
+                subject="Account restored",
+                recipients=[row.get("email")],
+                html=f"<p>Hi {row.get('first_name','Applicant')},</p><p>Your suspension period has ended. You may now continue using PESO SmartHire.</p>"
+            )
+            mail.send(msg)
+        except Exception as exc:
+            print(f"[v1] Failed to send suspension end email: {exc}")
+    conn.commit()
+    cursor.close()
+
 import os
 from werkzeug.utils import secure_filename
 from db_connection import create_connection, run_query
@@ -12,7 +63,6 @@ from .recaptcha import verify_recaptcha
 from flask import request
 from dateutil.relativedelta import relativedelta
 from apscheduler.schedulers.background import BackgroundScheduler
-
 
 applicants_bp = Blueprint("applicants", __name__)
 
@@ -144,6 +194,8 @@ def check_expired_recommendations():
                     except Exception as e:
                         print(
                             f"Failed to send expired email to {applicant['email']}: {e}")
+
+        release_expired_suspensions(conn)
 
     except Exception as e:
         print(f"[v0] Error checking expired recommendations: {e}")
@@ -703,49 +755,6 @@ def apply_job(job_id):
         conn.rollback()
         return jsonify({"success": False, "message": f"Error submitting application: {str(e)}"}), 500
     finally:
-        conn.close()
-
-
-@applicants_bp.route('/report', methods=['POST'])
-def report_job():
-    if "applicant_id" not in session:
-        return jsonify({"success": False, "message": "You must log in first."}), 401
-
-    data = request.get_json()
-    job_id = data.get("job_id")
-    applicant_id = session["applicant_id"]
-    reason = data.get("reason")
-
-    if not job_id or not reason:
-        return jsonify({"success": False, "message": "Job ID and reason are required."}), 400
-
-    conn = create_connection()
-    if not conn:
-        return jsonify({"success": False, "message": "Database connection failed."}), 500
-
-    try:
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute(
-            "SELECT id FROM job_reports WHERE job_id=%s AND applicant_id=%s",
-            (job_id, applicant_id)
-        )
-        if cursor.fetchone():
-            return jsonify({"success": False, "message": "You already reported this job."})
-
-        cursor.execute(
-            "INSERT INTO job_reports (job_id, applicant_id, reason) VALUES (%s, %s, %s)",
-            (job_id, applicant_id, reason)
-        )
-        conn.commit()
-        return jsonify({"success": True})
-
-    except Exception as e:
-        print("Report Error:", e)
-        conn.rollback()
-        return jsonify({"success": False, "message": "Failed to submit report."}), 500
-
-    finally:
-        cursor.close()
         conn.close()
 
 
@@ -1504,3 +1513,93 @@ def account_security():
     )
     conn.close()
     return render_template("Applicant/acc&secu.html", applicant=applicant)
+
+
+@applicants_bp.route('/report_job/<int:job_id>', methods=['POST'])
+def report_job(job_id):
+    """
+    Applicant reports a specific job post.
+    Saves the report in job_reports and notifies the admin team.
+    Expects JSON: { "reason": "..." }
+    """
+
+    data = request.get_json(silent=True) or {}
+    reason = (data.get('reason') or "").strip()
+    applicant_id = session.get('applicant_id')  # must be logged in
+
+    if not applicant_id:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 403
+
+    if not reason:
+        return jsonify({'success': False, 'message': 'Reason required'}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'DB connection failed'}), 500
+
+    cursor = conn.cursor(dictionary=True)
+
+    # Fetch job + employer details
+    cursor.execute("""
+        SELECT j.job_position, j.employer_id, e.employer_name
+        FROM jobs j
+        LEFT JOIN employers e ON j.employer_id = e.employer_id
+        WHERE j.job_id = %s
+    """, (job_id,))
+    job = cursor.fetchone()
+    if not job:
+        cursor.close()
+        conn.close()
+        return jsonify({'success': False, 'message': 'Job not found'}), 404
+
+    cursor.execute("""
+        SELECT first_name, last_name
+        FROM applicants
+        WHERE applicant_id = %s
+    """, (applicant_id,))
+    reporter = cursor.fetchone() or {}
+    reporter_name = f"{reporter.get('first_name', '').strip()} {reporter.get('last_name', '').strip()}".strip()
+
+    details = (data.get('details') or "").strip()
+
+    try:
+        ensure_job_report_details_column(cursor)
+        cursor.execute("""
+            INSERT INTO job_reports (job_id, applicant_id, reason, details, created_at, job_title, employer_name, status)
+            VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s)
+        """, (
+            job_id,
+            applicant_id,
+            reason,
+            details if details else None,
+            job.get('job_position'),
+            job.get('employer_name'),
+            'Pending'
+        ))
+        report_id = cursor.lastrowid
+        conn.commit()
+
+        # Notify admins so they can review immediately
+        try:
+            create_notification(
+                notification_type="employer_reported",
+                title="Job report submitted",
+                message=f"{job.get('job_position', 'Job')} ({job.get('employer_name', 'Unknown employer')}) was reported"
+                        f"{f' by {reporter_name}' if reporter_name else ''}. Reason: {reason}",
+                count=1,
+                related_ids=[job_id],
+                employer_id=job.get('employer_id')
+            )
+        except Exception as notif_error:
+            # Don't fail the request if notification creation fails
+            print(f"[v1] Failed to create notification for job report {report_id}: {notif_error}")
+
+        cursor.close()
+        conn.close()
+        return jsonify({'success': True, 'message': 'Job report submitted successfully'})
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        print(f"[v1] Error reporting job: {e}")
+        return jsonify({'success': False, 'message': 'Failed to submit report'}), 500
