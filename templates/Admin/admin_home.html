@@ -24,10 +24,14 @@
     />
     <link
       rel="stylesheet"
+      href="{{ url_for('static', filename='css/admin_analytics.css') }}"
+    />
+    <link
+      rel="stylesheet"
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
   </head>
-  <body>
+  <body class="admin-home-page">
     <!--Flash of Welcome Back Message-->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
@@ -89,26 +93,1408 @@
       <div class="hero-background">
         <img
           src="{{ url_for('static', filename='Assets/background.png') }}"
-          alt="New City Hall of Lipa CIty"
+          alt="New City Hall of Lipa City"
         />
       </div>
       <div class="hero-content">
         <div class="container">
           <h1 class="hero-title">Welcome, Administrator!</h1>
-          <!-- You can add the applicant's name here using python-->
-          <p class="hero-description">Here’s what we have today</p>
+          <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
 
-    <!-- Job Vacancies -->
+    <!-- Analytics Dashboard -->
     <section class="analytics-dashboard">
-      <div class="container">
-        <h2>PESO SmartHire - Administrative Dashboard</h2>
-        <p>
-          Welcome to the administrative control center. Monitor system
-          performance, manage user, and oversee operations.
-        </p>
+      <div class="analytics-container">
+        <!-- Module header -->
+        <div class="analytics-header">
+          <div class="analytics-module-switcher">
+            <button class="module-tab active" data-module="applicants">
+              Applicants Analytics
+            </button>
+            <button class="module-tab" data-module="employers">
+              Employers Analytics
+            </button>
+            <button class="module-tab" data-module="jobs">
+              Jobs &amp; Applications Analytics
+            </button>
+          </div>
+          <div class="analytics-actions">
+            <button id="toggleWidgetsBtn" class="add-filter-btn">
+              <i class="fas fa-th"></i>&nbsp; Widgets
+            </button>
+            <button
+              id="widgetManagerBtn"
+              class="add-filter-btn"
+              title="Manage Widgets"
+            >
+              <i class="fas fa-cog"></i>&nbsp; Manage
+            </button>
+            <button id="toggleFilterPanelBtn" class="add-filter-btn">
+              <i class="fa-solid fa-sliders"></i>&nbsp; Filters
+            </button>
+            <div class="export-controls compact">
+              <select id="exportFormatSelect" class="export-dropdown">
+                <option value="csv" selected>CSV</option>
+                <option value="xlsx">XLSX</option>
+              </select>
+              <button id="exportModuleBtn" class="export-btn">Export</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Widget Manager Modal -->
+        <div
+          id="widgetManagerModal"
+          class="widget-manager-modal"
+          style="display: none"
+        >
+          <div class="widget-manager-content">
+            <div class="widget-manager-header">
+              <h3><i class="fas fa-cog"></i> Widget Manager</h3>
+              <button class="close-modal-btn" onclick="closeWidgetManager()">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="widget-manager-body">
+              <p class="widget-manager-description">
+                Toggle widgets on or off to customize your dashboard. Changes
+                are saved automatically.
+              </p>
+              <div class="widget-toggle-list" id="widgetToggleList">
+                <!-- Widget toggles will be populated here -->
+              </div>
+              <div class="widget-manager-actions">
+                <button class="btn-reset-dashboard" onclick="resetDashboard()">
+                  <i class="fas fa-undo"></i> Reset Dashboard
+                </button>
+                <button
+                  class="btn-close-manager"
+                  onclick="closeWidgetManager()"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Widgets Panel -->
+        <div id="widgetsPanel" class="widgets-panel" style="display: none">
+          <div class="widgets-controls">
+            <h3>Dashboard Widgets</h3>
+            <button
+              id="saveWidgetPreferences"
+              class="btn-small"
+              style="display: none"
+              disabled
+            >
+              Save Layout
+            </button>
+          </div>
+          <div class="widgets-grid" id="widgetsGrid">
+            <!-- Clock & Weather Widget -->
+            <div class="widget-card" data-widget-name="clock">
+              <div class="widget-header">
+                <h4><i class="fas fa-clock"></i> Time & Weather</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="clock"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button class="widget-hide" data-widget="clock" title="Hide">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="clock">
+                <div id="clockWidget" class="clock-display">
+                  <div class="clock-time">--:--:--</div>
+                  <div class="clock-date">-- -- ----</div>
+                </div>
+                <div id="weatherWidget" class="weather-display">
+                  <div class="weather-loading">Loading weather...</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calendar Widget -->
+            <div class="widget-card" data-widget-name="calendar">
+              <div class="widget-header">
+                <h4><i class="fas fa-calendar"></i> Calendar</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="calendar"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button
+                    class="widget-hide"
+                    data-widget="calendar"
+                    title="Hide"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="calendar">
+                <div id="calendarWidget"></div>
+              </div>
+            </div>
+
+            <!-- Notes Widget -->
+            <div class="widget-card" data-widget-name="notes">
+              <div class="widget-header">
+                <h4><i class="fas fa-sticky-note"></i> Notes</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="notes"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button class="widget-hide" data-widget="notes" title="Hide">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="notes">
+                <button
+                  class="btn-small btn-primary"
+                  id="addNoteBtn"
+                  style="width: 100%; margin-bottom: 0.75rem"
+                >
+                  <i class="fas fa-plus"></i> New Note
+                </button>
+                <div id="notesList" class="notes-list"></div>
+              </div>
+            </div>
+
+            <!-- To-Do Widget -->
+            <div class="widget-card" data-widget-name="todo">
+              <div class="widget-header">
+                <h4><i class="fas fa-tasks"></i> To-Do List</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="todo"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button class="widget-hide" data-widget="todo" title="Hide">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="todo">
+                <div class="todo-input-group">
+                  <input
+                    type="text"
+                    id="todoInput"
+                    class="todo-input"
+                    placeholder="Add a task..."
+                    onkeypress="if(event.key==='Enter') addTodo()"
+                  />
+                  <select id="todoPriority" class="todo-priority-select">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                  <button class="btn-small btn-primary" onclick="addTodo()">
+                    Add
+                  </button>
+                </div>
+                <ul id="todoList" class="todo-list"></ul>
+                <div id="completedTodosSection" style="display: none">
+                  <button class="btn-link" onclick="toggleCompletedTodos()">
+                    <i class="fas fa-chevron-down"></i> Completed Tasks
+                  </button>
+                  <ul
+                    id="completedTodoList"
+                    class="todo-list completed-list"
+                  ></ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Countdown Widget -->
+            <div class="widget-card" data-widget-name="countdown">
+              <div class="widget-header">
+                <h4><i class="fas fa-hourglass-half"></i> Countdown</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="countdown"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button
+                    class="widget-hide"
+                    data-widget="countdown"
+                    title="Hide"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="countdown">
+                <button
+                  class="btn-small btn-primary"
+                  id="addCountdownBtn"
+                  style="width: 100%; margin-bottom: 0.75rem"
+                >
+                  <i class="fas fa-plus"></i> New Event
+                </button>
+                <div id="countdownList" class="countdown-list"></div>
+              </div>
+            </div>
+
+            <!-- Quick Links Widget -->
+            <div class="widget-card" data-widget-name="quickLinks">
+              <div class="widget-header">
+                <h4><i class="fas fa-link"></i> Quick Links</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="quickLinks"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button
+                    class="widget-hide"
+                    data-widget="quickLinks"
+                    title="Hide"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="quickLinks">
+                <div class="quick-links-grid">
+                  <a
+                    href="{{ url_for('admin.applicants_management') }}"
+                    class="quick-link-item"
+                  >
+                    <i class="fas fa-users"></i>
+                    <span>Applicants</span>
+                  </a>
+                  <a
+                    href="{{ url_for('admin.employers_management') }}"
+                    class="quick-link-item"
+                  >
+                    <i class="fas fa-building"></i>
+                    <span>Employers</span>
+                  </a>
+                  <a
+                    href="{{ url_for('admin.notifications_page') }}"
+                    class="quick-link-item"
+                  >
+                    <i class="fas fa-bell"></i>
+                    <span>Notifications</span>
+                  </a>
+                  <a
+                    href="{{ url_for('admin.account_settings') }}"
+                    class="quick-link-item"
+                  >
+                    <i class="fas fa-user-cog"></i>
+                    <span>Settings</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Motivational Quote Widget -->
+            <div class="widget-card" data-widget-name="quotes">
+              <div class="widget-header">
+                <h4><i class="fas fa-quote-left"></i> Daily Quote</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="quotes"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button class="widget-hide" data-widget="quotes" title="Hide">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="quotes">
+                <div id="quoteWidget" class="quote-display">
+                  <p class="quote-text">Loading quote...</p>
+                  <p class="quote-author">—</p>
+                  <button
+                    class="btn-small"
+                    onclick="refreshQuote()"
+                    style="margin-top: 0.5rem"
+                  >
+                    <i class="fas fa-sync"></i> New Quote
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- System Notifications Widget -->
+            <div class="widget-card" data-widget-name="notifications">
+              <div class="widget-header">
+                <h4><i class="fas fa-bell"></i> System Alerts</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="notifications"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button
+                    class="widget-hide"
+                    data-widget="notifications"
+                    title="Hide"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="notifications">
+                <div id="systemNotificationsWidget" class="notifications-list">
+                  <p class="text-muted">Loading notifications...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Productivity Stats Widget -->
+            <div class="widget-card" data-widget-name="productivity">
+              <div class="widget-header">
+                <h4><i class="fas fa-chart-line"></i> Today's Stats</h4>
+                <div class="widget-actions">
+                  <button
+                    class="widget-toggle"
+                    data-widget="productivity"
+                    title="Collapse"
+                  >
+                    <i class="fas fa-chevron-up"></i>
+                  </button>
+                  <button
+                    class="widget-hide"
+                    data-widget="productivity"
+                    title="Hide"
+                  >
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="widget-content" data-widget-content="productivity">
+                <div id="productivityWidget" class="productivity-stats">
+                  <div class="stat-item">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                      <div class="stat-value" id="statTasksCompleted">0</div>
+                      <div class="stat-label">Tasks Completed</div>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <i class="fas fa-file-alt"></i>
+                    <div>
+                      <div class="stat-value" id="statAppsReviewed">0</div>
+                      <div class="stat-label">Applications Reviewed</div>
+                    </div>
+                  </div>
+                  <div class="stat-item">
+                    <i class="fas fa-user-plus"></i>
+                    <div>
+                      <div class="stat-value" id="statNewRegs">0</div>
+                      <div class="stat-label">New Registrations</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slide-out filter panel -->
+        <aside id="filterPanel" class="filter-panel">
+          <header class="filter-panel-header">
+            <h3>Analytics Filters</h3>
+            <button id="closeFilterPanelBtn" class="filter-delete-btn">
+              <i class="fas fa-times"></i>
+            </button>
+          </header>
+
+          <!-- Time filters -->
+          <div class="filter-panel-section" data-module="all">
+            <h4>Time Period</h4>
+            <div class="filter-row">
+              <label>Quick Presets</label>
+              <div class="chip-group" id="timeQuickPresets">
+                <button data-range="last_30" class="chip">Last 30 Days</button>
+                <button data-range="qtd" class="chip">Quarter-to-Date</button>
+                <button data-range="ytd" class="chip">Year-to-Date</button>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Date Range</label>
+              <div class="date-range-inputs">
+                <input type="date" id="filterDateFrom" />
+                <span>to</span>
+                <input type="date" id="filterDateTo" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Location filters (Applicants) -->
+          <div class="filter-panel-section" data-module="applicants">
+            <h4>Applicant Location</h4>
+            <div class="filter-row">
+              <label>Province</label>
+              <select id="filterApplicantProvince" class="multi-select">
+                <option value="">All</option>
+              </select>
+            </div>
+            <div class="filter-row">
+              <label>City</label>
+              <select id="filterApplicantCity" class="multi-select" disabled>
+                <option value="">All</option>
+              </select>
+            </div>
+            <div class="filter-row">
+              <label>Barangay</label>
+              <select
+                id="filterApplicantBarangay"
+                class="multi-select"
+                disabled
+              >
+                <option value="">All</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Demographic filters (Applicants) -->
+          <div class="filter-panel-section" data-module="applicants">
+            <h4>Applicant Demographics</h4>
+            <div class="filter-row">
+              <label>Age Bracket</label>
+              <div class="filter-checkbox-group" data-filter="age_bracket">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="18-22" />
+                  <span>18-22</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="23-27" />
+                  <span>23-27</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="28-32" />
+                  <span>28-32</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="33-37" />
+                  <span>33-37</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="38-42" />
+                  <span>38-42</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="43-47" />
+                  <span>43-47</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="48-52" />
+                  <span>48-52</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="53-57" />
+                  <span>53-57</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="58-60" />
+                  <span>58-60</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="60+" />
+                  <span>60+</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Sex</label>
+              <div class="filter-checkbox-group" data-filter="sex">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Male" />
+                  <span>Male</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Female" />
+                  <span>Female</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Education</label>
+              <div class="filter-checkbox-group" data-filter="education">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="No Grade Completed" />
+                  <span>No Grade Completed</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Elementary Level" />
+                  <span>Elementary Level</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Elementary Graduate" />
+                  <span>Elementary Graduate</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="Junior High School Undergraduate (K-12)"
+                  />
+                  <span>Junior High School Undergraduate (K-12)</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="Junior High School Graduate (K-12)"
+                  />
+                  <span>Junior High School Graduate (K-12)</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="Senior High School Undergraduate (K-12)"
+                  />
+                  <span>Senior High School Undergraduate (K-12)</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="Senior High School Graduate (K-12)"
+                  />
+                  <span>Senior High School Graduate (K-12)</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="High School Undergraduate (pre-K-12, usually age 30+)"
+                  />
+                  <span>High School Undergraduate (pre-K-12)</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="High School Graduate (pre-K-12, usually age 30+)"
+                  />
+                  <span>High School Graduate (pre-K-12)</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Alternative Learning System" />
+                  <span>Alternative Learning System</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Vocational Level" />
+                  <span>Vocational Level</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Vocational Graduate" />
+                  <span>Vocational Graduate</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="College Level" />
+                  <span>College Level</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="College Graduate" />
+                  <span>College Graduate</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Some Masteral Units" />
+                  <span>Some Masteral Units</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Master's Degree Holder" />
+                  <span>Master's Degree Holder</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Some Doctorate Units" />
+                  <span>Some Doctorate Units</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Doctorate Degree Holder" />
+                  <span>Doctorate Degree Holder</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Is PWD</label>
+              <div class="filter-checkbox-group" data-filter="is_pwd">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="1" />
+                  <span>Yes</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="0" />
+                  <span>No</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>PWD Type</label>
+              <div class="filter-checkbox-group" data-filter="pwd_type">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Visual Disability" />
+                  <span>Visual Disability</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Hearing Disability" />
+                  <span>Hearing Disability</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="Speech/Communication Disability"
+                  />
+                  <span>Speech/Communication Disability</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input
+                    type="checkbox"
+                    value="Physical Disability/Orthopedic Disability"
+                  />
+                  <span>Physical/Orthopedic Disability</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Intellectual Disability" />
+                  <span>Intellectual Disability</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Learning Disability" />
+                  <span>Learning Disability</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Psychosocial Disability" />
+                  <span>Psychosocial Disability</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Chronic Illness" />
+                  <span>Chronic Illness</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Multiple Disabilities" />
+                  <span>Multiple Disabilities</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Has Work Experience</label>
+              <div class="filter-checkbox-group" data-filter="has_work_exp">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="1" />
+                  <span>Yes</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="0" />
+                  <span>No</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Years of Experience</label>
+              <div class="filter-checkbox-group" data-filter="years_experience">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Less than 1" />
+                  <span>Less than 1</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="1-2" />
+                  <span>1-2</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="3-5" />
+                  <span>3-5</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="6-10" />
+                  <span>6-10</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="10+" />
+                  <span>10+</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Reason for Registering</label>
+              <div
+                class="filter-checkbox-group"
+                data-filter="registration_reason"
+              >
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Find a full-time job" />
+                  <span>Find a full-time job</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Find a part-time job" />
+                  <span>Find a part-time job</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="For OJT" />
+                  <span>For OJT</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status filters (Applicants) -->
+          <div class="filter-panel-section" data-module="applicants">
+            <h4>Applicant Status &amp; Activity</h4>
+            <div class="filter-row">
+              <label>Applicant Status</label>
+              <div class="filter-checkbox-group" data-filter="applicant_status">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Pending" />
+                  <span>Pending</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Approved" />
+                  <span>Approved</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Reupload" />
+                  <span>Reupload</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Rejected" />
+                  <span>Rejected</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Active Flag</label>
+              <div
+                class="filter-checkbox-group"
+                data-filter="applicant_is_active"
+              >
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="1" />
+                  <span>Active</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="0" />
+                  <span>Inactive</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Employer location -->
+          <div class="filter-panel-section" data-module="employers">
+            <h4>Employer Location</h4>
+            <div class="filter-row">
+              <label>Province</label>
+              <select id="filterEmployerProvince" class="multi-select">
+                <option value="">All</option>
+              </select>
+            </div>
+            <div class="filter-row">
+              <label>City</label>
+              <select id="filterEmployerCity" class="multi-select" disabled>
+                <option value="">All</option>
+              </select>
+            </div>
+            <div class="filter-row">
+              <label>Barangay</label>
+              <select id="filterEmployerBarangay" class="multi-select" disabled>
+                <option value="">All</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Employers filters (basic) -->
+          <div class="filter-panel-section" data-module="employers">
+            <h4>Employers</h4>
+            <div class="filter-row">
+              <label>Industry</label>
+              <select
+                id="filterIndustry"
+                class="multi-select"
+                multiple
+                size="5"
+              ></select>
+            </div>
+            <div class="filter-row">
+              <label>Recruitment Type</label>
+              <div class="filter-checkbox-group" data-filter="recruitment_type">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Local" />
+                  <span>Local</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="International" />
+                  <span>International</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Employer Status</label>
+              <div class="filter-checkbox-group" data-filter="employer_status">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Pending" />
+                  <span>Pending</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Approved" />
+                  <span>Approved</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Rejected" />
+                  <span>Rejected</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Employer Active</label>
+              <div
+                class="filter-checkbox-group"
+                data-filter="employer_is_active"
+              >
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="1" />
+                  <span>Active</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="0" />
+                  <span>Inactive</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Jobs & Applications filters (basic) -->
+          <div class="filter-panel-section" data-module="jobs">
+            <h4>Jobs &amp; Applications</h4>
+            <div class="filter-row">
+              <label>Job Status</label>
+              <div class="filter-checkbox-group" data-filter="job_status">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Open" />
+                  <span>Open</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Closed" />
+                  <span>Closed</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Work Schedule</label>
+              <div class="filter-checkbox-group" data-filter="work_schedule">
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Full-Time" />
+                  <span>Full-Time</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Part-Time" />
+                  <span>Part-Time</span>
+                </label>
+              </div>
+            </div>
+            <div class="filter-row">
+              <label>Application Status</label>
+              <div
+                class="filter-checkbox-group"
+                data-filter="application_status"
+              >
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Pending" />
+                  <span>Pending</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Approved" />
+                  <span>Approved</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Rejected" />
+                  <span>Rejected</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-panel-footer">
+            <button id="clearAllFiltersBtn" class="export-btn">
+              Clear All
+            </button>
+            <button id="applyFiltersBtn" class="add-filter-btn">
+              Apply Filters
+            </button>
+          </div>
+        </aside>
+
+        <!-- Active filter chips -->
+        <div id="activeFiltersChips" class="active-filters-chips"></div>
+
+        <!-- MODULE: Applicants Analytics -->
+        <div class="analytics-module" id="module-applicants">
+          <!-- KPI Row -->
+          <div class="analytics-summary-grid">
+            <article class="summary-card">
+              <p>Total Registered Applicants</p>
+              <h3 id="metricApplicantsTotal">--</h3>
+            </article>
+            <article class="summary-card">
+              <p>Active Applicants</p>
+              <h3 id="metricApplicantsActive">--</h3>
+            </article>
+            <article class="summary-card">
+              <p>New Registrations (This Period)</p>
+              <h3 id="metricApplicantsNew">--</h3>
+            </article>
+          </div>
+
+          <!-- Charts -->
+          <div class="chart-grid">
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>New Registrations Over Time</h3>
+                    <small>Applicants by month</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsTrendChart"
+                  >
+                    <button data-type="line" class="chip active">Line</button>
+                    <button data-type="bar" class="chip">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsTrendChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applicants by Sex</h3>
+                    <small>Distribution by sex</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsBySexChart"
+                  >
+                    <button data-type="doughnut" class="chip active">
+                      Donut
+                    </button>
+                    <button data-type="bar" class="chip">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsBySexChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applicants by Education</h3>
+                    <small>Highest education level</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsByEducationChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                    <button data-type="doughnut" class="chip">Donut</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsByEducationChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applicants by Age Group</h3>
+                    <small>18–24, 25–34, 35+</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsByAgeGroupChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                    <button data-type="doughnut" class="chip">Donut</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsByAgeGroupChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applicants by City (Top 10)</h3>
+                    <small>Top applicant locations</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsByCityChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsByCityChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applicants by Is From Lipa</h3>
+                    <small>Local vs non-local</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsIsFromLipaChart"
+                  >
+                    <button data-type="doughnut" class="chip active">
+                      Donut
+                    </button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsIsFromLipaChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applicants by Years of Experience</h3>
+                    <small>Grouped ranges</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsYearsExperienceChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                    <button data-type="stacked" class="chip">Stacked</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsYearsExperienceChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>PWD Types Distribution</h3>
+                    <small>Disability types breakdown</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicantsByPWDTypeChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                    <button data-type="doughnut" class="chip">Donut</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicantsByPWDTypeChart"></canvas>
+                <p class="chart-empty-state">No PWD data available</p>
+              </div>
+            </article>
+          </div>
+
+          <p class="analytics-footnote" id="analyticsTimestamp">
+            Data refreshes live from the database.
+          </p>
+        </div>
+
+        <!-- MODULE: Employers Analytics (to be implemented) -->
+        <div
+          class="analytics-module"
+          id="module-employers"
+          style="display: none"
+        >
+          <div class="analytics-summary-grid">
+            <article class="summary-card">
+              <p>Total Registered Employers</p>
+              <h3 id="metricEmployersTotal">--</h3>
+            </article>
+            <article class="summary-card">
+              <p>Active Employers</p>
+              <h3 id="metricEmployersActive">--</h3>
+            </article>
+            <article class="summary-card">
+              <p>Pending Documents</p>
+              <h3 id="metricEmployersPendingDocs">--</h3>
+            </article>
+          </div>
+
+          <div class="chart-grid" id="employersCharts">
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Employers by Industry</h3>
+                    <small>Distribution of registered employers</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="employersByIndustryChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                    <button data-type="doughnut" class="chip">Donut</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="employersByIndustryChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Employers by Recruitment Type</h3>
+                    <small>Local vs International</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="employersByRecruitmentTypeChart"
+                  >
+                    <button data-type="doughnut" class="chip active">
+                      Donut
+                    </button>
+                    <button data-type="bar" class="chip">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="employersByRecruitmentTypeChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Employers by Status</h3>
+                    <small>Status distribution</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="employersByStatusChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                    <button data-type="doughnut" class="chip">Donut</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="employersByStatusChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Employers by City (Top 10)</h3>
+                    <small>Top employer locations</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="employersByCityChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="employersByCityChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Employers by Province (Top 10)</h3>
+                    <small>Province distribution</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="employersByProvinceChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="employersByProvinceChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <!-- MODULE: Jobs & Applications Analytics (to be implemented) -->
+        <div class="analytics-module" id="module-jobs" style="display: none">
+          <div class="analytics-summary-grid">
+            <article class="summary-card">
+              <p>Total Open Jobs</p>
+              <h3 id="metricJobsOpen">--</h3>
+            </article>
+            <article class="summary-card">
+              <p>Total Applications</p>
+              <h3 id="metricApplicationsTotal">--</h3>
+            </article>
+            <article class="summary-card">
+              <p>Overall Success Rate</p>
+              <h3 id="metricApplicationsSuccessRate">--</h3>
+            </article>
+          </div>
+
+          <div class="chart-grid" id="jobsCharts">
+            <!-- Job Demand -->
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Top Job Positions</h3>
+                    <small>Top 5 most demanded positions</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="jobsByPositionChart"
+                  >
+                    <button data-type="bar" class="chip active">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="jobsByPositionChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Jobs by Work Schedule</h3>
+                    <small>Full-Time vs Part-Time</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="jobsByWorkScheduleChart"
+                  >
+                    <button data-type="doughnut" class="chip active">
+                      Donut
+                    </button>
+                    <button data-type="bar" class="chip">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="jobsByWorkScheduleChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <!-- Applications Flow -->
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applications by Status</h3>
+                    <small>Pending, Approved, Rejected</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicationsByStatusChart"
+                  >
+                    <button data-type="doughnut" class="chip active">
+                      Donut
+                    </button>
+                    <button data-type="bar" class="chip">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicationsByStatusChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+
+            <article class="chart-card">
+              <header>
+                <div class="chart-header-main">
+                  <div>
+                    <h3>Applications Over Time</h3>
+                    <small>Applications per month</small>
+                  </div>
+                  <div
+                    class="chart-view-switcher"
+                    data-chart-id="applicationsTrendChart"
+                  >
+                    <button data-type="line" class="chip active">Line</button>
+                    <button data-type="bar" class="chip">Bar</button>
+                  </div>
+                </div>
+              </header>
+              <div class="chart-container">
+                <canvas id="applicationsTrendChart"></canvas>
+                <p class="chart-empty-state">No data available</p>
+              </div>
+            </article>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -181,7 +1567,9 @@
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin_dashboard.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>

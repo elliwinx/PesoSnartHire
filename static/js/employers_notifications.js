@@ -1,6 +1,6 @@
 let currentFilter = "all";
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
   console.log("[v0] Notifications page loaded");
   setupFilterButtons();
   loadNotifications();
@@ -43,22 +43,11 @@ async function loadNotifications() {
 
 function displayNotifications(notifications) {
   const container = document.getElementById("notificationList");
-  const navLinks = document.querySelectorAll('.nav-link, .nav-link-active');
 
-  // Update global unread dot if there are unread notifications
-  const unread = notifications.filter(n => !n.is_read).length;
-  // Add small dot to notifications nav link
-  navLinks.forEach(link => {
-    if (link.href && link.href.includes('/employers/notifications')) {
-      let dot = link.querySelector('.notif-dot');
-      if (!dot) {
-        dot = document.createElement('span');
-        dot.className = 'notif-dot';
-        link.appendChild(dot);
-      }
-      dot.style.display = unread > 0 ? 'inline-block' : 'none';
-    }
-  });
+  const unread = notifications.filter((n) => !n.is_read).length;
+  if (window.updateNotificationDot) {
+    window.updateNotificationDot(unread);
+  }
 
   if (!notifications || notifications.length === 0) {
     container.innerHTML =
@@ -70,10 +59,14 @@ function displayNotifications(notifications) {
     .map((notif) => {
       const timeAgo = formatTimeAgo(notif.created_at);
       const isUnread = !notif.is_read;
-      const badge = isUnread ? '<span class="badge">NEW</span>' : '';
+      const badge = isUnread ? '<span class="badge">NEW</span>' : "";
 
       return `
-            <div class="card ${isUnread ? "unread" : ""}" data-notification-id="${notif.notification_id}" data-redirect="${notif.redirect_url}">
+            <div class="card ${
+              isUnread ? "unread" : ""
+            }" data-notification-id="${notif.notification_id}" data-redirect="${
+        notif.redirect_url
+      }">
               <div class="card-details">
                 <h3>${notif.title}</h3>
                 <p>${notif.message}</p>
@@ -81,7 +74,9 @@ function displayNotifications(notifications) {
               </div>
               <div class="card-actions">
                 ${badge}
-                <button class="view-btn" data-id="${notif.notification_id}">View</button>
+                <button class="view-btn" data-id="${
+                  notif.notification_id
+                }">View</button>
               </div>
             </div>
           `;
@@ -89,40 +84,30 @@ function displayNotifications(notifications) {
     .join("");
 
   // Attach click handlers to cards and view buttons
-  container.querySelectorAll('.card').forEach(card => {
-    card.addEventListener('click', async (e) => {
+  container.querySelectorAll(".card").forEach((card) => {
+    card.addEventListener("click", async (e) => {
       const id = card.dataset.notificationId;
       const url = card.dataset.redirect;
       if (!url) return;
 
-      // mark read then navigate
-      try {
-        await fetch(`/employers/api/notifications/${id}/read`, { method: 'POST' });
-      } catch (err) {
-        console.error('Failed to mark notification read', err);
-      }
-
+      await markNotificationAsRead(id);
       window.location.href = url;
     });
 
-    const btn = card.querySelector('.view-btn');
+    const btn = card.querySelector(".view-btn");
     if (btn) {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
         const url = card.dataset.redirect;
-        try {
-          await fetch(`/employers/api/notifications/${id}/read`, { method: 'POST' });
-        } catch (err) {
-          console.error('Failed to mark notification read', err);
-        }
+        await markNotificationAsRead(id);
         window.location.href = url;
       });
     }
   });
 }
 
-async function markAsRead(notificationId) {
+async function markNotificationAsRead(notificationId) {
   try {
     const response = await fetch(
       `/employers/api/notifications/${notificationId}/read`,
@@ -131,8 +116,8 @@ async function markAsRead(notificationId) {
       }
     );
 
-    if (response.ok) {
-      loadNotifications();
+    if (response.ok && window.checkAndUpdateNotificationDot) {
+      window.checkAndUpdateNotificationDot();
     }
   } catch (error) {
     console.error("[v0] Error marking notification as read:", error);

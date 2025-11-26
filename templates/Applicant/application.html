@@ -130,7 +130,7 @@
                   target="_blank"
                   ><i class="devicon-facebook-plain"></i
                 ></a>
-                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -167,6 +167,35 @@
           style="margin-top: 20px; text-align: right"
         >
           <!-- Cancel button will be injected here if applicable -->
+          <button
+            id="applicationCancelBtn"
+            class="btn btn-danger"
+            style="
+              margin-right: 10px;
+              background-color: #dc3545;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
+          >
+            Cancel Application
+          </button>
+          <button
+            id="applicationCloseBtn"
+            class="btn btn-secondary"
+            style="
+              background-color: #6c757d;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -192,6 +221,7 @@
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/applicant-notification-dot.js') }}"></script>
     <script>
       // Ensure the applications list is loaded when the page is ready
       document.addEventListener("DOMContentLoaded", function () {

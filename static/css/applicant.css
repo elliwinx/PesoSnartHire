@@ -511,11 +511,11 @@ body {
 }
 
 #jobDetailsModalUnique {
-  z-index: 1000; /* example only */
+  z-index: 1000;
 }
 
 #confirmModalUnique {
-  z-index: 2000 !important; /* MUST BE HIGHER */
+  z-index: 2000 !important;
 }
 
 .modal-overlay {
@@ -666,6 +666,10 @@ body {
   position: relative;
   margin: 100px auto;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content p {
+  white-space: pre-line;
 }
 
 .app-cancel-btn {
@@ -972,7 +976,8 @@ body {
   font-size: 0.88rem;
 }
 
-.app-header, .app-body {
+.app-header,
+.app-body {
   margin-right: 20px;
   margin-left: 20px;
 }
@@ -980,7 +985,7 @@ body {
 #applicationDetailsContent {
   padding: 20px;
   border-radius: 8px;
-  background: #F4F4F4;
+  background: #f4f4f4;
 }
 
 /* Parent flex container */
@@ -999,7 +1004,7 @@ body {
 
 /* Style for badge */
 .status-badge.pending {
-  background-color: #7B7B7B;
+  background-color: #7b7b7b;
   color: white;
   padding: 3px 8px;
   border-radius: 5px;
@@ -1715,6 +1720,7 @@ div:where(.swal2-icon).swal2-warning {
   margin-bottom: 25px;
   font-size: 1rem;
   line-height: 1.5;
+  white-space: pre-line;
 }
 
 .confirm-overlay {
@@ -2261,4 +2267,38 @@ input[type="password"]:focus {
 #submitBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+#jobDetailsModalCancelBtn {
+  padding: 8px 12px;
+  margin-right: 8px;
+  background-color: #7b1113;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  display: none;
+  font-weight: 500;
+}
+
+#jobDetailsModalCancelBtn:hover {
+  background: white;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+}
+
+#jobDetailsModalCloseBtn {
+  padding: 8px 12px;
+  background-color: #333;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+#jobDetailsModalCloseBtn:hover {
+  background: white;
+  color: #333;
+  border: 1px solid #333;
 }

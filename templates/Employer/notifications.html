@@ -21,19 +21,6 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
-    <style>
-      .notif-dot {
-        display: none;
-        width: 8px;
-        height: 8px;
-        background: #e74c3c;
-        border-radius: 50%;
-        margin-left: 6px;
-      }
-      .card.unread {
-        border-left: 4px solid #e74c3c;
-      }
-    </style>
   </head>
   <body>
     <!-- Added flash messages section for success/error notifications -->
@@ -193,6 +180,7 @@
     </footer>
 
     {% include 'partials/loader.html' %}
+    <script src="{{ url_for('static', filename='js/notification-dot.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employers_notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>

@@ -1,4 +1,10 @@
 <div class="modal-job-header">
+  <div
+    id="applicationMeta"
+    data-application-id="{{ application_id }}"
+    data-job-id="{{ job.job_id }}"
+  ></div>
+
   <div class="job-title-row">
     <h2>{{ job.job_position }}</h2>
     {# show work schedule (e.g. 'Full Time') — jobs use work_schedule enum like

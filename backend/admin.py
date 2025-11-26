@@ -5,16 +5,477 @@ from .notifications import get_notifications, mark_notification_read, get_unread
 from .recruitment_change_handler import revert_recruitment_type_change
 from extensions import mail
 from flask_mail import Message
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 import json
 import os
 import logging
+import io
+import csv
+import requests
 
 logger = logging.getLogger(__name__)
 
 
 admin_bp = Blueprint("admin", __name__)
+
+
+def _to_int(value):
+    """Convert DB numeric values (Decimal, None) to plain int safely."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _parse_multi(args, key):
+    """Parse comma-separated or single-value query args into a list."""
+    raw = args.get(key)
+    if not raw:
+        return []
+    if "," in raw:
+        return [v for v in raw.split(",") if v]
+    return [raw]
+
+
+def build_applicants_filters(args, alias="a"):
+    """Build WHERE clause + params for applicant analytics filters."""
+    clauses = ["1=1"]
+    params = []
+
+    # Time period (created_at)
+    date_from = args.get("date_from")
+    date_to = args.get("date_to")
+    quick_range = args.get("quick_range")
+
+    if quick_range and not (date_from or date_to):
+        today = datetime.today().date()
+        if quick_range == "last_30":
+            date_from = (today - timedelta(days=30)).isoformat()
+            date_to = today.isoformat()
+        elif quick_range == "ytd":
+            date_from = f"{today.year}-01-01"
+            date_to = today.isoformat()
+        elif quick_range == "qtd":
+            quarter = (today.month - 1) // 3 + 1
+            start_month = 3 * (quarter - 1) + 1
+            date_from = f"{today.year}-{start_month:02d}-01"
+            date_to = today.isoformat()
+
+    if date_from:
+        clauses.append(f"{alias}.created_at >= %s")
+        params.append(date_from)
+    if date_to:
+        clauses.append(f"{alias}.created_at < DATE_ADD(%s, INTERVAL 1 DAY)")
+        params.append(date_to)
+
+    # Status / is_active
+    statuses = _parse_multi(args, "applicant_status")
+    if statuses:
+        placeholders = ",".join(["%s"] * len(statuses))
+        clauses.append(f"{alias}.status IN ({placeholders})")
+        params.extend(statuses)
+
+    is_active_vals = _parse_multi(args, "applicant_is_active")
+    if is_active_vals:
+        placeholders = ",".join(["%s"] * len(is_active_vals))
+        clauses.append(f"{alias}.is_active IN ({placeholders})")
+        params.extend(is_active_vals)
+
+    # Demographics
+    sexes = _parse_multi(args, "sex")
+    if sexes:
+        placeholders = ",".join(["%s"] * len(sexes))
+        clauses.append(f"{alias}.sex IN ({placeholders})")
+        params.extend(sexes)
+
+    educations = _parse_multi(args, "education")
+    if educations:
+        placeholders = ",".join(["%s"] * len(educations))
+        clauses.append(f"{alias}.education IN ({placeholders})")
+        params.extend(educations)
+
+    is_pwd_vals = _parse_multi(args, "is_pwd")
+    if is_pwd_vals:
+        placeholders = ",".join(["%s"] * len(is_pwd_vals))
+        clauses.append(f"{alias}.is_pwd IN ({placeholders})")
+        params.extend(is_pwd_vals)
+
+    has_work_exp_vals = _parse_multi(args, "has_work_exp")
+    if has_work_exp_vals:
+        placeholders = ",".join(["%s"] * len(has_work_exp_vals))
+        clauses.append(f"{alias}.has_work_experience IN ({placeholders})")
+        params.extend(has_work_exp_vals)
+
+    # Location
+    provinces = _parse_multi(args, "applicant_province")
+    if provinces:
+        placeholders = ",".join(["%s"] * len(provinces))
+        clauses.append(f"{alias}.province IN ({placeholders})")
+        params.extend(provinces)
+
+    cities = _parse_multi(args, "applicant_city")
+    if cities:
+        placeholders = ",".join(["%s"] * len(cities))
+        clauses.append(f"{alias}.city IN ({placeholders})")
+        params.extend(cities)
+
+    barangays = _parse_multi(args, "applicant_barangay")
+    if barangays:
+        placeholders = ",".join(["%s"] * len(barangays))
+        clauses.append(f"{alias}.barangay IN ({placeholders})")
+        params.extend(barangays)
+
+    return " AND ".join(clauses), tuple(params)
+
+
+def build_employers_filters(args, alias="e"):
+    """Build WHERE clause + params for employer analytics filters."""
+    clauses = ["1=1"]
+    params = []
+
+    # Time period (created_at)
+    date_from = args.get("date_from")
+    date_to = args.get("date_to")
+    quick_range = args.get("quick_range")
+
+    if quick_range and not (date_from or date_to):
+        today = datetime.today().date()
+        if quick_range == "last_30":
+            date_from = (today - timedelta(days=30)).isoformat()
+            date_to = today.isoformat()
+        elif quick_range == "ytd":
+            date_from = f"{today.year}-01-01"
+            date_to = today.isoformat()
+        elif quick_range == "qtd":
+            quarter = (today.month - 1) // 3 + 1
+            start_month = 3 * (quarter - 1) + 1
+            date_from = f"{today.year}-{start_month:02d}-01"
+            date_to = today.isoformat()
+
+    if date_from:
+        clauses.append(f"{alias}.created_at >= %s")
+        params.append(date_from)
+    if date_to:
+        clauses.append(f"{alias}.created_at < DATE_ADD(%s, INTERVAL 1 DAY)")
+        params.append(date_to)
+
+    # Status / is_active
+    statuses = _parse_multi(args, "employer_status")
+    if statuses:
+        placeholders = ",".join(["%s"] * len(statuses))
+        clauses.append(f"{alias}.status IN ({placeholders})")
+        params.extend(statuses)
+
+    is_active_vals = _parse_multi(args, "employer_is_active")
+    if is_active_vals:
+        placeholders = ",".join(["%s"] * len(is_active_vals))
+        clauses.append(f"{alias}.is_active IN ({placeholders})")
+        params.extend(is_active_vals)
+
+    # Industry / recruitment type
+    industries = _parse_multi(args, "industry")
+    if industries:
+        placeholders = ",".join(["%s"] * len(industries))
+        clauses.append(f"{alias}.industry IN ({placeholders})")
+        params.extend(industries)
+
+    rec_types = _parse_multi(args, "recruitment_type")
+    if rec_types:
+        placeholders = ",".join(["%s"] * len(rec_types))
+        clauses.append(f"{alias}.recruitment_type IN ({placeholders})")
+        params.extend(rec_types)
+
+    provinces = _parse_multi(args, "employer_province")
+    if provinces:
+        placeholders = ",".join(["%s"] * len(provinces))
+        clauses.append(f"{alias}.province IN ({placeholders})")
+        params.extend(provinces)
+
+    cities = _parse_multi(args, "employer_city")
+    if cities:
+        placeholders = ",".join(["%s"] * len(cities))
+        clauses.append(f"{alias}.city IN ({placeholders})")
+        params.extend(cities)
+
+    barangays = _parse_multi(args, "employer_barangay")
+    if barangays:
+        placeholders = ",".join(["%s"] * len(barangays))
+        clauses.append(f"{alias}.barangay IN ({placeholders})")
+        params.extend(barangays)
+
+    # Location (if present in schema)
+    provinces = _parse_multi(args, "employer_province")
+    if provinces:
+        placeholders = ",".join(["%s"] * len(provinces))
+        clauses.append(f"{alias}.province IN ({placeholders})")
+        params.extend(provinces)
+
+    cities = _parse_multi(args, "employer_city")
+    if cities:
+        placeholders = ",".join(["%s"] * len(cities))
+        clauses.append(f"{alias}.city IN ({placeholders})")
+        params.extend(cities)
+
+    barangays = _parse_multi(args, "employer_barangay")
+    if barangays:
+        placeholders = ",".join(["%s"] * len(barangays))
+        clauses.append(f"{alias}.barangay IN ({placeholders})")
+        params.extend(barangays)
+
+    return " AND ".join(clauses), tuple(params)
+
+
+def build_jobs_filters(args, alias="j"):
+    """Build WHERE clause + params for job analytics filters."""
+    clauses = ["1=1"]
+    params = []
+
+    date_from = args.get("date_from")
+    date_to = args.get("date_to")
+    quick_range = args.get("quick_range")
+
+    if quick_range and not (date_from or date_to):
+        today = datetime.today().date()
+        if quick_range == "last_30":
+            date_from = (today - timedelta(days=30)).isoformat()
+            date_to = today.isoformat()
+        elif quick_range == "ytd":
+            date_from = f"{today.year}-01-01"
+            date_to = today.isoformat()
+        elif quick_range == "qtd":
+            quarter = (today.month - 1) // 3 + 1
+            start_month = 3 * (quarter - 1) + 1
+            date_from = f"{today.year}-{start_month:02d}-01"
+            date_to = today.isoformat()
+
+    if date_from:
+        clauses.append(f"{alias}.created_at >= %s")
+        params.append(date_from)
+    if date_to:
+        clauses.append(f"{alias}.created_at < DATE_ADD(%s, INTERVAL 1 DAY)")
+        params.append(date_to)
+
+    job_statuses = _parse_multi(args, "job_status")
+    if job_statuses:
+        placeholders = ",".join(["%s"] * len(job_statuses))
+        clauses.append(f"{alias}.status IN ({placeholders})")
+        params.extend(job_statuses)
+
+    work_schedules = _parse_multi(args, "work_schedule")
+    if work_schedules:
+        placeholders = ",".join(["%s"] * len(work_schedules))
+        clauses.append(f"{alias}.work_schedule IN ({placeholders})")
+        params.extend(work_schedules)
+
+    return " AND ".join(clauses), tuple(params)
+
+
+def build_applications_filters(args, alias="a"):
+    """Build WHERE clause + params for application analytics filters."""
+    clauses = ["1=1"]
+    params = []
+
+    date_from = args.get("date_from")
+    date_to = args.get("date_to")
+    quick_range = args.get("quick_range")
+
+    if quick_range and not (date_from or date_to):
+        today = datetime.today().date()
+        if quick_range == "last_30":
+            date_from = (today - timedelta(days=30)).isoformat()
+            date_to = today.isoformat()
+        elif quick_range == "ytd":
+            date_from = f"{today.year}-01-01"
+            date_to = today.isoformat()
+        elif quick_range == "qtd":
+            quarter = (today.month - 1) // 3 + 1
+            start_month = 3 * (quarter - 1) + 1
+            date_from = f"{today.year}-{start_month:02d}-01"
+            date_to = today.isoformat()
+
+    if date_from:
+        clauses.append(f"{alias}.created_at >= %s")
+        params.append(date_from)
+    if date_to:
+        clauses.append(f"{alias}.created_at < DATE_ADD(%s, INTERVAL 1 DAY)")
+        params.append(date_to)
+
+    statuses = _parse_multi(args, "application_status")
+    if statuses:
+        placeholders = ",".join(["%s"] * len(statuses))
+        clauses.append(f"{alias}.status IN ({placeholders})")
+        params.extend(statuses)
+
+    # optional: filter by work_schedule via join alias "j"
+    work_schedules = _parse_multi(args, "work_schedule")
+    if work_schedules:
+        placeholders = ",".join(["%s"] * len(work_schedules))
+        clauses.append(f"j.work_schedule IN ({placeholders})")
+        params.extend(work_schedules)
+
+    return " AND ".join(clauses), tuple(params)
+
+
+@admin_bp.route("/api/analytics/export", methods=["POST"])
+def analytics_export():
+    """Export filtered data for a module as CSV or XLSX (basic implementation)."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    payload = request.get_json(silent=True) or {}
+    module = payload.get("module")
+    export_format = (payload.get("format") or "csv").lower()
+    filters = payload.get("filters") or {}
+
+    if module not in {"applicants", "employers", "jobs_applications"}:
+        return jsonify({"success": False, "message": "Invalid module"}), 400
+
+    if export_format not in {"csv", "xlsx"}:
+        return jsonify({"success": False, "message": "Only CSV and XLSX export are implemented at the moment."}), 400
+
+    # Build args-like object for helpers
+    class _Args:
+        def __init__(self, d):
+            self._d = d
+
+        def get(self, key, default=None):
+            v = self._d.get(key, default)
+            if isinstance(v, list):
+                return ",".join(v)
+            return v
+
+    args_obj = _Args(filters)
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        if module == "applicants":
+            where_sql, params = build_applicants_filters(args_obj, alias="a")
+            rows = run_query(
+                conn,
+                f"""
+                SELECT
+                  a.applicant_id,
+                  a.first_name,
+                  a.last_name,
+                  a.sex,
+                  a.education,
+                  a.is_pwd,
+                  a.has_work_experience,
+                  a.years_experience,
+                  a.province,
+                  a.city,
+                  a.barangay,
+                  a.status,
+                  a.is_active,
+                  a.created_at
+                FROM applicants a
+                WHERE {where_sql}
+                ORDER BY a.created_at DESC
+                """,
+                params,
+                fetch="all",
+            ) or []
+        elif module == "employers":
+            where_sql, params = build_employers_filters(args_obj, alias="e")
+            rows = run_query(
+                conn,
+                f"""
+                SELECT
+                  e.employer_id,
+                  e.employer_name,
+                  e.industry,
+                  e.recruitment_type,
+                  e.province,
+                  e.city,
+                  e.barangay,
+                  e.status,
+                  e.is_active,
+                  e.created_at
+                FROM employers e
+                WHERE {where_sql}
+                ORDER BY e.created_at DESC
+                """,
+                params,
+                fetch="all",
+            ) or []
+        else:  # jobs_applications
+            where_sql, params = build_applications_filters(args_obj, alias="a")
+            rows = run_query(
+                conn,
+                f"""
+                SELECT
+                  a.id AS application_id,
+                  a.applicant_id,
+                  a.job_id,
+                  a.status AS application_status,
+                  a.created_at AS application_created_at,
+                  j.job_position,
+                  j.work_schedule,
+                  j.status AS job_status
+                FROM applications a
+                LEFT JOIN jobs j ON a.job_id = j.job_id
+                WHERE {where_sql}
+                ORDER BY a.created_at DESC
+                """,
+                params,
+                fetch="all",
+            ) or []
+
+        if not rows:
+            return jsonify({"success": False, "message": "No records match the current filters."}), 400
+
+        fieldnames = list(rows[0].keys())
+
+        if export_format == "csv":
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            for r in rows:
+                writer.writerow(r)
+            mem = io.BytesIO(output.getvalue().encode("utf-8-sig"))
+            filename = f"{module}_export.csv"
+            from flask import send_file
+
+            return send_file(
+                mem,
+                mimetype="text/csv",
+                as_attachment=True,
+                download_name=filename,
+            )
+        else:  # xlsx
+            try:
+                from openpyxl import Workbook
+            except ImportError:
+                return jsonify({"success": False, "message": "openpyxl is required for XLSX export"}), 500
+
+            wb = Workbook()
+            ws = wb.active
+            ws.append(fieldnames)
+            for r in rows:
+                ws.append([r.get(f) for f in fieldnames])
+
+            mem = io.BytesIO()
+            wb.save(mem)
+            mem.seek(0)
+
+            filename = f"{module}_export.xlsx"
+            from flask import send_file
+
+            return send_file(
+                mem,
+                mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                as_attachment=True,
+                download_name=filename,
+            )
+    except Exception as exc:
+        print("[analytics] export error:", exc)
+        return jsonify({"success": False, "message": "Failed to export data"}), 500
+    finally:
+        conn.close()
 
 
 # ===== Admin Home (Dashboard with notifications) =====
@@ -23,6 +484,1604 @@ def admin_home():
     if "admin_id" not in session:  # Protect route
         return redirect(url_for("admin.login"))
     return render_template("Admin/admin_home.html")
+
+
+@admin_bp.route("/api/analytics/summary", methods=["GET"])
+def admin_analytics_summary():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        applicants_row = run_query(
+            conn, "SELECT COUNT(*) AS total FROM applicants", fetch="one") or {}
+        employers_row = run_query(
+            conn, "SELECT COUNT(*) AS total FROM employers", fetch="one") or {}
+        jobs_row = run_query(
+            conn, "SELECT COUNT(*) AS total FROM jobs WHERE status = 'active'", fetch="one") or {}
+        applications_row = run_query(
+            conn, "SELECT COUNT(*) AS total FROM applications", fetch="one") or {}
+
+        payload = {
+            "totalApplicants": _to_int(applicants_row.get("total")),
+            "totalEmployers": _to_int(employers_row.get("total")),
+            "activeJobs": _to_int(jobs_row.get("total")),
+            "totalApplications": _to_int(applications_row.get("total")),
+        }
+        return jsonify({"success": True, "data": payload})
+    except Exception as exc:
+        print("[analytics] summary error:", exc)
+        return jsonify({"success": False, "message": "Failed to load summary"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applicants-per-month", methods=["GET"])
+def admin_analytics_applicants_per_month():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    year_filter = request.args.get("year", type=int)
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        # Reuse filters (including date range and demographics)
+        where_sql, params = build_applicants_filters(request.args, alias="a")
+        if year_filter:
+            where_sql += " AND YEAR(a.created_at) = %s"
+            params = (*params, year_filter)
+
+        rows = run_query(
+            conn,
+            f"""
+            SELECT
+                DATE_FORMAT(a.created_at, '%Y-%m') AS month_key,
+                DATE_FORMAT(a.created_at, '%b %Y') AS label,
+                MONTH(a.created_at) AS month_num,
+                YEAR(a.created_at) AS year_num,
+                COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql}
+            GROUP BY year_num, month_num
+            ORDER BY year_num ASC, month_num ASC
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = [
+            {
+                "month": _to_int(row.get("month_num")),
+                "year": _to_int(row.get("year_num")),
+                "label": row.get("label"),
+                "count": _to_int(row.get("total")),
+            }
+            for row in rows
+        ]
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applicants-per-month error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applicants per month"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applications-by-category", methods=["GET"])
+def admin_analytics_applications_by_category():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    month_filter = request.args.get("month", type=int)
+    year_filter = request.args.get("year", type=int)
+    category_filter = request.args.get("category", type=str)
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        query = """
+            SELECT
+                COALESCE(NULLIF(j.work_schedule, ''), 'Unspecified') AS category,
+                COUNT(a.id) AS total
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.job_id
+            WHERE 1=1
+        """
+        params = []
+
+        if month_filter:
+            query += " AND MONTH(a.created_at) = %s"
+            params.append(month_filter)
+        if year_filter:
+            query += " AND YEAR(a.created_at) = %s"
+            params.append(year_filter)
+        if category_filter:
+            query += " AND j.work_schedule = %s"
+            params.append(category_filter)
+
+        query += " GROUP BY category ORDER BY total DESC"
+
+        rows = run_query(conn, query, tuple(params)
+                         if params else None, fetch="all") or []
+
+        data = [
+            {"category": row.get("category"),
+             "count": _to_int(row.get("total"))}
+            for row in rows
+        ]
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applications-by-category error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applications by category"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/hiring-ratio", methods=["GET"])
+def admin_analytics_hiring_ratio():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    month_filter = request.args.get("month", type=int)
+    year_filter = request.args.get("year", type=int)
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        query = """
+            SELECT COALESCE(status, 'Pending') AS status, COUNT(*) AS total
+            FROM applications
+            WHERE 1=1
+        """
+        params = []
+
+        if month_filter:
+            query += " AND MONTH(created_at) = %s"
+            params.append(month_filter)
+        if year_filter:
+            query += " AND YEAR(created_at) = %s"
+            params.append(year_filter)
+
+        query += " GROUP BY status"
+
+        rows = run_query(conn, query, tuple(params)
+                         if params else None, fetch="all") or []
+
+        breakdown = {
+            row.get("status"): _to_int(row.get("total"))
+            for row in rows
+        }
+        hired = breakdown.get("Hired", 0)
+        total = sum(breakdown.values())
+        not_hired = max(total - hired, 0)
+
+        data = {
+            "hired": hired,
+            "not_hired": not_hired,
+            "breakdown": breakdown,
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] hiring-ratio error:", exc)
+        return jsonify({"success": False, "message": "Failed to load hiring ratio"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/filters/applicants/locations", methods=["GET"])
+def applicants_location_filters():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    level = request.args.get("level", "province").lower()
+    parent = request.args.get("parent")
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        if level == "province":
+            rows = run_query(
+                conn,
+                """
+                SELECT DISTINCT province AS value
+                FROM applicants
+                WHERE province IS NOT NULL AND province <> ''
+                ORDER BY value ASC
+                """,
+                fetch="all",
+            ) or []
+        elif level == "city":
+            if not parent:
+                return jsonify({"success": True, "data": []})
+            rows = run_query(
+                conn,
+                """
+                SELECT DISTINCT city AS value
+                FROM applicants
+                WHERE province = %s AND city IS NOT NULL AND city <> ''
+                ORDER BY value ASC
+                """,
+                (parent,),
+                fetch="all",
+            ) or []
+        elif level == "barangay":
+            if not parent:
+                return jsonify({"success": True, "data": []})
+            rows = run_query(
+                conn,
+                """
+                SELECT DISTINCT barangay AS value
+                FROM applicants
+                WHERE city = %s AND barangay IS NOT NULL AND barangay <> ''
+                ORDER BY value ASC
+                """,
+                (parent,),
+                fetch="all",
+            ) or []
+        else:
+            return jsonify({"success": False, "message": "Invalid level"}), 400
+
+        values = [row.get("value") for row in rows if row.get("value")]
+        return jsonify({"success": True, "data": values})
+    except Exception as exc:
+        print("[filters] applicants locations error:", exc)
+        return jsonify({"success": False, "message": "Failed to load locations"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/filters/employers/locations", methods=["GET"])
+def employers_location_filters():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    level = request.args.get("level", "province").lower()
+    parent = request.args.get("parent")
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        if level == "province":
+            rows = run_query(
+                conn,
+                """
+                SELECT DISTINCT province AS value
+                FROM employers
+                WHERE province IS NOT NULL AND province <> ''
+                ORDER BY value ASC
+                """,
+                fetch="all",
+            ) or []
+        elif level == "city":
+            if not parent:
+                return jsonify({"success": True, "data": []})
+            rows = run_query(
+                conn,
+                """
+                SELECT DISTINCT city AS value
+                FROM employers
+                WHERE province = %s AND city IS NOT NULL AND city <> ''
+                ORDER BY value ASC
+                """,
+                (parent,),
+                fetch="all",
+            ) or []
+        elif level == "barangay":
+            if not parent:
+                return jsonify({"success": True, "data": []})
+            rows = run_query(
+                conn,
+                """
+                SELECT DISTINCT barangay AS value
+                FROM employers
+                WHERE city = %s AND barangay IS NOT NULL AND barangay <> ''
+                ORDER BY value ASC
+                """,
+                (parent,),
+                fetch="all",
+            ) or []
+        else:
+            return jsonify({"success": False, "message": "Invalid level"}), 400
+
+        values = [row.get("value") for row in rows if row.get("value")]
+        return jsonify({"success": True, "data": values})
+    except Exception as exc:
+        print("[filters] employers locations error:", exc)
+        return jsonify({"success": False, "message": "Failed to load locations"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applicants-by-province", methods=["GET"])
+def admin_analytics_applicants_by_province():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    month_filter = request.args.get("month", type=int)
+    year_filter = request.args.get("year", type=int)
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        query = """
+            SELECT
+                COALESCE(NULLIF(province, ''), 'Unspecified') AS province,
+                COUNT(*) AS total
+            FROM applicants
+            WHERE 1=1
+        """
+        params = []
+
+        if month_filter:
+            query += " AND MONTH(created_at) = %s"
+            params.append(month_filter)
+        if year_filter:
+            query += " AND YEAR(created_at) = %s"
+            params.append(year_filter)
+
+        query += " GROUP BY province ORDER BY total DESC"
+
+        rows = run_query(conn, query, tuple(params)
+                         if params else None, fetch="all") or []
+
+        data = [
+            {"province": row.get("province"),
+             "count": _to_int(row.get("total"))}
+            for row in rows
+        ]
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applicants-by-province error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applicant locations"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/employers-by-industry", methods=["GET"])
+def admin_analytics_employers_by_industry():
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        rows = run_query(
+            conn,
+            """
+            SELECT
+                COALESCE(NULLIF(industry, ''), 'Unspecified') AS industry,
+                COUNT(*) AS total
+            FROM employers
+            GROUP BY industry
+            ORDER BY total DESC
+            """,
+            fetch="all",
+        ) or []
+
+        data = [
+            {"industry": row.get("industry"),
+             "count": _to_int(row.get("total"))}
+            for row in rows
+        ]
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] employers-by-industry error:", exc)
+        return jsonify({"success": False, "message": "Failed to load employer industries"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applicants/summary", methods=["GET"])
+def applicants_summary():
+    """Applicants volume & active count, respecting filters."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_applicants_filters(request.args, alias="a")
+        row = run_query(
+            conn,
+            f"""
+            SELECT
+              COUNT(*) AS total_registered,
+              SUM(CASE WHEN a.is_active = 1 THEN 1 ELSE 0 END) AS active_count
+            FROM applicants a
+            WHERE {where_sql}
+            """,
+            params,
+            fetch="one",
+        ) or {}
+
+        total_registered = _to_int(row.get("total_registered"))
+        active_count = _to_int(row.get("active_count"))
+
+        data = {
+            "total_registered": total_registered,
+            "active_applicants": active_count,
+            # For now, treat "new registrations" as total in filtered window
+            "new_registrations": total_registered,
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applicants_summary error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applicants summary"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applicants/demographics", methods=["GET"])
+def applicants_demographics():
+    """Applicants by sex, education, and age groups."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_applicants_filters(request.args, alias="a")
+
+        # Sex distribution
+        sex_rows = run_query(
+            conn,
+            f"""
+            SELECT COALESCE(NULLIF(a.sex, ''), 'Unspecified') AS label,
+                   COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql}
+            GROUP BY label
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        # Education distribution
+        edu_rows = run_query(
+            conn,
+            f"""
+            SELECT COALESCE(NULLIF(a.education, ''), 'Unspecified') AS label,
+                   COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql}
+            GROUP BY label
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        # Age groups (based on age column)
+        age_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              CASE
+                WHEN a.age IS NULL THEN 'Unspecified'
+                WHEN a.age < 18 THEN 'Under 18'
+                WHEN a.age BETWEEN 18 AND 24 THEN '18-24'
+                WHEN a.age BETWEEN 25 AND 34 THEN '25-34'
+                WHEN a.age BETWEEN 35 AND 44 THEN '35-44'
+                WHEN a.age >= 45 THEN '45+'
+                ELSE 'Unspecified'
+              END AS age_group,
+              COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql}
+            GROUP BY CASE
+              WHEN a.age IS NULL THEN 'Unspecified'
+              WHEN a.age < 18 THEN 'Under 18'
+              WHEN a.age BETWEEN 18 AND 24 THEN '18-24'
+              WHEN a.age BETWEEN 25 AND 34 THEN '25-34'
+              WHEN a.age BETWEEN 35 AND 44 THEN '35-44'
+              WHEN a.age >= 45 THEN '45+'
+              ELSE 'Unspecified'
+            END
+            ORDER BY CASE
+              WHEN age_group = 'Under 18' THEN 1
+              WHEN age_group = '18-24' THEN 2
+              WHEN age_group = '25-34' THEN 3
+              WHEN age_group = '35-44' THEN 4
+              WHEN age_group = '45+' THEN 5
+              ELSE 6
+            END
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_sex": [
+                {"label": r.get("label"), "count": _to_int(r.get("total"))}
+                for r in sex_rows
+            ],
+            "by_education": [
+                {"label": r.get("label"), "count": _to_int(r.get("total"))}
+                for r in edu_rows
+            ],
+            "by_age_group": [
+                {"age_group": r.get("age_group"),
+                 "count": _to_int(r.get("total"))}
+                for r in age_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applicants_demographics error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applicant demographics"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applicants/location", methods=["GET"])
+def applicants_location():
+    """Applicants by top cities and is_from_lipa status."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_applicants_filters(request.args, alias="a")
+
+        # Top 10 cities
+        city_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(a.city, ''), 'Unspecified') AS city,
+              COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql}
+            GROUP BY city
+            ORDER BY total DESC
+            LIMIT 10
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        # Is from Lipa status
+        lipa_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              CASE WHEN a.is_from_lipa = 1 THEN 'From Lipa' ELSE 'Not From Lipa' END AS status,
+              COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql}
+            GROUP BY status
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_city": [
+                {"city": r.get("city"), "count": _to_int(r.get("total"))}
+                for r in city_rows
+            ],
+            "by_is_from_lipa": [
+                {"status": r.get("status"), "count": _to_int(r.get("total"))}
+                for r in lipa_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applicants_location error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applicant location data"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applicants/experience", methods=["GET"])
+def applicants_experience():
+    """Applicants by years of experience."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_applicants_filters(request.args, alias="a")
+
+        exp_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              CASE
+                WHEN a.years_experience IS NULL OR a.years_experience = 0 THEN 'No Experience'
+                WHEN a.years_experience BETWEEN 1 AND 2 THEN '1-2 Years'
+                WHEN a.years_experience BETWEEN 3 AND 5 THEN '3-5 Years'
+                WHEN a.years_experience BETWEEN 6 AND 10 THEN '6-10 Years'
+                WHEN a.years_experience > 10 THEN '10+ Years'
+                ELSE 'Unspecified'
+              END AS exp_range,
+              COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql}
+            GROUP BY exp_range
+            ORDER BY 
+              CASE exp_range
+                WHEN 'No Experience' THEN 1
+                WHEN '1-2 Years' THEN 2
+                WHEN '3-5 Years' THEN 3
+                WHEN '6-10 Years' THEN 4
+                WHEN '10+ Years' THEN 5
+                ELSE 6
+              END
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_experience": [
+                {"range": r.get("exp_range"), "count": _to_int(r.get("total"))}
+                for r in exp_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applicants_experience error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applicant experience data"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applicants/pwd", methods=["GET"])
+def applicants_pwd():
+    """Applicants by PWD type."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_applicants_filters(request.args, alias="a")
+
+        pwd_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(a.pwd_type, ''), 'Not Specified') AS pwd_type,
+              COUNT(*) AS total
+            FROM applicants a
+            WHERE {where_sql} AND a.is_pwd = 1
+            GROUP BY pwd_type
+            ORDER BY total DESC
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_pwd_type": [
+                {"pwd_type": r.get("pwd_type"),
+                 "count": _to_int(r.get("total"))}
+                for r in pwd_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applicants_pwd error:", exc)
+        return jsonify({"success": False, "message": "Failed to load PWD data"}), 500
+    finally:
+        conn.close()
+
+
+# ========== WIDGETS API ENDPOINTS ==========
+
+@admin_bp.route("/api/widgets/notes", methods=["GET"])
+def get_notes():
+    """Get all notes for the current admin."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        admin_id = session.get("admin_id")
+        rows = run_query(
+            conn,
+            """
+            SELECT note_id, title, content, is_pinned, created_at, updated_at
+            FROM admin_notes
+            WHERE admin_id = %s
+            ORDER BY is_pinned DESC, updated_at DESC
+            """,
+            (admin_id,),
+            fetch="all",
+        ) or []
+
+        notes = [
+            {
+                "id": row.get("note_id"),
+                "title": row.get("title") or "",
+                "content": row.get("content") or "",
+                "is_pinned": bool(row.get("is_pinned")),
+                "created_at": row.get("created_at").isoformat() if row.get("created_at") else None,
+                "updated_at": row.get("updated_at").isoformat() if row.get("updated_at") else None,
+            }
+            for row in rows
+        ]
+        return jsonify({"success": True, "data": notes})
+    except Exception as exc:
+        print("[widgets] get_notes error:", exc)
+        return jsonify({"success": False, "message": "Failed to load notes"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/widgets/notes", methods=["POST"])
+def create_note():
+    """Create a new note."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+    is_pinned = int(data.get("is_pinned", False))
+
+    if not content:
+        return jsonify({"success": False, "message": "Note content is required"}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        admin_id = session.get("admin_id")
+        note_id = run_query(
+            conn,
+            """
+            INSERT INTO admin_notes (admin_id, title, content, is_pinned, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, NOW(), NOW())
+            """,
+            (admin_id, title, content, is_pinned),
+            fetch="lastrowid",
+        )
+
+        return jsonify({"success": True, "data": {"note_id": note_id}})
+    except Exception as exc:
+        print("[widgets] create_note error:", exc)
+        return jsonify({"success": False, "message": "Failed to create note"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/widgets/notes/<int:note_id>", methods=["PUT"])
+def update_note(note_id):
+    """Update an existing note."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+    is_pinned = int(data.get("is_pinned", False))
+
+    if not content:
+        return jsonify({"success": False, "message": "Note content is required"}), 400
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        admin_id = session.get("admin_id")
+        # Verify ownership
+        existing = run_query(
+            conn,
+            "SELECT note_id FROM admin_notes WHERE note_id = %s AND admin_id = %s",
+            (note_id, admin_id),
+            fetch="one",
+        )
+        if not existing:
+            return jsonify({"success": False, "message": "Note not found"}), 404
+
+        run_query(
+            conn,
+            """
+            UPDATE admin_notes
+            SET title = %s, content = %s, is_pinned = %s, updated_at = NOW()
+            WHERE note_id = %s AND admin_id = %s
+            """,
+            (title, content, is_pinned, note_id, admin_id),
+        )
+
+        return jsonify({"success": True})
+    except Exception as exc:
+        print("[widgets] update_note error:", exc)
+        return jsonify({"success": False, "message": "Failed to update note"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/widgets/notes/<int:note_id>", methods=["DELETE"])
+def delete_note(note_id):
+    """Delete a note."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        admin_id = session.get("admin_id")
+        # Verify ownership
+        existing = run_query(
+            conn,
+            "SELECT note_id FROM admin_notes WHERE note_id = %s AND admin_id = %s",
+            (note_id, admin_id),
+            fetch="one",
+        )
+        if not existing:
+            return jsonify({"success": False, "message": "Note not found"}), 404
+
+        run_query(
+            conn,
+            "DELETE FROM admin_notes WHERE note_id = %s AND admin_id = %s",
+            (note_id, admin_id),
+        )
+
+        return jsonify({"success": True})
+    except Exception as exc:
+        print("[widgets] delete_note error:", exc)
+        return jsonify({"success": False, "message": "Failed to delete note"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/widgets/preferences", methods=["GET"])
+def get_widget_preferences():
+    """Get widget visibility preferences for the current admin."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        admin_id = session.get("admin_id")
+        row = run_query(
+            conn,
+            "SELECT widget_preferences FROM admin_widget_preferences WHERE admin_id = %s",
+            (admin_id,),
+            fetch="one",
+        )
+
+        if row and row.get("widget_preferences"):
+            prefs = json.loads(row.get("widget_preferences"))
+        else:
+            # Default: all widgets visible
+            prefs = {
+                "clock": True,
+                "calendar": True,
+                "notes": True,
+                "todo": True,
+                "countdown": True,
+                "quickLinks": True,
+                "quotes": True,
+                "notifications": True,
+                "productivity": True,
+            }
+
+        return jsonify({"success": True, "data": prefs})
+    except Exception as exc:
+        print("[widgets] get_widget_preferences error:", exc)
+        return jsonify({"success": False, "message": "Failed to load preferences"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/widgets/preferences/reset", methods=["POST"])
+def reset_widget_preferences():
+    """Reset widget preferences to default for the current admin."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        admin_id = session.get("admin_id")
+
+        # Default: all widgets visible
+        default_prefs = {
+            "clock": True,
+            "calendar": True,
+            "notes": True,
+            "todo": True,
+            "countdown": True,
+            "quickLinks": True,
+            "quotes": True,
+            "notifications": True,
+            "productivity": True,
+        }
+
+        default_json = json.dumps(default_prefs)
+
+        # Save into the DB (overwrite existing)
+        run_query(
+            conn,
+            """
+            INSERT INTO admin_widget_preferences (admin_id, widget_preferences, updated_at)
+            VALUES (%s, %s, NOW())
+            ON DUPLICATE KEY UPDATE widget_preferences = %s, updated_at = NOW()
+            """,
+            (admin_id, default_json, default_json),
+        )
+
+        # Return for frontend
+        return jsonify({"success": True, "data": default_prefs})
+    except Exception as exc:
+        print("[widgets] reset_widget_preferences error:", exc)
+        return jsonify({"success": False, "message": "Failed to reset preferences"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/widgets/preferences", methods=["POST"])
+def save_widget_preferences():
+    """Save widget visibility preferences."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    preferences = data.get("preferences", {})
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        admin_id = session.get("admin_id")
+        prefs_json = json.dumps(preferences)
+
+        # Insert or update
+        run_query(
+            conn,
+            """
+            INSERT INTO admin_widget_preferences (admin_id, widget_preferences, updated_at)
+            VALUES (%s, %s, NOW())
+            ON DUPLICATE KEY UPDATE widget_preferences = %s, updated_at = NOW()
+            """,
+            (admin_id, prefs_json, prefs_json),
+        )
+
+        return jsonify({"success": True})
+    except Exception as exc:
+        print("[widgets] save_widget_preferences error:", exc)
+        return jsonify({"success": False, "message": "Failed to save preferences"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/widgets/weather", methods=["GET"])
+def get_weather():
+    """Get weather data using Open-Meteo API."""
+    city = request.args.get("city", "Lipa City")
+
+    # Coordinates for Lipa, Batangas
+    latitude = 13.9444
+    longitude = 121.1631
+
+    try:
+        url = "https://api.open-meteo.com/v1/forecast"
+
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "current_weather": True,
+            "timezone": "Asia/Manila",
+        }
+
+        headers = {
+            "User-Agent": "DashboardWidget/1.0"  # REQUIRED by Open-Meteo
+        }
+
+        response = requests.get(url, params=params, headers=headers, timeout=7)
+        response.raise_for_status()
+
+        data = response.json()
+
+        if "current_weather" not in data:
+            raise Exception("No current weather field in API response")
+
+        current = data["current_weather"]
+
+        # Extract values safely
+        temperature = current.get("temperature")
+        wind_speed = current.get("windspeed")
+        weather_code = current.get("weathercode")
+
+        # Your weather code mapper function
+        weather_info = get_weather_info(weather_code)
+
+        return jsonify({
+            "success": True,
+            "data": {
+                "city": city,
+                "temperature": temperature,
+                "description": weather_info["description"],
+                "icon": weather_info["icon"],
+                "wind_speed": wind_speed,
+                "weather_code": weather_code
+            }
+        })
+
+    except Exception as e:
+        print(f"[widgets] Weather error: {e}")
+
+        # Fallback
+        return jsonify({
+            "success": True,
+            "data": {
+                "city": city,
+                "temperature": 28,
+                "description": "Weather unavailable",
+                "icon": "cloud",
+                "wind_speed": 0
+            }
+        })
+
+
+def get_weather_info(weather_code):
+    """Map Open-Meteo weather codes to descriptions and icons.
+
+    Weather codes from Open-Meteo:
+    0 = Clear sky
+    1-3 = Mainly clear, partly cloudy, overcast
+    45-48 = Fog
+    51-67 = Drizzle and rain
+    71-77 = Snow
+    80-82 = Rain showers
+    85-86 = Snow showers
+    95-99 = Thunderstorm
+    """
+    code = int(weather_code) if weather_code else 0
+
+    if code == 0:
+        return {"description": "Clear Sky", "icon": "sun"}
+    elif code in [1, 2, 3]:
+        return {"description": "Partly Cloudy", "icon": "cloud-sun"}
+    elif code in [45, 48]:
+        return {"description": "Foggy", "icon": "smog"}
+    elif code in [51, 53, 55]:
+        return {"description": "Light Drizzle", "icon": "cloud-rain"}
+    elif code in [56, 57]:
+        return {"description": "Freezing Drizzle", "icon": "snowflake"}
+    elif code in [61, 63, 65]:
+        return {"description": "Rain", "icon": "cloud-rain"}
+    elif code in [66, 67]:
+        return {"description": "Freezing Rain", "icon": "snowflake"}
+    elif code in [71, 73, 75, 77]:
+        return {"description": "Snow", "icon": "snowflake"}
+    elif code in [80, 81, 82]:
+        return {"description": "Rain Showers", "icon": "cloud-showers-heavy"}
+    elif code in [85, 86]:
+        return {"description": "Snow Showers", "icon": "snowflake"}
+    elif code in [95, 96, 99]:
+        return {"description": "Thunderstorm", "icon": "bolt"}
+    else:
+        return {"description": "Unknown", "icon": "cloud"}
+
+
+@admin_bp.route("/api/widgets/productivity", methods=["GET"])
+def get_productivity_stats():
+    """Get productivity statistics for today."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        today = datetime.today().date()
+
+        # Tasks completed today (from todos - would need a todos table)
+        # For now, return placeholder data
+        # Applications reviewed today
+        apps_reviewed = run_query(
+            conn,
+            """
+            SELECT COUNT(*) AS count
+            FROM applications
+            WHERE DATE(updated_at) = %s AND status IN ('Approved', 'Rejected')
+            """,
+            (today,),
+            fetch="one",
+        ) or {}
+
+        # New registrations today
+        new_regs = run_query(
+            conn,
+            """
+            SELECT COUNT(*) AS count
+            FROM applicants
+            WHERE DATE(created_at) = %s
+            """,
+            (today,),
+            fetch="one",
+        ) or {}
+
+        data = {
+            "tasks_completed": 0,  # Placeholder
+            "applications_reviewed": _to_int(apps_reviewed.get("count")),
+            "new_registrations": _to_int(new_regs.get("count")),
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[widgets] get_productivity_stats error:", exc)
+        return jsonify({"success": False, "message": "Failed to load productivity stats"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/employers/summary", methods=["GET"])
+def employers_summary():
+    """Employers volume & active vs inactive, respecting filters."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_employers_filters(request.args, alias="e")
+        row = run_query(
+            conn,
+            f"""
+            SELECT
+              COUNT(*) AS total_employers,
+              SUM(CASE WHEN e.is_active = 1 THEN 1 ELSE 0 END) AS active_count,
+              SUM(CASE WHEN e.is_active = 0 THEN 1 ELSE 0 END) AS inactive_count
+            FROM employers e
+            WHERE {where_sql}
+            """,
+            params,
+            fetch="one",
+        ) or {}
+
+        total_employers = _to_int(row.get("total_employers"))
+        active_count = _to_int(row.get("active_count"))
+        inactive_count = _to_int(row.get("inactive_count"))
+
+        # Pending documents: approximate as status = 'Pending'
+        pending_row = run_query(
+            conn,
+            f"""
+            SELECT COUNT(*) AS pending_docs
+            FROM employers e
+            WHERE {where_sql} AND e.status = 'Pending'
+            """,
+            params,
+            fetch="one",
+        ) or {}
+
+        data = {
+            "total_employers": total_employers,
+            "active_employers": active_count,
+            "inactive_employers": inactive_count,
+            "pending_documents": _to_int(pending_row.get("pending_docs")),
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] employers_summary error:", exc)
+        return jsonify({"success": False, "message": "Failed to load employers summary"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/employers/business", methods=["GET"])
+def employers_business():
+    """Employers by industry and recruitment type, respecting filters."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_employers_filters(request.args, alias="e")
+
+        industry_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(e.industry, ''), 'Unspecified') AS industry,
+              COUNT(*) AS total
+            FROM employers e
+            WHERE {where_sql}
+            GROUP BY industry
+            ORDER BY total DESC
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        rec_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(e.recruitment_type, ''), 'Unspecified') AS recruitment_type,
+              COUNT(*) AS total
+            FROM employers e
+            WHERE {where_sql}
+            GROUP BY recruitment_type
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_industry": [
+                {"industry": r.get("industry"),
+                 "count": _to_int(r.get("total"))}
+                for r in industry_rows
+            ],
+            "by_recruitment_type": [
+                {
+                    "recruitment_type": r.get("recruitment_type"),
+                    "count": _to_int(r.get("total")),
+                }
+                for r in rec_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] employers_business error:", exc)
+        return jsonify({"success": False, "message": "Failed to load employer demographics"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/employers/location", methods=["GET"])
+def employers_location():
+    """Employers by top cities and provinces."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_employers_filters(request.args, alias="e")
+
+        # Top 10 cities
+        city_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(e.city, ''), 'Unspecified') AS city,
+              COUNT(*) AS total
+            FROM employers e
+            WHERE {where_sql}
+            GROUP BY city
+            ORDER BY total DESC
+            LIMIT 10
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        # Top 10 provinces
+        province_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(e.province, ''), 'Unspecified') AS province,
+              COUNT(*) AS total
+            FROM employers e
+            WHERE {where_sql}
+            GROUP BY province
+            ORDER BY total DESC
+            LIMIT 10
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_city": [
+                {"city": r.get("city"), "count": _to_int(r.get("total"))}
+                for r in city_rows
+            ],
+            "by_province": [
+                {"province": r.get("province"),
+                 "count": _to_int(r.get("total"))}
+                for r in province_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] employers_location error:", exc)
+        return jsonify({"success": False, "message": "Failed to load employer location data"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/employers/status", methods=["GET"])
+def employers_status():
+    """Employers by status."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_employers_filters(request.args, alias="e")
+
+        status_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(e.status, ''), 'Unspecified') AS status,
+              COUNT(*) AS total
+            FROM employers e
+            WHERE {where_sql}
+            GROUP BY status
+            ORDER BY total DESC
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_status": [
+                {"status": r.get("status"), "count": _to_int(r.get("total"))}
+                for r in status_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] employers_status error:", exc)
+        return jsonify({"success": False, "message": "Failed to load employer status data"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/jobs/summary", methods=["GET"])
+def jobs_summary():
+    """Job demand KPIs: total open jobs."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_jobs_filters(request.args, alias="j")
+        row = run_query(
+            conn,
+            f"""
+            SELECT COUNT(*) AS open_jobs
+            FROM jobs j
+            WHERE j.status = 'active'
+            AND (j.job_expiration_date IS NULL OR j.job_expiration_date >= CURDATE())
+            AND {where_sql}
+            """,
+            params,
+            fetch="one",
+        ) or {}
+
+        data = {
+            "total_open_jobs": _to_int(row.get("open_jobs")),
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] jobs_summary error:", exc)
+        return jsonify({"success": False, "message": "Failed to load jobs summary"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/jobs/demand", methods=["GET"])
+def jobs_demand():
+    """Top job positions and jobs by work schedule."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_jobs_filters(request.args, alias="j")
+
+        pos_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(j.job_position, ''), 'Unspecified') AS job_position,
+              COUNT(*) AS total
+            FROM jobs j
+            WHERE {where_sql}
+            GROUP BY job_position
+            ORDER BY total DESC
+            LIMIT 5
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        sched_rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(j.work_schedule, ''), 'Unspecified') AS work_schedule,
+              COUNT(*) AS total
+            FROM jobs j
+            WHERE {where_sql}
+            GROUP BY work_schedule
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = {
+            "by_position": [
+                {"job_position": r.get("job_position"),
+                 "count": _to_int(r.get("total"))}
+                for r in pos_rows
+            ],
+            "by_work_schedule": [
+                {"work_schedule": r.get("work_schedule"),
+                 "count": _to_int(r.get("total"))}
+                for r in sched_rows
+            ],
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] jobs_demand error:", exc)
+        return jsonify({"success": False, "message": "Failed to load job demand"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applications/summary", methods=["GET"])
+def applications_summary():
+    """Applications flow KPIs: total applications, status breakdown, success rate."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_applications_filters(request.args, alias="a")
+
+        rows = run_query(
+            conn,
+            f"""
+            SELECT
+              COALESCE(NULLIF(a.status, ''), 'Pending') AS status,
+              COUNT(*) AS total
+            FROM applications a
+            LEFT JOIN jobs j ON a.job_id = j.job_id
+            WHERE {where_sql}
+            GROUP BY status
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        by_status = [
+            {"status": r.get("status"), "count": _to_int(r.get("total"))}
+            for r in rows
+        ]
+
+        total_applications = sum(item["count"] for item in by_status)
+        approved = next(
+            (item["count"]
+             for item in by_status if item["status"] == "Approved"), 0
+        )
+        success_rate = (
+            approved / total_applications) if total_applications else 0
+
+        data = {
+            "total_applications": total_applications,
+            "by_status": by_status,
+            "success_rate": success_rate,
+            "success_rate_percentage": round(success_rate * 100, 2)
+            if total_applications
+            else 0,
+        }
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applications_summary error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applications summary"}), 500
+    finally:
+        conn.close()
+
+
+@admin_bp.route("/api/analytics/applications/trend", methods=["GET"])
+def applications_trend():
+    """Applications by month/year trend."""
+    if "admin_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+    try:
+        where_sql, params = build_applications_filters(request.args, alias="a")
+
+        rows = run_query(
+            conn,
+            f"""
+            SELECT
+            DATE_FORMAT(a.applied_at, '%b %Y') AS label,
+            YEAR(a.applied_at) AS year_num,
+            MONTH(a.applied_at) AS month_num,
+            COUNT(*) AS total
+            FROM applications a
+            LEFT JOIN jobs j ON a.job_id = j.job_id
+            WHERE {where_sql}
+            GROUP BY year_num, month_num
+            ORDER BY year_num ASC, month_num ASC
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        data = [
+            {
+                "label": r.get("label"),
+                "year": _to_int(r.get("year_num")),
+                "month": _to_int(r.get("month_num")),
+                "count": _to_int(r.get("total")),
+            }
+            for r in rows
+        ]
+        return jsonify({"success": True, "data": data})
+    except Exception as exc:
+        print("[analytics] applications_trend error:", exc)
+        return jsonify({"success": False, "message": "Failed to load applications trend"}), 500
+    finally:
+        conn.close()
 
 
 # ===== API: Get Notifications =====
@@ -505,8 +2564,9 @@ def applicants_view_all():
 
     return render_template("Admin/applicants_view_all.html", applicants=applicants)
 
+
 @admin_bp.route("/applicants/for-reported-acc")
-def applicants_reported_acc():
+def applicants_for_reported_acc():
     """Show applicants with reported accounts"""
     if "admin_id" not in session:
         return redirect(url_for("admin.login"))
@@ -534,6 +2594,7 @@ def applicants_reported_acc():
         conn.close()
 
     return render_template("Admin/applicants_for_reported_acc.html", applicants=applicants)
+
 
 @admin_bp.route("/applicants/<int:applicant_id>")
 def view_applicant(applicant_id):
@@ -1456,4 +3517,3 @@ def reject_recruitment_type_change(employer_id):
             conn.rollback()
             conn.close()
         return jsonify({"success": False, "message": str(e)}), 500
-

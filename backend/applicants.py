@@ -752,7 +752,6 @@ def report_job():
 @applicants_bp.route("/job/<int:job_id>")
 def job_page(job_id):
     if "applicant_id" not in session:
-        # return plain text with 401 so fetch.ok will be false
         return "Please log in to view job details.", 401
 
     conn = create_connection()
@@ -773,8 +772,22 @@ def job_page(job_id):
         if not job:
             return "Job not found.", 404
 
-        # Return only modal fragment HTML
-        return render_template("Applicant/job_modal_content.html", job=job)
+        # Fetch the applicant's application ID for this job
+        applicant_id = session.get("applicant_id")
+        application = run_query(
+            conn,
+            "SELECT id FROM applications WHERE applicant_id=%s AND job_id=%s",
+            (applicant_id, job_id),
+            fetch="one"
+        )
+        application_id = application["id"] if application else None
+
+        # Return modal HTML with both job and application_id
+        return render_template(
+            "Applicant/job_modal_content.html",
+            job=job,
+            application_id=application_id
+        )
 
     except Exception as e:
         print(f"[job_page] Error fetching job {job_id}: {e}")
@@ -1024,7 +1037,11 @@ def api_get_application_details(application_id):
 
 
 @applicants_bp.route('/api/delete-application/<int:app_id>', methods=['DELETE'])
-def api_delete_application(app_id):
+def delete_application(app_id):
+    """
+    DELETE endpoint for cancelling applications
+    Updated to use correct database schema with applications_history table
+    """
     if 'applicant_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'}), 401
 
@@ -1034,55 +1051,64 @@ def api_delete_application(app_id):
         return jsonify({'success': False, 'message': 'DB connection failed'}), 500
 
     try:
-        # Verify ownership and get job_id
-        row = run_query(conn, 'SELECT * FROM applications WHERE id = %s AND applicant_id = %s',
-                        (app_id, applicant_id), fetch='one')
-        if not row:
-            return jsonify({'success': False, 'message': 'Application not found'}), 404
+        app = run_query(
+            conn,
+            'SELECT id, status, job_id FROM applications WHERE id = %s AND applicant_id = %s',
+            (app_id, applicant_id),
+            fetch='one'
+        )
 
-        job_id = row.get('job_id')
+        if not app:
+            conn.close()
+            return jsonify({'success': False, 'message': 'Application not found or unauthorized'}), 404
 
-        # Delete the application
-        run_query(conn, 'DELETE FROM applications WHERE id = %s', (app_id,))
+        job_id = app.get('job_id')
+        old_status = app.get('status', 'Pending')
 
-        # Decrement job.application_count if present
-        try:
-            run_query(
-                conn, 'UPDATE jobs SET application_count = application_count - 1 WHERE job_id = %s AND application_count > 0', (job_id,))
-        except Exception:
-            # try legacy column name
-            try:
-                run_query(
-                    conn, 'UPDATE jobs SET applicant_count = applicant_count - 1 WHERE job_id = %s AND applicant_count > 0', (job_id,))
-            except Exception:
-                pass
+        run_query(
+            conn,
+            'UPDATE applications SET status = %s WHERE id = %s',
+            ('Cancelled', app_id)
+        )
 
-        # If we can get employer id, decrement employer counts too
-        try:
-            jid = run_query(
-                conn, 'SELECT employer_id FROM jobs WHERE job_id = %s', (job_id,), fetch='one')
-            if jid and jid.get('employer_id'):
-                emp_id = jid.get('employer_id')
-                try:
-                    run_query(
-                        conn, 'UPDATE employers SET application_count = application_count - 1 WHERE employer_id = %s AND application_count > 0', (emp_id,))
-                except Exception:
-                    try:
-                        run_query(
-                            conn, 'UPDATE employers SET applicant_count = applicant_count - 1 WHERE employer_id = %s AND application_count > 0', (emp_id,))
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+        run_query(
+            conn,
+            '''
+            INSERT INTO applications_history (application_id, old_status, new_status, changed_by, changed_at, note)
+            VALUES (%s, %s, %s, %s, NOW(), %s)
+            ''',
+            (app_id, old_status, 'Cancelled', applicant_id,
+             'Applicant cancelled their application')
+        )
+
+        run_query(
+            conn,
+            'UPDATE jobs SET application_count = CASE WHEN application_count > 0 THEN application_count - 1 ELSE 0 END WHERE job_id = %s',
+            (job_id,)
+        )
 
         conn.commit()
-        return jsonify({'success': True})
+        print(
+            f"[v0] Application {app_id} cancelled successfully by applicant {applicant_id}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Application cancelled successfully',
+            'applicationId': app_id
+        })
+
     except Exception as e:
         conn.rollback()
-        print('[v0] Error deleting application:', e)
-        return jsonify({'success': False, 'message': 'Failed to delete application'}), 500
+        print(f"[v0] Error cancelling application {app_id}: {str(e)}")
+        return jsonify({'success': False, 'message': 'Failed to cancel application', 'error': str(e)}), 500
     finally:
         conn.close()
+
+
+@applicants_bp.route('/api/cancel-application/<int:app_id>', methods=['POST'])
+def api_cancel_application(app_id):
+    """Legacy POST endpoint - delegates to DELETE logic for backwards compatibility"""
+    return delete_application(app_id)
 
 
 @applicants_bp.route("/submit-reupload", methods=["POST"])

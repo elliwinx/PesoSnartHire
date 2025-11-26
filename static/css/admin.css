@@ -45,10 +45,10 @@ body {
 }
 
 .nav {
-    display: flex;
-    flex-wrap: wrap; /* important para mag-wrap kapag kulang na space */
-    align-items: center;
-    gap: 30px; /* mas maliit na gap para mobile */
+  display: flex;
+  flex-wrap: wrap; /* important para mag-wrap kapag kulang na space */
+  align-items: center;
+  gap: 30px; /* mas maliit na gap para mobile */
 }
 
 .nav-link {
@@ -876,7 +876,7 @@ input[type="email"] {
 }
 
 .modal-content-edit-status {
-    display: flex;
+  display: flex;
   justify-content: space-between;
   gap: 12px;
 }
@@ -891,7 +891,7 @@ input[type="email"] {
 
 .status-btn {
   display: flex !important;
-  flex-direction: column;    /* ICON sa taas, TEXT sa baba */
+  flex-direction: column; /* ICON sa taas, TEXT sa baba */
   align-items: center;
   justify-content: center;
   gap: 4px;

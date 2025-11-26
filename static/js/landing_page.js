@@ -302,9 +302,34 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Auto-check "Is From Lipa" when Province=Batangas and City=Lipa City
+  function checkIsFromLipaAuto() {
+    if (!fromLipaCheckbox || !provinceSelect || !citySelect) return;
+    
+    const province = provinceSelect.value;
+    const city = citySelect.value;
+    
+    // Auto-check if Province = Batangas AND City = Lipa City
+    if (province === "Batangas" && city === "Lipa City") {
+      if (!fromLipaCheckbox.checked) {
+        fromLipaCheckbox.checked = true;
+        // Trigger change event to update UI
+        fromLipaCheckbox.dispatchEvent(new Event("change"));
+      }
+    } else if (fromLipaCheckbox.checked && (province !== "Batangas" || city !== "Lipa City")) {
+      // Uncheck if manually changed away from Batangas/Lipa City
+      // Only uncheck if it was auto-checked (we'll track this)
+      // For now, we'll leave it checked if user manually checked it
+      // User can manually uncheck if needed
+    }
+  }
+
   // Province change behavior (when not Lipeno)
   if (provinceSelect) {
     provinceSelect.addEventListener("change", function () {
+      // Check if should auto-check "Is From Lipa"
+      checkIsFromLipaAuto();
+      
       if (fromLipaCheckbox && fromLipaCheckbox.checked) return;
 
       // Always show text inputs for city/barangay when NOT from Lipa
@@ -327,6 +352,13 @@ document.addEventListener("DOMContentLoaded", () => {
         barangayTextInput.style.display = "block";
         barangayTextInput.required = true;
       }
+    });
+  }
+
+  // City change behavior - also check for auto-check
+  if (citySelect) {
+    citySelect.addEventListener("change", function () {
+      checkIsFromLipaAuto();
     });
   }
 

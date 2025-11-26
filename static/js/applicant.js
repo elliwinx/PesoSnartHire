@@ -1096,7 +1096,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch("/applicants/report", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ job_id: reportingJobId, reason }),
+          body: JSON.JSON.stringify({ job_id: reportingJobId, reason }),
           credentials: "same-origin",
         });
         const data = await res.json();
@@ -1410,10 +1410,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // <CHANGE> FIXED: Properly handle the existing modal buttons and make them work
   window.viewApplicationDetails = async (applicationId) => {
     const modal = document.getElementById("applicationDetailsModal");
     const content = document.getElementById("applicationDetailsContent");
-    const actions = document.getElementById("applicationModalActions");
+    const cancelBtn = document.getElementById("applicationCancelBtn");
+    const closeBtn = document.getElementById("applicationCloseBtn");
 
     if (!modal || !content) {
       console.log("[v0] Modal elements not found");
@@ -1421,7 +1423,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     content.innerHTML = '<div class="loader">Loading details...</div>';
-    actions.innerHTML = "";
     modal.style.display = "block";
 
     try {
@@ -1447,62 +1448,128 @@ document.addEventListener("DOMContentLoaded", () => {
       const app = data.application;
 
       content.innerHTML = `
-        <div class="header-row" id="header-row-${app.id}">
-          <h2>Current Application Status</h2>
-          <p class="status">
-            <strong>Status:</strong>
-            <span class="status-badge ${app.status
-              .toLowerCase()
-              .replace(/\s+/g, "-")}">${app.status}</span>
-          </p>
-        </div>
-          <p><strong>Application Information:</strong></p>
-        
-        <div class="detail-group" style="margin: 2px 0;">
-          <p> ${app.job_position}</p>
-          <p> ${app.employer_name}</p>
-          <p> ${app.location}</p>
-          <p>Applied On ${new Date(app.applied_at).toLocaleDateString()}</p>
-        </div>
-      `;
-      if (app.status === "Pending") {
-          actions.innerHTML = `
-            <button onclick="window.cancelApplication(${app.id})" class="app-cancel-btn">
-              Cancel Application
-            </button>
-          `;
+      <div class="header-row" id="header-row-${app.id}">
+        <h2>Current Application Status</h2>
+        <p class="status">
+          <strong>Status:</strong>
+          <span class="status-badge ${app.status
+            .toLowerCase()
+            .replace(/\s+/g, "-")}">${app.status}</span>
+        </p>
+      </div>
+      <p><strong>Application Information:</strong></p>
+      <div class="detail-group" style="margin: 2px 0;">
+        <p>${app.job_position}</p>
+        <p>${app.employer_name}</p>
+        <p>${app.location}</p>
+        <p>Applied On ${new Date(app.applied_at).toLocaleDateString()}</p>
+      </div>
+    `;
+
+      // <CHANGE> Show/hide cancel button based on status and attach click handler
+      if (cancelBtn) {
+        if (app.status === "Pending") {
+          cancelBtn.style.display = "inline-block";
+          cancelBtn.onclick = () => window.cancelApplication(app.id);
         } else {
-          actions.innerHTML = "";
+          cancelBtn.style.display = "none";
         }
-      } catch (error) {
-        console.error("[v0] Error in viewApplicationDetails:", error);
-        content.innerHTML = `<p class="error" style="color: #dc3545;">Failed to load details: ${error.message}</p>`;
       }
+
+      // <CHANGE> Make sure close button is clickable
+      if (closeBtn) {
+        closeBtn.style.display = "inline-block";
+        closeBtn.onclick = () => {
+          modal.style.display = "none";
+        };
+      }
+    } catch (error) {
+      console.error("[v0] Error in viewApplicationDetails:", error);
+      content.innerHTML = `<p class="error" style="color: #dc3545;">Failed to load details: ${error.message}</p>`;
+    }
+  };
+
+  const proceedCancel = async (applicationId) => {
+    try {
+      window.showLoader("Cancelling application...");
+      console.log("[v0] Calling cancel endpoint for app:", applicationId);
+
+      // <CHANGE> Correct endpoint path: /applicants/api/cancel-application (legacy delete path delegated server-side)
+      // Use POST method (not DELETE)
+      const response = await fetch(
+        `/applicants/api/cancel-application/${applicationId}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+        }
+      );
+
+      window.hideLoader();
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("[v0] Cancel response:", data);
+
+        if (data.success) {
+          window.showFlash("Application cancelled successfully", "success");
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          console.error("[v0] Cancel failed:", data.message);
+          window.showFlash(
+            data.message || "Failed to cancel application",
+            "error"
+          );
+        }
+      } else {
+        console.error("[v0] HTTP error:", response.status);
+        window.showFlash(
+          "Failed to cancel application with status: " + response.status,
+          "error"
+        );
+      }
+    } catch (error) {
+      window.hideLoader();
+      console.error("[v0] Error cancelling application:", error);
+      window.showFlash(
+        "An error occurred while cancelling the application",
+        "error"
+      );
+    }
   };
 
   window.cancelApplication = (applicationId) => {
     const modal = document.getElementById("cancelConfirmModal");
+
+    if (!modal) {
+      console.error("[v0] cancelConfirmModal not found in DOM");
+      return;
+    }
+
     modal.style.display = "flex";
 
     // When YES is clicked
-    document.getElementById("confirmCancelYes").onclick = () => {
-      modal.style.display = "none";
-      proceedCancel(applicationId); // <-- call function below
-    };
+    const confirmYesBtn = document.getElementById("confirmCancelYes");
+    if (confirmYesBtn) {
+      confirmYesBtn.onclick = () => {
+        modal.style.display = "none";
+        proceedCancel(applicationId);
+      };
+    }
 
     // When NO is clicked
-    document.getElementById("confirmCancelNo").onclick = () => {
-      modal.style.display = "none";
-    };
+    const confirmNoBtn = document.getElementById("confirmCancelNo");
+    if (confirmNoBtn) {
+      confirmNoBtn.onclick = () => {
+        modal.style.display = "none";
+      };
+    }
 
-    document
-      .getElementById("cancelConfirmModal")
-      .addEventListener("click", function (e) {
-        // If ang na-click ay mismong overlay (hindi yung inner box)
-        if (e.target === this) {
-          this.style.display = "none";
-        }
-      });
+    modal.addEventListener("click", function (e) {
+      if (e.target === this) {
+        modal.style.display = "none";
+      }
+    });
   };
 
   document.addEventListener("click", (event) => {

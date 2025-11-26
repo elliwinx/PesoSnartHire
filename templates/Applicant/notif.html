@@ -42,7 +42,9 @@
             class="nav-link"
             >Applications</a
           >
-          <a href="{{ url_for('applicants.notifications') }}" class="nav-link-active"
+          <a
+            href="{{ url_for('applicants.notifications') }}"
+            class="nav-link-active"
             >Notifications</a
           >
           <a
@@ -87,7 +89,7 @@
         data-notif-id="{{ notif.notification_id }}"
       >
         <div class="left">
-          <div class="icon"><i class="fa-solid fa-bell"></i></div>
+          <!--<div class="icon"><i class="fa-solid fa-bell"></i></div>-->
           <div class="details">
             <h3>
               {{ notif.title }} {% if not notif.is_read %}
@@ -113,69 +115,6 @@
       {% endif %}
     </section>
 
-    <!-- Modal for notification details -->
-    <div
-      id="notifModal"
-      class="modal"
-      style="
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        overflow: auto;
-        background-color: rgba(0, 0, 0, 0.5);
-      "
-    >
-      <div
-        class="modal-content"
-        style="
-          background: #fff;
-          margin: 6% auto;
-          padding: 20px;
-          border-radius: 6px;
-          width: 90%;
-          max-width: 600px;
-          position: relative;
-        "
-      >
-        <button
-          id="notifModalClose"
-          style="
-            position: absolute;
-            right: 12px;
-            top: 8px;
-            background: none;
-            border: none;
-            font-size: 20px;
-            cursor: pointer;
-          "
-        >
-          &times;
-        </button>
-        <h3 class="modal-title" style="margin-top: 0"></h3>
-        <div
-          class="modal-body"
-          style="margin-top: 10px; white-space: pre-wrap"
-        ></div>
-        <div style="margin-top: 16px; text-align: right">
-          <a
-            class="modal-job-link"
-            href="#"
-            target="_blank"
-            style="display: none; margin-right: 8px"
-            >View job details</a
-          >
-          <button id="notifModalCloseBtn" style="padding: 8px 12px">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Added missing jobDetailsModal for viewing job details from notifications -->
     <div
       id="jobDetailsModal"
       class="modal"
@@ -194,32 +133,54 @@
       <div
         class="modal-content"
         style="
-        background: #fff;
-        border-radius: 12px;
-        padding: 30px;
-        width: 50%;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        text-align: center;
+          background: #fff;
+          border-radius: 12px;
+          padding: 30px;
+          width: 50%;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+          position: relative;
         "
       >
-        <span
-          class="close"
-          onclick="document.getElementById('jobDetailsModal').style.display='none'"
-          style="
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-          "
-          >&times;</span
-        >
         <div class="modal-body">
           <!-- Job details will be loaded here via AJAX -->
           <div style="text-align: center; padding: 20px">
             Loading job details...
           </div>
+        </div>
+        <!-- Added footer with cancel button to job details modal -->
+        <div
+          style="
+            margin-top: 20px;
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 16px;
+          "
+        >
+          <button id="jobDetailsModalCancelBtn" data-application-id="123">
+            Cancel Application
+          </button>
+          <button
+            id="jobDetailsModalCloseBtn"
+            onclick="document.getElementById('jobDetailsModal').style.display='none'"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Cancel Modal -->
+    <div id="cancelConfirmModal" class="confirm-overlay">
+      <div class="confirm-box">
+        <h3>Cancel Application</h3>
+        <p>
+          Are you sure you want to cancel this application?<br />This action
+          cannot be undone.
+        </p>
+
+        <div class="confirm-actions">
+          <button id="confirmCancelYes" class="btn-yes">Yes, Cancel</button>
+          <button id="confirmCancelNo" class="btn-no">No, Keep It</button>
         </div>
       </div>
     </div>
@@ -264,7 +225,7 @@
                   target="_blank"
                   ><i class="devicon-facebook-plain"></i
                 ></a>
-                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                <a href="mailto:levitareymark11@gmail.com" target="_blank"
                   ><i class="fa-solid fa-envelope"></i
                 ></a>
               </div>
@@ -296,5 +257,6 @@
     <script src="{{ url_for('static', filename='js/applicant_notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/applicant-notification-dot.js') }}"></script>
   </body>
 </html>

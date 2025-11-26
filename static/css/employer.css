@@ -2196,6 +2196,18 @@ input[type="password"]:focus {
   border: 1px solid #7b1113;
 }
 
+.notif-dot {
+  display: none;
+  width: 8px;
+  height: 8px;
+  background: #e74c3c;
+  border-radius: 50%;
+  margin-left: 6px;
+}
+.card.unread {
+  border-left: 4px solid #e74c3c;
+}
+
 @media (max-width: 600px) {
   .status-options {
     grid-template-columns: 1fr;

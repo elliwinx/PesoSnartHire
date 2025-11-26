@@ -209,13 +209,22 @@
               data-job-id="{{ app.job_id }}"
               data-app-id="{{ app.id }}"
             >
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                <strong>{{ app.job_position or ('Job ID: ' ~
-                app.job_id) }}</strong>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-top: 8px;
+                "
+              >
+                <strong
+                  >{{ app.job_position or ('Job ID: ' ~ app.job_id) }}</strong
+                >
                 <span>
                   <strong id="status-{{ app.id }}"
                     >{{ app.status or 'Pending' }}</strong
-                  ></span>
+                  ></span
+                >
               </div>
 
               <div style="margin-top: 8px">
@@ -226,7 +235,7 @@
                   >
                 </div>
                 <!-- Replaced dropdown with Edit Status button -->
-                <br>
+                <br />
                 <button class="edit-status-btn" data-app-id="{{ app.id }}">
                   <i class="fa-solid fa-pencil"></i> Edit Status
                 </button>
@@ -483,5 +492,6 @@
     {% include 'partials/loader.html' %}
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-dot.js') }}"></script>
   </body>
 </html>

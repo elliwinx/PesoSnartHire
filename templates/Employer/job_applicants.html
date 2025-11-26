@@ -127,7 +127,12 @@
           <!-- Status Filter -->
           <select
             id="statusFilter"
-            style="padding: 10px; width: 200px; border-radius: 8px; border: 1px solid #ccc"
+            style="
+              padding: 10px;
+              width: 200px;
+              border-radius: 8px;
+              border: 1px solid #ccc;
+            "
           >
             <option value="">All Status</option>
             <option value="Pending">Pending</option>
@@ -259,5 +264,6 @@
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/employer.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applicant-list-refresh.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification-dot.js') }}"></script>
   </body>
 </html>
