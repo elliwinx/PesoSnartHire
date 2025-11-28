@@ -1992,16 +1992,44 @@ def delete_job(job_id):
         return jsonify({"success": False, "message": "DB connection failed"}), 500
 
     try:
-        run_query(conn, "DELETE FROM jobs WHERE job_id=%s", (job_id,))
+        cursor = conn.cursor(dictionary=True)
+        
+        # FIRST: Check if job exists and get its status
+        cursor.execute("""
+            SELECT status, employer_id 
+            FROM jobs 
+            WHERE job_id = %s
+        """, (job_id,))
+        
+        job = cursor.fetchone()
+        
+        if not job:
+            return jsonify({"success": False, "message": "Job not found"}), 404
+        
+        # SECOND: Verify the employer owns this job
+        if job['employer_id'] != session['employer_id']:
+            return jsonify({"success": False, "message": "Unauthorized to delete this job"}), 403
+        
+        # THIRD: Check if job is suspended - PREVENT DELETION
+        if job['status'] == 'suspended':
+            return jsonify({
+                "success": False, 
+                "message": "Cannot delete suspended job. This job has been reported and suspended. Please contact PESO SmartHire admin."
+            }), 403
+        
+        # FOURTH: Only if not suspended, proceed with deletion
+        cursor.execute("DELETE FROM jobs WHERE job_id = %s", (job_id,))
         conn.commit()
+        
         return jsonify({"success": True, "message": "Job post deleted successfully."})
+        
     except Exception as e:
         conn.rollback()
-        return jsonify({"success": False, "message": f"Error: {e}"})
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
     finally:
-        conn.close()
-
-
+        if conn:
+            conn.close()
+            
 @employers_bp.route("/api/notifications", methods=["GET"])
 def get_notifications():
     """Fetch notifications for the current employer"""

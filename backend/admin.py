@@ -622,77 +622,257 @@ def reported_applicants():
 
 @admin_bp.route("/get_job_details/<int:job_id>")
 def get_job_details(job_id):
+    try:
+        print(f"[DEBUG] Fetching job details for job_id: {job_id}")
+        
+        conn = create_connection()
+        if not conn:
+            print("[DEBUG] Database connection failed")
+            return jsonify({"success": False, "message": "Database connection failed"}), 500
+
+        cursor = conn.cursor(dictionary=True)
+        print(f"[DEBUG] Executing SQL query for job_id: {job_id}")
+        
+        # CORRECTED QUERY - NO requirements column!
+        cursor.execute("""
+            SELECT 
+                j.job_id,
+                j.job_position,
+                j.job_description,
+                j.qualifications,
+                j.work_schedule,
+                j.min_salary,
+                j.max_salary,
+                j.status,
+                j.created_at,
+                j.job_expiration_date,
+                j.application_count,
+                e.employer_name,
+                e.city,
+                e.province,
+                e.employer_id
+            FROM jobs j
+            LEFT JOIN employers e ON j.employer_id = e.employer_id
+            WHERE j.job_id=%s
+        """, (job_id,))
+        
+        job = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not job:
+            print(f"[DEBUG] Job {job_id} not found in database")
+            return jsonify({"success": False, "message": "Job not found"}), 404
+
+        print(f"[DEBUG] Found job: {job.get('job_position')}")
+
+        # Process qualifications for the requirements section
+        raw_qualifications = job.get('qualifications') or ""
+        requirements = []
+        
+        if raw_qualifications:
+            if isinstance(raw_qualifications, str):
+                requirements = [
+                    req.strip() for req in raw_qualifications.replace("\r", "").split("\n")
+                    if req.strip()
+                ]
+                if not requirements:
+                    requirements = [req.strip() for req in raw_qualifications.split(",") if req.strip()]
+        else:
+            requirements = ["No qualifications specified."]
+
+        # Build response payload
+        payload = {
+            "id": job.get("job_id"),
+            "title": job.get("job_position"),
+            "job_position": job.get("job_position"),
+            "description": job.get("job_description"),
+            "employment_type": job.get("work_schedule"),  # Use work_schedule as employment_type
+            "work_schedule": job.get("work_schedule"),
+            "requirements": requirements,  # From qualifications
+            "qualifications": requirements,
+            "min_salary": float(job.get("min_salary", 0)) if job.get("min_salary") else 0,
+            "max_salary": float(job.get("max_salary", 0)) if job.get("max_salary") else 0,
+            "status": job.get("status"),
+            "posted_at": job.get("created_at").isoformat() if job.get("created_at") else None,
+            "expiration_date": job.get("job_expiration_date").isoformat() if job.get("job_expiration_date") else None,
+            "application_count": job.get("application_count", 0),
+            "employer_name": job.get("employer_name"),
+            "location": ", ".join(filter(None, [job.get("city"), job.get("province")])),
+            "employer_id": job.get("employer_id")
+        }
+
+        print(f"[DEBUG] Successfully built payload for job {job_id}")
+        return jsonify({"success": True, "job": payload})
+
+    except Exception as e:
+        print(f"[DEBUG] ERROR in get_job_details: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        if 'conn' in locals():
+            try:
+                conn.close()
+            except:
+                pass
+            
+        return jsonify({
+            "success": False, 
+            "message": f"Server error: {str(e)}"
+        }), 500
+
+@admin_bp.route("/job/<int:job_id>")
+def admin_view_job(job_id):
+    """Admin view for job details"""
+    if "admin_id" not in session:
+        return "Unauthorized", 401
+    
     conn = create_connection()
     if not conn:
-        return jsonify({"success": False, "message": "Database connection failed"}), 500
+        return "Database connection failed", 500
 
+    try:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT 
+                j.job_id,
+                j.job_position,
+                j.job_description,
+                j.qualifications,
+                j.work_schedule,
+                j.min_salary,
+                j.max_salary,
+                j.status,
+                j.created_at,
+                j.job_expiration_date,
+                e.employer_name,
+                e.city,
+                e.province,
+                e.employer_id
+            FROM jobs j
+            LEFT JOIN employers e ON j.employer_id = e.employer_id
+            WHERE j.job_id=%s
+        """, (job_id,))
+        
+        job = cursor.fetchone()
+        
+        if not job:
+            return "Job not found", 404
+
+        # Format qualifications as HTML list
+        qualifications_html = ""
+        if job.get('qualifications'):
+            qualifications = [
+                q.strip() for q in job['qualifications'].split('\n') 
+                if q.strip()
+            ]
+            qualifications_html = "<ul style='margin: 0; padding-left: 20px;'>" + "".join([f"<li style='margin-bottom: 5px;'>{q}</li>" for q in qualifications]) + "</ul>"
+        else:
+            qualifications_html = "<p>No qualifications specified.</p>"
+
+        # Format salary
+        salary = "Not specified"
+        if job.get('min_salary') and job.get('max_salary'):
+            salary = f"₱{job['min_salary']:,.2f} - ₱{job['max_salary']:,.2f}"
+        elif job.get('min_salary'):
+            salary = f"₱{job['min_salary']:,.2f}"
+        elif job.get('max_salary'):
+            salary = f"₱{job['max_salary']:,.2f}"
+
+        # Format work schedule
+        work_schedule = job['work_schedule'].replace('-', ' ').title() if job.get('work_schedule') else "Not specified"
+
+        # Render the job details HTML with your CSS style
+        html_content = f"""
+        <div class="modal-job-content">
+            <div class="job-title-row">
+                <h2 style="font-size: 24px; font-weight: bold; color: #2c3e50; margin: 0;">{job['job_position']}</h2>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin: 8px 0; color: #555;"><strong>Company:</strong> {job['employer_name']}</p>
+                <p style="margin: 8px 0; color: #555;"><strong>Location:</strong> {job['city']}, {job['province']}</p>
+                <p style="margin: 8px 0; color: #555;"><strong>Salary:</strong> {salary}</p>
+                <p style="margin: 8px 0; color: #555;"><strong>Work Schedule:</strong> {work_schedule}</p>
+                <p style="margin: 8px 0; color: #555;"><strong>Status:</strong> 
+                    <span style="color: {'#27ae60' if job['status'] == 'active' else '#e74c3c'}; font-weight: bold;">
+                        {job['status'].title()}
+                    </span>
+                </p>
+                <p style="margin: 8px 0; color: #555;"><strong>Posted:</strong> {job['created_at'].strftime('%B %d, %Y') if job['created_at'] else 'N/A'}</p>
+                {f"<p style='margin: 8px 0; color: #555;'><strong>Expires:</strong> {job['job_expiration_date'].strftime('%B %d, %Y')}</p>" if job.get('job_expiration_date') else ''}
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 16px; margin-top: 12px; margin-bottom: 5px; color: #7b1113; font-weight: 600;">Job Description</h3>
+                <p style="color: #555; margin-bottom: 25px; font-size: 1rem; line-height: 1.5;">{job['job_description'] or 'No description provided.'}</p>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <h3 style="font-size: 16px; margin-top: 12px; margin-bottom: 5px; color: #7b1113; font-weight: 600;">Requirements</h3>
+                {qualifications_html}
+            </div>
+
+            <div style="text-align: center; padding-top: 20px; border-top: 1px solid #eee;">
+                <a href="/admin/employers/{job['employer_id']}" style="background: #7b1113; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;">
+                    <i class="fa-solid fa-user-tie"></i> View Employer Profile
+                </a>
+            </div>
+        </div>
+        """
+
+        return html_content
+
+    except Exception as e:
+        print(f"[ERROR] Failed to load job {job_id}: {e}")
+        return f"<p style='color: red; text-align: center; padding: 20px;'>Error loading job details: {str(e)}</p>", 500
+    
+    finally:
+        if 'conn' in locals():
+            conn.close()
+            
+def safe_send_email(subject, recipient, body):
+    """Send email with proper error handling"""
+    if not recipient:
+        print(f"❌ No recipient for: {subject}")
+        return False
+    
+    try:
+        msg = Message(
+            subject=subject,
+            recipients=[recipient],
+            html=body,
+            sender=("PESO SmartHire", "noreply@pesosmarthire.com")
+        )
+        mail.send(msg)
+        print(f"✅ Email sent to: {recipient}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send email to {recipient}: {str(e)}")
+        return False
+
+@admin_bp.route("/test-job-report/<int:report_id>")
+def test_job_report(report_id):
+    """Test if we can fetch report data"""
+    conn = create_connection()
     cursor = conn.cursor(dictionary=True)
+    
     cursor.execute("""
-        SELECT 
-            j.job_id,
-            j.job_position,
-            j.job_description,
-            j.qualifications,
-            j.work_schedule,
-            j.min_salary,
-            j.max_salary,
-            j.status,
-            j.requirements,
-            j.employment_type,
-            j.created_at,
-            e.employer_name,
-            e.city,
-            e.province,
-            e.employer_id
-        FROM jobs j
+        SELECT jr.id, jr.job_id, j.job_position, e.employer_name, e.email 
+        FROM job_reports jr
+        LEFT JOIN jobs j ON jr.job_id = j.job_id
         LEFT JOIN employers e ON j.employer_id = e.employer_id
-        WHERE j.job_id=%s
-    """, (job_id,))
-    job = cursor.fetchone()
+        WHERE jr.id = %s
+    """, (report_id,))
+    
+    report = cursor.fetchone()
     cursor.close()
     conn.close()
-
-    if not job:
-        return jsonify({"success": False, "message": "Job not found"}), 404
-
-    raw_requirements = job.get('requirements') or job.get('qualifications') or ""
-    requirements = [
-        req.strip() for req in raw_requirements.replace("\r", "").split("\n")
-        if req.strip()
-    ]
-    if not requirements and raw_requirements:
-        requirements = [req.strip() for req in raw_requirements.split(",") if req.strip()]
-
-    payload = {
-        "id": job.get("job_id"),
-        "title": job.get("job_position"),
-        "description": job.get("job_description"),
-        "employment_type": job.get("employment_type") or job.get("work_schedule"),
-        "work_schedule": job.get("work_schedule"),
-        "requirements": requirements,
-        "min_salary": job.get("min_salary"),
-        "max_salary": job.get("max_salary"),
-        "status": job.get("status"),
-        "posted_at": job.get("created_at").isoformat() if job.get("created_at") else None,
-        "employer_name": job.get("employer_name"),
-        "location": ", ".join(filter(None, [job.get("city"), job.get("province")])),
-        "employer_id": job.get("employer_id")
-    }
-
-    return jsonify({"success": True, "job": payload})
-
-
-
-def safe_send_email(subject, recipient, body):
-    if not recipient:
-        return
-    try:
-        msg = Message(subject=subject, recipients=[recipient], html=body)
-        mail.send(msg)
-    except Exception as exc:
-        print(f"[v1] Failed to send email to {recipient}: {exc}")
-
-
+    
+    return jsonify({
+        "success": True,
+        "report": report
+    })
 
 def ensure_job_report_details_column(cursor):
     cursor.execute("SHOW COLUMNS FROM job_reports LIKE 'details'")
@@ -708,6 +888,9 @@ def handle_job_report_action(report_id):
     data = request.get_json(silent=True) or {}
     action = data.get("action")
     moderator_note = data.get("moderator_note", "").strip()
+    days = data.get("days", 0)  # Get the days parameter
+
+    print(f"📥 Received request - report_id: {report_id}, action: {action}, days: {days}")
 
     valid_actions = {"confirm", "reject"}
     if action not in valid_actions:
@@ -741,13 +924,19 @@ def handle_job_report_action(report_id):
         report = cursor.fetchone()
 
         if not report:
+            print(f"❌ Report {report_id} not found")
             return jsonify({"success": False, "message": "Report not found"}), 404
 
         job_id = report.get("job_id")
         job_position = report.get("job_position", "Job")
         employer_id = report.get("employer_id")
 
+        print(f"📊 Report found - job_id: {job_id}, job_position: {job_position}")
+
         if action == "confirm":
+            print("🔄 Processing CONFIRM action...")
+            
+            # Update job status to suspended
             cursor.execute(
                 "UPDATE jobs SET status = %s WHERE job_id = %s",
                 ("suspended", job_id)
@@ -758,8 +947,10 @@ def handle_job_report_action(report_id):
             )
             cursor.execute(
                 "UPDATE applications SET status = %s WHERE job_id = %s",
-                ("Withdrawn", job_id)
+                ("Cancelled", job_id)
             )
+            
+            # Get impacted applicants
             cursor.execute("""
                 SELECT DISTINCT a.applicant_id, a.email, a.first_name, a.last_name
                 FROM applications ap
@@ -769,95 +960,119 @@ def handle_job_report_action(report_id):
             impacted_applicants = cursor.fetchall() or []
 
             conn.commit()
+            print("✅ Database updates committed")
 
+            # ========== EMAIL SENDING ==========
+            email_count = 0
+            
+            # 1. Send email to Employer
+            employer_email = report.get("employer_email")
+            if employer_email:
+                try:
+                    print(f"📧 Sending email to employer: {employer_email}")
+                    safe_send_email(
+                        "Job post suspended",
+                        employer_email,
+                        f"""
+                        <p>Hello {report.get('employer_name','Employer')},</p>
+                        <p>Your job post titled <strong>{job_position}</strong> has been reported and confirmed. 
+                        It is now temporarily <strong>suspended</strong> and all applications have been cancelled.</p>
+                        <p>You have <strong>{days} days</strong> to respond to this report.</p>
+                        <p>Please contact PESO SmartHire admin for more details.</p>
+                        """
+                    )
+                    email_count += 1
+                except Exception as e:
+                    print(f"❌ Employer email error: {e}")
+
+            # 2. Send emails to Applicants
             for applicant in impacted_applicants:
-                create_notification(
-                    notification_type="job_application",
-                    title="Application withdrawn",
-                    message=f"Your application for {job_position} was withdrawn because the job post was suspended.",
-                    applicant_id=applicant["applicant_id"],
-                    related_ids=[job_id]
-                )
-                safe_send_email(
-                    "Application withdrawn",
-                    applicant.get("email"),
-                    f"<p>Hi {applicant.get('first_name','Applicant')},</p>"
-                    f"<p>The job post for <strong>{job_position}</strong> was suspended after our investigation. "
-                    "Your application has been withdrawn automatically.</p>"
-                )
+                applicant_email = applicant.get("email")
+                if applicant_email:
+                    try:
+                        print(f"📧 Sending email to applicant: {applicant_email}")
+                        safe_send_email(
+                            "Application cancelled",
+                            applicant_email,
+                            f"""
+                            <p>Hi {applicant.get('first_name','Applicant')},</p>
+                            <p>The job post <strong>{job_position}</strong> was suspended after our investigation. 
+                            Your application has been cancelled automatically.</p>
+                            <p>We apologize for any inconvenience.</p>
+                            """
+                        )
+                        email_count += 1
+                    except Exception as e:
+                        print(f"❌ Applicant email error ({applicant['applicant_id']}): {e}")
 
-            if employer_id:
-                create_notification(
-                    notification_type="employer_reported",
-                    title="Job post suspended",
-                    message=f"{job_position} was suspended after confirming a report.",
-                    employer_id=employer_id,
-                    related_ids=[job_id]
-                )
-            safe_send_email(
-                "Job post suspended",
-                report.get("employer_email"),
-                f"<p>Hi {report.get('employer_name','Employer')},</p>"
-                f"<p>Your job post <strong>{job_position}</strong> was suspended permanently after confirming a report.</p>"
-            )
+            # 3. Send email to Reporter
+            reporter_email = report.get("reporter_email")
+            if reporter_email:
+                try:
+                    print(f"📧 Sending email to reporter: {reporter_email}")
+                    safe_send_email(
+                        "Report confirmed",
+                        reporter_email,
+                        f"""
+                        <p>Hi {report.get('reporter_name','Applicant')},</p>
+                        <p>Your report for <strong>{job_position}</strong> has been confirmed. 
+                        The job post is now suspended.</p>
+                        <p>Thank you for helping maintain the quality of our platform.</p>
+                        """
+                    )
+                    email_count += 1
+                except Exception as e:
+                    print(f"❌ Reporter email error: {e}")
 
-            if report.get("reporter_id"):
-                create_notification(
-                    notification_type="applicant_reported",
-                    title="Report confirmed",
-                    message=f"Thanks for reporting {job_position}. We suspended the job post after review.",
-                    applicant_id=report["reporter_id"],
-                    related_ids=[job_id]
-                )
-                safe_send_email(
-                    "Report confirmed",
-                    report.get("reporter_email"),
-                    f"<p>Hi {report.get('reporter_name','Applicant')},</p>"
-                    f"<p>Your report for <strong>{job_position}</strong> has been confirmed. "
-                    "The job post is now suspended.</p>"
-                )
+            print(f"✅ Process completed - {email_count} emails sent")
 
             return jsonify({
                 "success": True,
-                "message": f"{job_position} was suspended and all applications were withdrawn.",
+                "message": f"{job_position} was suspended and all applications were cancelled. Employer has {days} days to respond.",
                 "job_status": "suspended",
                 "report_status": "Confirmed"
             })
 
-        # Reject branch
-        cursor.execute(
-            "UPDATE job_reports SET status = %s, updated_at = NOW() WHERE id = %s",
-            ("Rejected", report_id)
-        )
-        conn.commit()
-
-        if report.get("reporter_id"):
-            create_notification(
-                notification_type="applicant_reported",
-                title="Report rejected",
-                message="We reviewed your report and found no violation.",
-                applicant_id=report["reporter_id"],
-                related_ids=[job_id]
+        elif action == "reject":
+            print("🔄 Processing REJECT action...")
+            cursor.execute(
+                "UPDATE job_reports SET status = %s, updated_at = NOW() WHERE id = %s",
+                ("Rejected", report_id)
             )
-            safe_send_email(
-                "Report rejected",
-                report.get("reporter_email"),
-                f"<p>Hi {report.get('reporter_name','Applicant')},</p>"
-                f"<p>Your report for <strong>{job_position}</strong> was rejected. "
-                "Our moderators did not find sufficient evidence.</p>"
-                f"{f'<p>Moderator note: {moderator_note}</p>' if moderator_note else ''}"
-            )
+            conn.commit()
 
-        return jsonify({
-            "success": True,
-            "message": "Report rejected and reporter notified.",
-            "job_status": None,
-            "report_status": "Rejected"
-        })
+            # Send rejection email to reporter
+            reporter_email = report.get("reporter_email")
+            if reporter_email:
+                try:
+                    print(f"📧 Sending rejection email to reporter: {reporter_email}")
+                    safe_send_email(
+                        "Report rejected",
+                        reporter_email,
+                        f"""
+                        <p>Hi {report.get('reporter_name','Applicant')},</p>
+                        <p>Your report for <strong>{job_position}</strong> was rejected. 
+                        Our moderators did not find sufficient evidence.</p>
+                        {f'<p>Moderator note: {moderator_note}</p>' if moderator_note else ''}
+                        <p>Thank you for your understanding.</p>
+                        """
+                    )
+                except Exception as e:
+                    print(f"❌ Reporter rejection email error: {e}")
+
+            return jsonify({
+                "success": True,
+                "message": "Report rejected and reporter notified.",
+                "job_status": None,
+                "report_status": "Rejected"
+            })
+
     except Exception as exc:
         conn.rollback()
-        print(f"[v1] Failed to update job report {report_id}: {exc}")
-        return jsonify({"success": False, "message": "Failed to update job status"}), 500
+        print(f"❌ ERROR in handle_job_report_action: {exc}")
+        import traceback
+        traceback.print_exc()  # This will show the full error traceback
+        return jsonify({"success": False, "message": f"Failed to update job status: {str(exc)}"}), 500
     finally:
         cursor.close()
         conn.close()
@@ -1009,22 +1224,151 @@ def update_report_status():
 
     report_id = request.form.get("report_id")
     new_status = request.form.get("status")
+    days = request.form.get("days", 0)
+
+    print(f"🔄 Updating report {report_id} to {new_status} with {days} days")
 
     conn = create_connection()
-    cursor = conn.cursor()
+    if not conn:
+        return jsonify({"status": "error", "message": "Database connection failed"})
 
-    cursor.execute("""
-        UPDATE job_reports
-        SET status = %s
-        WHERE id = %s
-    """, (new_status, report_id))
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
+    cursor = conn.cursor(dictionary=True)
 
-    return jsonify({"status": "success", "message": "Status updated!"})
+    try:
+        # Update the report status
+        cursor.execute("""
+            UPDATE job_reports
+            SET status = %s
+            WHERE id = %s
+        """, (new_status, report_id))
+        
+        # If status is Confirmed, send emails and update job status
+        if new_status == "Confirmed":
+            # Get detailed report information
+            cursor.execute("""
+                SELECT 
+                    jr.job_id,
+                    jr.applicant_id AS reporter_id,
+                    j.job_position,
+                    j.employer_id,
+                    e.employer_name,
+                    e.email AS employer_email,
+                    a.email AS reporter_email,
+                    CONCAT(a.first_name, ' ', a.last_name) AS reporter_name
+                FROM job_reports jr
+                LEFT JOIN jobs j ON jr.job_id = j.job_id
+                LEFT JOIN employers e ON j.employer_id = e.employer_id
+                LEFT JOIN applicants a ON jr.applicant_id = a.applicant_id
+                WHERE jr.id = %s
+            """, (report_id,))
+            report = cursor.fetchone()
 
+            if report:
+                job_id = report['job_id']
+                job_position = report['job_position'] or "Job Post"
+                employer_email = report['employer_email']
+                
+                print(f"📊 Processing job {job_id}: {job_position}")
+
+                # 1. Update job status to suspended (sa employer side)
+                cursor.execute(
+                    "UPDATE jobs SET status = 'suspended' WHERE job_id = %s",
+                    (job_id,)
+                )
+
+                # 2. ✅ CORRECTED: Update applications status to 'Cancelled' (NOT 'Withdrawn')
+                cursor.execute(
+                    "UPDATE applications SET status = 'Cancelled' WHERE job_id = %s",
+                    (job_id,)
+                )
+
+                # 3. Get all applicants for this job to notify them
+                cursor.execute("""
+                    SELECT DISTINCT a.applicant_id, a.email, a.first_name, a.last_name
+                    FROM applications ap
+                    JOIN applicants a ON ap.applicant_id = a.applicant_id
+                    WHERE ap.job_id = %s AND a.email IS NOT NULL
+                """, (job_id,))
+                impacted_applicants = cursor.fetchall()
+
+                print(f"👥 Found {len(impacted_applicants)} applicants to notify")
+
+                # 4. Send email to Employer
+                if employer_email:
+                    try:
+                        safe_send_email(
+                            "Job Post Suspended - PESO SmartHire",
+                            employer_email,
+                            f"""
+                            <h3>Job Post Suspended</h3>
+                            <p>Dear {report['employer_name']},</p>
+                            <p>Your job post titled <strong>"{job_position}"</strong> has been reported and after review, has been confirmed.</p>
+                            <p>The job post is now <strong style="color: red;">SUSPENDED</strong> and all applications have been cancelled.</p>
+                            <p>You have <strong>{days} days</strong> to respond to this report.</p>
+                            <p>Please contact PESO SmartHire administration for more details.</p>
+                            <br>
+                            <p>Best regards,<br>PESO SmartHire Team</p>
+                            """
+                        )
+                        print(f"✅ Email sent to employer: {employer_email}")
+                    except Exception as e:
+                        print(f"❌ Failed to send email to employer: {e}")
+
+                # 5. Send emails to Applicants
+                for applicant in impacted_applicants:
+                    applicant_email = applicant['email']
+                    if applicant_email:
+                        try:
+                            safe_send_email(
+                                "Application Cancelled - PESO SmartHire",  # ✅ Changed subject
+                                applicant_email,
+                                f"""
+                                <h3>Application Cancelled</h3>
+                                <p>Dear {applicant['first_name']},</p>
+                                <p>Your application for the job post <strong>"{job_position}"</strong> has been <strong>CANCELLED</strong>.</p>
+                                <p>The job post was suspended after our investigation team confirmed a report against it.</p>
+                                <p>We apologize for any inconvenience this may cause.</p>
+                                <br>
+                                <p>Best regards,<br>PESO SmartHire Team</p>
+                                """
+                            )
+                            print(f"✅ Email sent to applicant: {applicant_email}")
+                        except Exception as e:
+                            print(f"❌ Failed to send email to applicant {applicant['applicant_id']}: {e}")
+
+                # 6. Send email to Reporter
+                reporter_email = report.get('reporter_email')
+                if reporter_email:
+                    try:
+                        safe_send_email(
+                            "Report Confirmed - PESO SmartHire",
+                            reporter_email,
+                            f"""
+                            <h3>Report Confirmed</h3>
+                            <p>Dear {report.get('reporter_name', 'User')},</p>
+                            <p>Your report for the job post <strong>"{job_position}"</strong> has been reviewed and confirmed.</p>
+                            <p>The job post has been suspended and all applications cancelled.</p>
+                            <p>Thank you for helping maintain the quality and safety of our platform.</p>
+                            <br>
+                            <p>Best regards,<br>PESO SmartHire Team</p>
+                            """
+                        )
+                        print(f"✅ Email sent to reporter: {reporter_email}")
+                    except Exception as e:
+                        print(f"❌ Failed to send email to reporter: {e}")
+
+        conn.commit()
+        print(f"✅ Successfully updated report {report_id} to {new_status}")
+        
+        return jsonify({"status": "success", "message": "Status updated and notifications sent!"})
+
+    except Exception as e:
+        conn.rollback()
+        print(f"❌ Database error: {e}")
+        return jsonify({"status": "error", "message": f"Database error: {str(e)}"})
+    finally:
+        cursor.close()
+        conn.close()
 
 @admin_bp.route("/applicants/<int:applicant_id>")
 def view_applicant(applicant_id):

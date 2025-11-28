@@ -911,61 +911,116 @@ function applyEmployerFilters() {
 
 document.querySelectorAll(".edit-status-btn[data-report-id]").forEach((btn) => {
   btn.addEventListener("click", function () {
-    if (typeof Swal === "undefined") {
-      return alert("Unable to open status editor. Please refresh the page.");
-    }
-
     const reportId = this.dataset.reportId;
 
+    // Step 1: Select Status
     Swal.fire({
       title: "Change Status",
       input: "select",
       inputOptions: {
         Pending: "Pending",
-        Confirm: "Confirm",
+        Confirm: "Confirm", 
         Reject: "Reject",
       },
       inputPlaceholder: "Select status",
       showCancelButton: true,
+      confirmButtonText: "OK",
+      cancelButtonText: "Cancel"
     }).then((result) => {
       if (!result.value) return;
 
       const status = result.value;
 
-      // ⚠️ If status is CONFIRM → ask for time frame
       if (status === "Confirm") {
+        // Step 2: Ask for days
         Swal.fire({
           title: "Set Report Time Frame",
-          input: "number",
+          input: "number", 
           inputLabel: "How many days is the employer allowed to respond?",
           inputPlaceholder: "Enter number of days...",
-          inputAttributes: { min: 1 },
+          inputAttributes: { min: 1, max: 30 },
           showCancelButton: true,
+          confirmButtonText: "OK", 
+          cancelButtonText: "Cancel",
+          validationMessage: "Please enter a number between 1 and 30"
         }).then((daysResult) => {
-          if (!daysResult.value) return;
+          if (daysResult.isDismissed) return;
 
           const days = daysResult.value;
+          if (!days || days < 1) {
+            Swal.fire("Error!", "Please enter a valid number of days.", "error");
+            return;
+          }
 
-          // SEND STATUS + DAYS TO BACKEND
+          console.log(`Confirming report ${reportId} with ${days} days`);
+
+          // Show loading
+          Swal.fire({
+            title: "Processing...",
+            text: "Updating status and sending notifications",
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          // Use the working endpoint
+          const formData = new FormData();
+          formData.append('report_id', reportId);
+          formData.append('status', 'Confirmed');
+          formData.append('days', days);
+
           fetch("/admin/update_report_status", {
             method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: `report_id=${reportId}&status=${status}&days=${days}`,
-          }).then(() => {
-            Swal.fire("Updated!", "Report status changed successfully.", "success")
-              .then(() => location.reload());
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            Swal.close();
+            if (data.status === "success") {
+
+              Swal.fire({
+              icon: "success",
+              title: "Success!",
+              html: `Report confirmed!<br><br>
+                    <strong>Emails sent to:</strong><br>
+                    • Employer (${days} days to respond)<br>
+                    • All applicants (applications cancelled)<br>
+                    • Reporter`,
+              confirmButtonText: "OK"
+            }).then(() => location.reload());
+            } else {
+              Swal.fire("Error!", data.message || "Failed to update status", "error");
+            }
+          })
+          .catch(err => {
+            Swal.close();
+            console.error("Error:", err);
+            Swal.fire("Error!", "Failed to update status. Please try again.", "error");
           });
         });
 
       } else {
-        // ⚠️ PENDING OR REJECT → direct update
+        // For Reject and Pending
+        const formData = new FormData();
+        formData.append('report_id', reportId);
+        formData.append('status', status);
+
         fetch("/admin/update_report_status", {
           method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `report_id=${reportId}&status=${status}`,
-        }).then(() => {
-          Swal.fire("Updated!", "Report status changed.", "success")
-            .then(() => location.reload());
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "success") {
+            Swal.fire("Success!", `Report status changed to ${status}.`, "success")
+              .then(() => location.reload());
+          } else {
+            Swal.fire("Error!", data.message || "Failed to update status", "error");
+          }
+        })
+        .catch(err => {
+          Swal.fire("Error!", "Failed to update status.", "error");
         });
       }
     });
@@ -1002,81 +1057,70 @@ if (jobActionButtons.length) {
 }
 
 document.querySelectorAll(".view-job-btn").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const jobId = btn.dataset.jobId;
-    const reportId = btn.dataset.reportId || null;
-    if (!jobId) return;
+  btn.addEventListener("click", function () {
+    const jobId = this.dataset.jobId;
+    const jobDetailsModal = document.getElementById("jobDetailsModal");
+    
+    jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
+      "<p style='text-align: center; padding: 20px;'>Loading job details...</p>";
+    jobDetailsModal.dataset.modalJobId = jobId;
+    jobDetailsModal.style.display = "flex";
+    console.log("[v0] Modal displayed");
 
-    resetJobActionFeedback();
-    toggleJobActionButtons(Boolean(reportId));
-
-    try {
-      const res = await fetch(`/admin/get_job_details/${jobId}`);
-      const payload = await res.json();
-      if (!res.ok || !payload.success) {
-        return showFlashMessage(payload.message || "Failed to load job details.", "danger");
-      }
-
-      const job = payload.job || {};
-      const employmentTypeRaw = job.employment_type || job.work_schedule;
-      const workScheduleRaw = job.work_schedule || job.employment_type;
-      const employmentTypeLabel = employmentTypeRaw ? formatStatusLabel(employmentTypeRaw) : "—";
-      const workScheduleLabel = workScheduleRaw ? formatStatusLabel(workScheduleRaw) : "—";
-      const statusLabel = formatStatusLabel(job.status || "Pending");
-
-      setElementText(modalJobTitleElement, job.title || "Untitled Job");
-      setElementText(modalEmployerElement, job.employer_name || "Unknown employer");
-      setElementText(modalLocationElement, job.location || "—");
-      if (modalSalaryElement)
-        modalSalaryElement.innerText = formatSalaryRange(job.min_salary, job.max_salary);
-
-      setElementText(modalEmploymentTypeBadge, employmentTypeLabel);
-      setElementText(modalEmploymentTypeValue, employmentTypeLabel);
-      setElementText(modalWorkScheduleBadge, workScheduleLabel);
-      setElementText(modalWorkScheduleValue, workScheduleLabel);
-
-      if (modalDescriptionElement)
-        modalDescriptionElement.innerText = job.description || "No description provided.";
-      applyStatusBadgeClass(statusLabel);
-      setElementText(modalJobStatusValue, statusLabel);
-      if (modalPostedDateElement)
-        modalPostedDateElement.innerText = formatDateTime(job.posted_at || job.created_at);
-      if (modalEmployerLink) {
-        if (job.employer_id) {
-          modalEmployerLink.style.display = "inline-flex";
-          modalEmployerLink.href = `/admin/employers/${job.employer_id}`;
-        } else {
-          modalEmployerLink.style.display = "none";
+    // CHANGE THIS LINE: Use admin route instead of applicants route
+    fetch(`/admin/job/${jobId}`, { credentials: "same-origin" })
+      .then((res) => {
+        console.log("[v0] Response status:", res.status);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
         }
-      }
-
-      if (modalRequirementsList) {
-        modalRequirementsList.innerHTML = "";
-        const requirements =
-          job.requirements && job.requirements.length
-            ? job.requirements
-            : ["No requirements provided."];
-        requirements.forEach((r) => {
-          const li = document.createElement("li");
-          li.innerText = r;
-          modalRequirementsList.appendChild(li);
-        });
-      }
-
-      activeJobContext = {
-        jobId,
-        reportId,
-        row: btn.closest("tr[data-report-id]") || null,
-      };
-
-      if (!jobModalElement) return;
-      showJobModal();
-    } catch (err) {
-      console.error("[v0] Failed to load job details", err);
-      showFlashMessage("Failed to load job details. Please try again.", "danger");
-    }
+        return res.text();
+      })
+      .then((html) => {
+        console.log("[v0] Loaded HTML length:", html.length);
+        jobDetailsModal.querySelector("#modal-body-unique").innerHTML = html;
+      })
+      .catch((err) => {
+        console.error("[v0] Fetch error:", err);
+        jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
+          "<p style='color: red; text-align: center;'>Failed to load job details. Please try again.</p>";
+      });
   });
 });
+
+// Helper function to safely set element text
+function setElementText(element, value, fallback = "—") {
+  if (!element) {
+    console.warn('[DEBUG] Attempted to set text on null element');
+    return;
+  }
+  element.textContent = value || fallback;
+}
+
+// Enhanced salary formatting with error handling
+function formatSalaryRange(min, max) {
+  try {
+    const formatter = new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+      minimumFractionDigits: 0,
+    });
+    
+    const numericMin = Number(min);
+    const numericMax = Number(max);
+    const hasMin = Number.isFinite(numericMin) && numericMin > 0;
+    const hasMax = Number.isFinite(numericMax) && numericMax > 0;
+
+    if (!hasMin && !hasMax) return "Not specified";
+    if (hasMin && hasMax) {
+      return `${formatter.format(numericMin)} - ${formatter.format(numericMax)}`;
+    }
+    return formatter.format(hasMin ? numericMin : numericMax);
+  } catch (error) {
+    console.error('[DEBUG] Error formatting salary:', error);
+    return "Salary not specified";
+  }
+}
 
 jobActionButtons.forEach((button) => {
   button.addEventListener("click", () => {

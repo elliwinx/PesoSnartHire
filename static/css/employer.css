@@ -405,6 +405,13 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.listing-card[data-status="suspended"] .action-btn[data-action="delete"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+}
+
 /* Hover stays the same */
 .listing-card:hover {
   transform: translateY(-2px);

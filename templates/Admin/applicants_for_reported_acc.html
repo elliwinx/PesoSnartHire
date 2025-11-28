@@ -345,11 +345,11 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Job Title</th>
-            <th>Employer Name</th>
-            <th>Reported By</th>
-            <th>Date Reported</th>
-            <th>Reason</th>
+            <th style="width: 10%;">Job Title</th>
+            <th style="width: 15%;">Employer Name</th>
+            <th style="width: 15%;">Reported By</th>
+            <th style="width: 15%;">Date Reported</th>
+            <th style="width: 10%;">Reason</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -404,7 +404,7 @@
                     <i class="fa-solid fa-user-tie"></i> Employer
                     </a>
                 {% else %}
-                  <button class="btn btn-sm btn-secondary" disabled>
+                  <button class="btn btn-sm btn-secondary" disabled style="width: 108px;">
                     <i class="fa-solid fa-user-slash"></i>
                   </button>
                 {% endif %}
@@ -493,106 +493,18 @@
     </footer>
 
     <!-- View Job Modal -->
-    <div class="modal fade job-review-modal" id="viewJobModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content job-modal-shell">
-          <div class="job-modal-header">
-            <div class="job-header-text">
-              <p class="eyebrow">Reported job post</p>
-              <h2 id="modalJobTitle">Job Title</h2>
-              <div class="job-modal-badges">
-                <span id="modalJobStatus" class="badge job-status-chip">Pending</span>
-                <span id="modalEmploymentType" class="badge job-type-chip">—</span>
-                <span id="modalWorkSchedule" class="badge job-schedule-chip">—</span>
-              </div>
-            </div>
-            <div class="job-modal-salary-chip">
-              <span>Salary range</span>
-              <strong id="modalSalary">Not specified</strong>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-
-          <div class="modal-body job-modal-body">
-            <div class="job-info-grid">
-              <article class="job-info-card">
-                <span class="label">Employer</span>
-                <p id="modalEmployerName">—</p>
-              </article>
-              <article class="job-info-card">
-                <span class="label">Location</span>
-                <p id="modalLocation">—</p>
-              </article>
-              <article class="job-info-card">
-                <span class="label">Employment Type</span>
-                <p id="modalEmploymentTypeValue">—</p>
-              </article>
-              <article class="job-info-card">
-                <span class="label">Work Schedule</span>
-                <p id="modalWorkScheduleValue">—</p>
-              </article>
-              <article class="job-info-card">
-                <span class="label">Posted On</span>
-                <p id="modalPostedDate">—</p>
-              </article>
-              <article class="job-info-card">
-                <span class="label">Current Status</span>
-                <p id="modalJobStatusValue">—</p>
-              </article>
-            </div>
-
-            <div class="job-longform">
-              <details class="job-collapsible" open>
-                <summary>
-                  <span><i class="fa-solid fa-align-left"></i> Description</span>
-                  <i class="fa-solid fa-chevron-down"></i>
-                </summary>
-            <p id="modalDescription"></p>
-              </details>
-
-              <details class="job-collapsible" open>
-                <summary>
-                  <span><i class="fa-solid fa-list-check"></i> Qualifications / Requirements</span>
-                  <i class="fa-solid fa-chevron-down"></i>
-                </summary>
-            <ul id="modalRequirements"></ul>
-              </details>
-            </div>
-          </div>
-
-          <div class="modal-footer job-action-footer">
-            <div class="job-action-feedback">
-              <span id="jobActionFeedback" class="text-muted small"></span>
-            </div>
-            <div class="job-action-toolbar">
-              <button type="button" class="btn job-action-btn job-suspend" data-job-action="confirm">
-                <i class="fa-solid fa-ban"></i> Suspend Job
-              </button>
-              <button type="button" class="btn job-action-btn job-reject" data-job-action="reject">
-                <i class="fa-solid fa-xmark"></i> Reject Report
-              </button>
-              <a
-                id="modalEmployerLink"
-                class="btn btn-outline-secondary"
-                href="#"
-                target="_blank"
-                rel="noopener"
-                style="display: none"
-              >
-                <i class="fa-solid fa-user-tie"></i> View Employer
-              </a>
-            </div>
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-              Close
-            </button>
-          </div>
+    <div id="jobDetailsModal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <div id="modal-body-unique">
+          <!-- Job details will be loaded here -->
         </div>
       </div>
     </div>
 
     {% include 'partials/loader.html' %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{{ url_for('static', filename='js/report-modal') }}"></script>
+    <script src="{{ url_for('static', filename='js/report-modal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>

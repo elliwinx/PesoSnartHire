@@ -879,6 +879,7 @@ input[type="email"] {
   background: white;
   border-radius: 10px;
   padding: 40px;
+  width: 30%;
 }
 
 .modal-content-edit-status {
@@ -1252,6 +1253,7 @@ input[type="email"] {
   color: #4b5563;
   line-height: 1.4;
   word-break: break-word;
+  margin-left: 10px;
 }
 
 .action-chip-group {
@@ -1334,10 +1336,14 @@ tbody tr:hover {
 
 .btn-outline-success {
   color: #198754;
+  width: 109px;
+  height: 40px;
 }
 
 .btn-outline-danger {
   color: #dc3545;
+  width: 109px;
+  height: 40px;
 }
 
 .btn-outline-dark {
@@ -1346,6 +1352,7 @@ tbody tr:hover {
 
 .btn-outline-warning {
   color: #b45309;
+  width: 225px;
 }
 
 .btn-outline-info {
@@ -1383,9 +1390,9 @@ tbody tr:hover {
 }
 
 .btn-outline-warning:hover {
-  background: #b45309;
+  background: #7b1113;
   color: #fff;
-  border-color: #b45309;
+  border-color: #7b1113;
 }
 
 .btn-outline-info:hover {

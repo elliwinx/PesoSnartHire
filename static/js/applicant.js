@@ -47,40 +47,43 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("[v0] Initializing applicant.js");
 
   // ================== DROPDOWN MENU ==================
-  const menuToggle = document.getElementById("menuToggle");
-  const dropdownMenu = document.getElementById("dropdownMenu");
+const menuToggle = document.getElementById("menuToggle");
+const dropdownMenu = document.getElementById("dropdownMenu");
 
-  if (menuToggle && dropdownMenu) {
-    dropdownMenu.classList.remove("show", "open");
-    dropdownMenu.style.display = "none";
-    menuToggle.setAttribute("aria-expanded", "false");
+if (menuToggle && dropdownMenu) {
+  dropdownMenu.classList.remove("show", "open");
+  dropdownMenu.style.display = "none";
+  menuToggle.setAttribute("aria-expanded", "false");
 
-    menuToggle.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const isOpen = dropdownMenu.toggleClass("show");
-      dropdownMenu.classList.toggle("open", isOpen);
-      dropdownMenu.style.display = isOpen ? "block" : "none";
-      menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
-    });
+  menuToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    
+    // FIXED: Use classList.toggle instead of toggleClass
+    const wasHidden = !dropdownMenu.classList.contains("show");
+    dropdownMenu.classList.toggle("show");
+    dropdownMenu.classList.toggle("open", wasHidden);
+    dropdownMenu.style.display = wasHidden ? "block" : "none";
+    menuToggle.setAttribute("aria-expanded", wasHidden ? "true" : "false");
+  });
 
-    document.addEventListener("click", (e) => {
-      if (!dropdownMenu.contains(e.target) && !menuToggle.contains(e.target)) {
-        if (dropdownMenu.classList.contains("show")) {
-          dropdownMenu.classList.remove("show", "open");
-          dropdownMenu.style.display = "none";
-          menuToggle.setAttribute("aria-expanded", "false");
-        }
-      }
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && dropdownMenu.classList.contains("show")) {
+  document.addEventListener("click", (e) => {
+    if (!dropdownMenu.contains(e.target) && !menuToggle.contains(e.target)) {
+      if (dropdownMenu.classList.contains("show")) {
         dropdownMenu.classList.remove("show", "open");
         dropdownMenu.style.display = "none";
         menuToggle.setAttribute("aria-expanded", "false");
       }
-    });
-  }
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && dropdownMenu.classList.contains("show")) {
+      dropdownMenu.classList.remove("show", "open");
+      dropdownMenu.style.display = "none";
+      menuToggle.setAttribute("aria-expanded", "false");
+    }
+  });
+}
 
   // ================== TAB SWITCHING ==================
   const buttons = document.querySelectorAll(".tab-btn");
