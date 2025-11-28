@@ -627,7 +627,9 @@ def applicant_home():
                 employers.city AS location,
                 (SELECT COUNT(*) FROM applications
                  WHERE applications.job_id = jobs.job_id
-                 AND applications.applicant_id = %s) as has_applied
+                 AND applications.applicant_id = %s
+                 AND TRIM(applications.status) != 'Cancelled' 
+                ) as has_applied
             FROM jobs
             LEFT JOIN employers ON jobs.employer_id = employers.employer_id
             WHERE jobs.status = 'active'
@@ -658,20 +660,30 @@ def apply_job(job_id):
     try:
         applicant_id = session["applicant_id"]
 
-        existing = run_query(
+        # 1. CHECK STATUS (Don't just check existence)
+        existing_app = run_query(
             conn,
-            "SELECT 1 FROM applications WHERE job_id=%s AND applicant_id=%s",
+            "SELECT id, status FROM applications WHERE job_id=%s AND applicant_id=%s",
             (job_id, applicant_id),
             fetch="one"
         )
-        if existing:
-            return jsonify({"success": False, "message": "You have already applied to this job."}), 400
+
+        is_reactivation = False
+
+        if existing_app:
+            # If application exists AND is active (not Cancelled), block them
+            if existing_app['status'] != 'Cancelled':
+                return jsonify({"success": False, "message": "You have already applied to this job."}), 400
+
+            # If it IS Cancelled, we will Reactivate it instead of inserting new
+            is_reactivation = True
+            application_id = existing_app['id']
 
         job_details = run_query(
             conn,
-            """SELECT j.job_position, j.employer_id, e.employer_name
-               FROM jobs j
-               JOIN employers e ON j.employer_id = e.employer_id
+            """SELECT j.job_position, j.employer_id, e.employer_name 
+               FROM jobs j 
+               JOIN employers e ON j.employer_id = e.employer_id 
                WHERE j.job_id = %s""",
             (job_id,),
             fetch="one"
@@ -684,79 +696,69 @@ def apply_job(job_id):
             fetch="one"
         )
 
-        # Insert application
-        run_query(
-            conn,
-            "INSERT INTO applications (job_id, applicant_id, applied_at) VALUES (%s, %s, NOW())",
-            (job_id, applicant_id)
-        )
+        # 2. PERFORM INSERT OR UPDATE
+        if is_reactivation:
+            # A. REACTIVATE: Update the old 'Cancelled' row back to 'Pending'
+            run_query(
+                conn,
+                "UPDATE applications SET status = 'Pending', applied_at = NOW() WHERE id = %s",
+                (application_id,)
+            )
 
+            # Add History Log for Reactivation
+            run_query(
+                conn,
+                """INSERT INTO applications_history 
+                   (application_id, old_status, new_status, changed_by, changed_at, note) 
+                   VALUES (%s, 'Cancelled', 'Pending', %s, NOW(), 'Applicant re-applied')""",
+                (application_id, applicant_id)
+            )
+        else:
+            # B. NEW APPLICATION: Insert fresh row
+            run_query(
+                conn,
+                "INSERT INTO applications (job_id, applicant_id, applied_at, status) VALUES (%s, %s, NOW(), 'Pending')",
+                (job_id, applicant_id)
+            )
+
+        # 3. NOTIFICATIONS & COUNTS (Same logic for both)
         if job_details and applicant_details:
             employer_id = job_details["employer_id"]
             job_position = job_details["job_position"]
             applicant_name = f"{applicant_details['first_name']} {applicant_details['last_name']}"
 
-            # Use existing notification system
+            # Send Notification
             try:
                 create_notification(
-                    # Use job_application notification type instead of employer_approval
                     notification_type='job_application',
                     title=f"New Application for {job_position}",
-                    message=f"{applicant_name} has applied to your job posting",
+                    message=f"{applicant_name} has applied (or re-applied) to your job posting",
                     count=1,
                     related_ids=[job_id],
                     employer_id=employer_id
                 )
             except Exception as notif_error:
                 print(f"[v0] Error creating notification: {notif_error}")
-                # Continue even if notification fails
 
-            # Try to increment employer applicant count if column exists
+            # Increment Employer Count
             try:
                 run_query(
-                    conn,
-                    "UPDATE employers SET application_count = application_count + 1 WHERE employer_id = %s",
-                    (employer_id,)
-                )
-            except Exception as e:
-                # Fallback to old column name if DB still uses applicant_count
-                try:
-                    run_query(
-                        conn,
-                        "UPDATE employers SET applicant_count = application_count + 1 WHERE employer_id = %s",
-                        (employer_id,)
-                    )
-                except Exception:
-                    print(
-                        "[v0] Skipping employers application count update (columns may be missing):", e)
-
-            # Also increment the job's application_count so frontend shows correct count
-            try:
-                run_query(
-                    conn,
-                    "UPDATE jobs SET application_count = application_count + 1 WHERE job_id = %s",
-                    (job_id,)
-                )
+                    conn, "UPDATE employers SET application_count = application_count + 1 WHERE employer_id = %s", (employer_id,))
             except Exception:
-                try:
-                    run_query(
-                        conn,
-                        "UPDATE jobs SET applicant_count = applicant_count + 1 WHERE job_id = %s",
-                        (job_id,)
-                    )
-                except Exception:
-                    # ignore if column missing
-                    pass
+                pass  # Ignore if column missing
+
+            # Increment Job Count
+            try:
+                run_query(
+                    conn, "UPDATE jobs SET application_count = application_count + 1 WHERE job_id = %s", (job_id,))
+            except Exception:
+                pass
 
         conn.commit()
 
-        # Fetch updated job applicant count
+        # Fetch updated count for frontend
         new_count_row = run_query(
-            conn,
-            "SELECT application_count FROM jobs WHERE job_id = %s",
-            (job_id,),
-            fetch="one"
-        )
+            conn, "SELECT application_count FROM jobs WHERE job_id = %s", (job_id,), fetch="one")
         new_count = new_count_row["application_count"] if new_count_row else 0
 
         return jsonify({

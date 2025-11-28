@@ -1312,7 +1312,12 @@ document.addEventListener("DOMContentLoaded", () => {
     e.stopPropagation();
 
     const jobId = detailsBtn.dataset.jobId;
-    console.log("[v0] Details clicked for job:", jobId);
+
+    // ✅ NEW: Get the applied status from the button we clicked
+    // This reads the data-has-applied="1" we added in HTML
+    const hasApplied = detailsBtn.getAttribute("data-has-applied") === "1";
+
+    console.log("[v0] Details clicked for job:", jobId, "Applied:", hasApplied);
 
     if (!jobId) {
       console.log("[v0] No job ID found");
@@ -1324,6 +1329,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // ✅ NEW: Update the Modal Apply Button based on status
+    if (modalApplyBtn) {
+      if (hasApplied) {
+        modalApplyBtn.textContent = "Application Sent";
+        modalApplyBtn.disabled = true;
+        modalApplyBtn.style.backgroundColor = "#6c757d"; // Optional: Gray it out
+        modalApplyBtn.style.cursor = "not-allowed";
+      } else {
+        modalApplyBtn.textContent = "Apply Now";
+        modalApplyBtn.disabled = false;
+        modalApplyBtn.style.backgroundColor = ""; // Reset to default
+        modalApplyBtn.style.cursor = "pointer";
+      }
+    }
+
+    // --- The rest of your existing code stays the same ---
     jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
       "<p style='text-align: center; padding: 20px;'>Loading job details...</p>";
     jobDetailsModal.dataset.modalJobId = jobId;

@@ -304,6 +304,7 @@ body {
   padding: 0 18px; /* horizontal only */
   line-height: 1 !important;
   width: 100px;
+  gap: 5px;
 }
 
 .job-actions .right-button {
@@ -2281,4 +2282,36 @@ input[type="password"]:focus {
   background: white;
   color: #333;
   border: 1px solid #333;
+}
+
+/* Ensure the stamp stays inside the card */
+.job-card {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The Stamp Design */
+.applied-ribbon {
+  position: absolute;
+  top: 12px;
+  right: -30px; /* Offset to corners */
+  background-color: #28a745; /* Green */
+  color: white;
+  padding: 5px 30px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  transform: rotate(45deg); /* Angled look */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+  pointer-events: none; /* Allows clicking items behind it */
+}
+
+/* Optional: Style for the disabled button */
+.btn-applied {
+  background-color: #e9ecef;
+  color: #28a745;
+  border: 1px solid #28a745;
+  cursor: not-allowed;
+  opacity: 0.8;
 }

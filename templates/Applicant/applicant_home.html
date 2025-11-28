@@ -184,6 +184,11 @@
             data-title="{{ job.job_position|default('') }}"
             data-company="{{ job.company_name|default('') }}"
           >
+            {% if job.has_applied > 0 %}
+            <div class="applied-ribbon">
+              <i class="fas fa-check"></i> Applied
+            </div>
+            {% endif %}
             <div class="job-card-top">
               <div class="logo-and-title">
                 <img
@@ -215,7 +220,6 @@
                 Vacancies | {{ job.work_schedule or 'Full-Time' }}
               </p>
 
-              <!-- Visible industry and recruitment type for users -->
               <p class="job-industry-visible">
                 <i class="fa-solid fa-building"></i> {{ job.industry or 'N/A' }}
               </p>
@@ -225,7 +229,6 @@
               </p>
             </div>
 
-            <!-- Hidden spans for filtering -->
             <span class="job-industry" style="display: none"
               >{{ job.industry }}</span
             >
@@ -242,8 +245,16 @@
                   href="#"
                   class="btn btn-details"
                   data-job-id="{{ job.job_id }}"
-                  >Details</a
+                  data-has-applied="{{ 1 if job.has_applied > 0 else 0 }}"
                 >
+                  Details
+                </a>
+
+                {% if job.has_applied > 0 %}
+                <button type="button" class="btn btn-applied" disabled>
+                  <i class="fas fa-check-circle"></i>Applied
+                </button>
+                {% else %}
                 <form
                   id="applyForm-{{ job.job_id }}"
                   action="{{ url_for('applicants.apply_job', job_id=job.job_id) }}"
@@ -258,6 +269,7 @@
                     Apply
                   </button>
                 </form>
+                {% endif %}
               </div>
               <div class="right-button">
                 <button
@@ -266,7 +278,7 @@
                   data-report-trigger
                   data-report-endpoint="{{ url_for('applicants.report_job', job_id=job.job_id) }}"
                   data-report-title="Report Job Post"
-                  data-report-helper="Let us know why this job post should be reviewed. Your message goes directly to PESO SmartHire."
+                  data-report-helper="Let us know why this job post should be reviewed."
                   data-report-type="job"
                   data-report-id="{{ job.job_id }}"
                   data-report-success="Thank you! We'll review this job post soon."
