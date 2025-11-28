@@ -215,3 +215,155 @@ document.addEventListener("DOMContentLoaded", () => {
     updateNotifBadge();
   }, 30000);
 });
+
+if (typeof window.notifSystemInitialized === "undefined") {
+  window.notifSystemInitialized = true;
+  window.currentFilter = "all";
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const notificationList = document.getElementById("notificationList");
+  if (!notificationList) return console.warn("[v0] Notification container missing, aborting notifications.");
+
+  const fetchNotifications = async (filter = "all") => {
+    console.log("[v0] Fetching notifications with filter:", filter);
+
+    try {
+      const response = await fetch(`/admin/api/notifications?filter=${filter}`);
+      if (!response.ok) throw new Error("Failed to fetch notifications");
+
+      const data = await response.json();
+      console.log("[v0] Notifications received:", data.notifications?.length || 0);
+
+      displayNotifications(data.notifications || []);
+    } catch (err) {
+      console.error("[v0] Error fetching notifications:", err);
+      notificationList.innerHTML = `
+        <p style="text-align:center;color:#e74c3c;padding:2rem;">
+          Failed to load notifications. Please refresh.
+        </p>
+      `;
+    }
+  };
+
+  const displayNotifications = (notifications) => {
+    if (!notificationList) return;
+    if (!notifications || notifications.length === 0) {
+      notificationList.innerHTML = `
+        <p style="text-align:center;color:#666;padding:2rem;">No notifications to display.</p>
+      `;
+      return;
+    }
+
+    notificationList.innerHTML = notifications.map((notif) => {
+      const timeAgo = getTimeAgo(notif.created_at);
+      const isNew = !notif.is_read;
+      const badge = isNew ? '<span class="badge">NEW</span>' : "";
+
+      return `
+        <div class="card ${isNew ? "unread" : ""}" data-notification-id="${notif.notification_id}" data-redirect="${notif.redirect_url || "#"}">
+          <div class="card-details">
+            <h3>${notif.title}</h3>
+            <p>${notif.message}</p>
+            <small>Type: ${notif.notification_type} | Recruitment: ${notif.recruitment_type || "N/A"} | ${timeAgo}</small>
+          </div>
+          <div class="card-actions">
+            ${badge}
+            <a href="${notif.redirect_url || "#"}" class="view-btn">
+              <i class="fa-solid fa-eye"></i> View
+            </a>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // Add click handlers safely
+    document.querySelectorAll(".card").forEach((card) => card.addEventListener("click", handleNotificationClick));
+    document.querySelectorAll(".view-btn").forEach((btn) => {
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const card = btn.closest(".card");
+        if (!card) return;
+        const redirectUrl = btn.getAttribute("href") || card.dataset.redirect;
+        const notificationId = card.dataset.notificationId;
+
+        try {
+          await fetch(`/admin/api/notifications/${notificationId}/read`, { method: "POST" });
+          fetchNotifications(window.currentFilter);
+        } catch (err) { console.error(err); }
+
+        if (redirectUrl && redirectUrl !== "#") window.location.href = redirectUrl;
+      });
+    });
+  };
+
+  // --- NOTIFICATION CONTAINER CHECK ---
+const notificationContainer = document.getElementById("notificationList")
+if (!notificationContainer) {
+  console.warn("[admin.js] Notification container not found!")
+}
+
+console.log("[v0] Admin page loaded - modal setup skipped for reported posts view")
+
+  const handleNotificationClick = async (event) => {
+    const card = event.currentTarget;
+    const notificationId = card.dataset.notificationId;
+    const redirectUrl = card.dataset.redirect;
+
+    try {
+      await fetch(`/admin/api/notifications/${notificationId}/read`, { method: "POST" });
+      fetchNotifications(window.currentFilter);
+    } catch (err) { console.error(err); }
+
+    if (redirectUrl && redirectUrl !== "#") window.location.href = redirectUrl;
+  };
+
+  const getTimeAgo = (timestamp) => {
+    const now = new Date();
+    const notifTime = new Date(timestamp);
+    const diffMins = Math.floor((now - notifTime) / 60000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? "s" : ""} ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    return `${Math.floor(diffHours / 24)} day${diffHours / 24 > 1 ? "s" : ""} ago`;
+  };
+
+  // Filter buttons
+  const setupFilterButtons = () => {
+    document.querySelectorAll(".tab-group button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-group button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        window.currentFilter = btn.dataset.filter || "all";
+        fetchNotifications(window.currentFilter);
+      });
+    });
+  };
+
+  const updateNotifBadge = async () => {
+    try {
+      const res = await fetch("/admin/api/notifications/unread-count");
+      const data = await res.json();
+      let badge = document.getElementById("notifBadge");
+      if (!badge) {
+        document.querySelectorAll(".nav-link, .nav-link-active").forEach(link => {
+          const b = link.querySelector(".notif-badge");
+          if (b) badge = b;
+        });
+      }
+      if (!badge) return;
+      if (data.success && data.unread_count > 0) {
+        badge.style.display = "inline-block";
+        badge.textContent = "●";
+      } else badge.style.display = "none";
+    } catch (err) { console.error(err); }
+  };
+
+  // Init
+  setupFilterButtons();
+  fetchNotifications(window.currentFilter);
+  updateNotifBadge();
+  setInterval(() => { fetchNotifications(window.currentFilter); updateNotifBadge(); }, 30000);
+});

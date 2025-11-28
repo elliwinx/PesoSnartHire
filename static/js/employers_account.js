@@ -410,52 +410,89 @@ document.addEventListener("DOMContentLoaded", () => {
     img.style.opacity = "1";
   });
 });
+const deactivateBtn = document.getElementById("deactivateAccountBtn");
 
-document
-  .getElementById("deactivateAccountBtn")
-  .addEventListener("click", async () => {
-    // 1️⃣ Ask for confirmation
-    const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "Your account will be permanently deleted after 30 days.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#8b0d0d",
-      cancelButtonColor: "gray",
-      confirmButtonText: "Confirm",
-      cancelButtonText: "Cancel",
-    });
-
-    // 2️⃣ Stop if user canceled
-    if (!confirmDelete.isConfirmed) return;
-
-    // 3️⃣ Show loader
-    showLoader("Deactivating account — please wait…");
-
+if (deactivateBtn) {
+  deactivateBtn.addEventListener("click", async (e) => {
+    e.preventDefault(); // ✅ Prevent default action
+    
     try {
-      // 4️⃣ Call backend
-      const res = await fetch("/employers/deactivate", { method: "POST" });
-      const data = await res.json();
-
-      if (data.success) {
-        // 5️⃣ Keep loader visible for a short time (1.5s) before logout
-        setTimeout(() => {
-          hideLoader();
-          window.location.href = "/"; // logout/redirect
-        }, 1500);
-      } else {
-        hideLoader();
-        Swal.fire("Error", data.message, "error");
+      // ✅ SAFETY CHECK - Wait for SweetAlert to be available
+      let retries = 0;
+      const maxRetries = 10;
+      
+      while (typeof window.Swal === 'undefined' && retries < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retries++;
       }
-    } catch (err) {
+      
+      // ✅ FINAL CHECK - If still not available, use fallback
+      if (typeof window.Swal === 'undefined') {
+        console.warn('SweetAlert2 not loaded after retries, using fallback');
+        if (confirm('Are you sure? Your account will be permanently deleted after 30 days.')) {
+          await deactivateAccount();
+        }
+        return;
+      }
+
+      // ✅ Now safely use SweetAlert
+      const confirmDelete = await window.Swal.fire({
+        title: "Are you sure?",
+        text: "Your account will be permanently deleted after 30 days.",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#8b0d0d",
+        cancelButtonColor: "gray",
+        confirmButtonText: "Confirm",
+        cancelButtonText: "Cancel",
+      });
+
+      if (!confirmDelete.isConfirmed) return;
+
+      await deactivateAccount();
+      
+    } catch (error) {
+      console.error('Deactivation process error:', error);
+    }
+  });
+}
+
+// ✅ Separate function for the deactivation logic
+async function deactivateAccount() {
+  showLoader("Deactivating account — please wait…");
+
+  try {
+    const res = await fetch("/employers/deactivate", { method: "POST" });
+    const data = await res.json();
+
+    if (data.success) {
+      setTimeout(() => {
+        hideLoader();
+        window.location.href = "/";
+      }, 1500);
+    } else {
       hideLoader();
-      Swal.fire(
+      // Use fallback if SweetAlert fails
+      if (typeof window.Swal !== 'undefined') {
+        window.Swal.fire("Error", data.message, "error");
+      } else {
+        alert("Error: " + data.message);
+      }
+    }
+  } catch (err) {
+    hideLoader();
+    // Use fallback if SweetAlert fails
+    if (typeof window.Swal !== 'undefined') {
+      window.Swal.fire(
         "Error",
         "Something went wrong. Please try again later.",
         "error"
       );
+    } else {
+      alert("Something went wrong. Please try again later.");
     }
-  });
+  }
+}
 
 // Loader control functions
 function showLoader(text = "Processing — please wait...") {

@@ -358,6 +358,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const card = this.closest(".listing-card");
         const currentStatus = card?.dataset.status?.toLowerCase();
         const isArchived = currentStatus === "archived";
+        const isSuspended = currentStatus === "suspended";
+
+        // PREVENT DELETION OF SUSPENDED JOBS
+        if (action === "delete" && isSuspended) {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Cannot Delete Suspended Job',
+            html: `This job post has been <strong>suspended</strong> and cannot be deleted.<br><br>
+                  Please contact <strong>PESO SmartHire Admin</strong> for assistance.`,
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#7b1113'
+          });
+          return;
+        }
 
         const actionTexts = {
           archive: {
@@ -402,12 +416,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 }, 1500);
               } else {
                 hideLoader();
-                location.reload();
+                // Show error message if deletion failed (e.g., backend also blocked it)
+                if (data.message) {
+                  Swal.fire({
+                    icon: 'error',
+                    title: 'Action Failed',
+                    text: data.message,
+                    confirmButtonText: 'OK'
+                  });
+                } else {
+                  location.reload();
+                }
               }
             })
-            .catch(() => {
+            .catch((error) => {
               hideLoader();
-              location.reload();
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to complete action. Please try again.',
+                confirmButtonText: 'OK'
+              });
             });
         }
       });

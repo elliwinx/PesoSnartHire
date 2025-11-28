@@ -1136,14 +1136,22 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
+      if (!reportingJobId) {
+        showFlash("Unable to determine which job to report.", "danger");
+        return;
+      }
+
       try {
-        const res = await fetch("/applicants/report", {
+        const res = await fetch(`/applicants/report_job/${reportingJobId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.JSON.stringify({ job_id: reportingJobId, reason }),
+          body: JSON.stringify({ reason }),
           credentials: "same-origin",
         });
         const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to submit report.");
+        }
 
         if (data.success) {
           showFlash("Report submitted successfully. Thank you!", "success");

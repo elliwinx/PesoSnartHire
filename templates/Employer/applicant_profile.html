@@ -25,8 +25,14 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/report-modal.css') }}"
+    />
   </head>
-  <body>
+  <body
+    data-report-url="{{ url_for('employers.report_applicant', applicant_id=applicant.applicant_id) }}"
+  >
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -93,12 +99,12 @@
             ></a>
           </div>
         </div>
-        <div class="right">
+        <!--<div class="right">
           <i class="fa-solid fa-bars" id="menuToggle"></i>
           <div class="dropdown-menu" id="dropdownMenu">
-            <a href="#" id="reportAccountBtn">Report Account</a>
+            <a href="#" id="reportAccountBtn" data-report-applicant-trigger>Report Applicant</a>
           </div>
-        </div>
+        </div>-->
       </div>
     </section>
 
@@ -128,6 +134,29 @@
               'N/A' }}
             </p>
             <p><strong>Status:</strong> {{ applicant.status or 'N/A' }}</p>
+          </div>
+          <div class="profile-actions">
+            {% set context_options = namespace(items=[{'value': '', 'label':
+            'Not tied to a specific job'}]) %} {% for app in applications %} {%
+            set _ = context_options.items.append({'value': app.job_id, 'label':
+            app.job_position or ('Job ID ' ~ app.job_id)}) %} {% endfor %}
+            <button
+              type="button"
+              class="report-account-chip"
+              data-report-trigger
+              data-report-endpoint="{{ url_for('employers.report_applicant', applicant_id=applicant.applicant_id) }}"
+              data-report-title="Report Applicant"
+              data-report-helper="Explain why this applicant should be reviewed. Your note goes directly to the admin team."
+              data-report-type="applicant"
+              data-reported-id="{{ applicant.applicant_id }}"
+              data-report-context-options="{{ context_options.items|tojson }}"
+              data-report-context-label="Related job posting"
+              data-report-context-field="job_id"
+              data-report-min-length="10"
+              data-report-success="Thanks! We'll review this applicant soon."
+            >
+              <i class="fa-solid fa-flag"></i> Report Applicant
+            </button>
           </div>
         </div>
 
@@ -343,27 +372,6 @@
         }
       });
 
-      document.addEventListener("DOMContentLoaded", () => {
-        const menuToggle = document.getElementById("menuToggle");
-        const dropdownMenu = document.getElementById("dropdownMenu");
-
-        // Toggle dropdown on click
-        menuToggle.addEventListener("click", (event) => {
-          event.stopPropagation(); // prevents from closing immediately
-          dropdownMenu.classList.toggle("show");
-        });
-
-        // Close when clicking outside
-        document.addEventListener("click", (event) => {
-          if (
-            !dropdownMenu.contains(event.target) &&
-            event.target !== menuToggle
-          ) {
-            dropdownMenu.classList.remove("show");
-          }
-        });
-      });
-
       let currentApplicationId = null;
 
       // Open modal when Edit Status button is clicked
@@ -430,6 +438,7 @@
       });
     </script>
 
+    {% include 'partials/report_modal.html' %}
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -498,6 +507,6 @@
     {% include 'partials/loader.html' %}
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/notification-dot.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/report-modal.js') }}"></script>
   </body>
 </html>

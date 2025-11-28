@@ -405,6 +405,13 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.listing-card[data-status="suspended"] .action-btn[data-action="delete"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
+}
+
 /* Hover stays the same */
 .listing-card:hover {
   transform: translateY(-2px);
@@ -791,6 +798,17 @@ body {
 
 .social-links a:hover {
   color: #7b1113;
+}
+
+@media (max-width: 640px) {
+  .profile-header {
+    flex-direction: column;
+  }
+
+  .profile-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 /* Modal */
@@ -1907,6 +1925,33 @@ input[type="password"]:focus {
 .profile-details strong {
   font-weight: 600;
   color: black;
+}
+
+.profile-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-start;
+}
+
+.report-account-chip {
+  border: 1px solid #c53030;
+  background: rgba(197, 48, 48, 0.08);
+  color: #b91c1c;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.report-account-chip:hover {
+  background: #b91c1c;
+  color: #fff;
+  border-color: transparent;
 }
 
 .section {

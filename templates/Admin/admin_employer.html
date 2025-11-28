@@ -127,7 +127,12 @@
       >
         View All Employers
       </button>
-      <button data-url="#">Reported Accounts</button>
+      <button
+        data-url="{{ url_for('admin.reported_applicants') }}"
+        onclick="window.location.href=this.getAttribute('data-url')"
+      >
+        Reported Accounts
+      </button>
     </div>
 
     <!-- Footer -->
