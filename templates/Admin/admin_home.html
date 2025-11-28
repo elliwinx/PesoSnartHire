@@ -66,10 +66,10 @@
           <a
             href="{{ url_for('admin.applicants_management') }}"
             class="nav-link"
-            >Applicants Management</a
+            >Applicants</a
           >
           <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
-            >Employers Management</a
+            >Employers</a
           >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications<span
@@ -103,6 +103,14 @@
         </div>
       </div>
     </section>
+
+    <div class="container">
+      <h2>PESO SmartHire - Administrative Dashboard</h2>
+      <p>
+        Welcome to the administrative control center. Monitor system
+        performance, manage user, and oversee operations.
+      </p>
+    </div>
 
     <!-- Analytics Dashboard -->
     <section class="analytics-dashboard">
@@ -138,6 +146,7 @@
               <select id="exportFormatSelect" class="export-dropdown">
                 <option value="csv" selected>CSV</option>
                 <option value="xlsx">XLSX</option>
+                <option value="pdf">PDF</option>
               </select>
               <button id="exportModuleBtn" class="export-btn">Export</button>
             </div>
@@ -587,44 +596,28 @@
               <label>Age Bracket</label>
               <div class="filter-checkbox-group" data-filter="age_bracket">
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="18-22" />
-                  <span>18-22</span>
+                  <input type="checkbox" value="18-24" />
+                  <span>18-24</span>
                 </label>
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="23-27" />
-                  <span>23-27</span>
+                  <input type="checkbox" value="25-34" />
+                  <span>25-34</span>
                 </label>
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="28-32" />
-                  <span>28-32</span>
+                  <input type="checkbox" value="35-44" />
+                  <span>35-44</span>
                 </label>
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="33-37" />
-                  <span>33-37</span>
+                  <input type="checkbox" value="45-54" />
+                  <span>45-54</span>
                 </label>
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="38-42" />
-                  <span>38-42</span>
+                  <input type="checkbox" value="55-64" />
+                  <span>55-64</span>
                 </label>
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="43-47" />
-                  <span>43-47</span>
-                </label>
-                <label class="checkbox-pill">
-                  <input type="checkbox" value="48-52" />
-                  <span>48-52</span>
-                </label>
-                <label class="checkbox-pill">
-                  <input type="checkbox" value="53-57" />
-                  <span>53-57</span>
-                </label>
-                <label class="checkbox-pill">
-                  <input type="checkbox" value="58-60" />
-                  <span>58-60</span>
-                </label>
-                <label class="checkbox-pill">
-                  <input type="checkbox" value="60+" />
-                  <span>60+</span>
+                  <input type="checkbox" value="65+" />
+                  <span>65+</span>
                 </label>
               </div>
             </div>
@@ -926,12 +919,9 @@
             <h4>Employers</h4>
             <div class="filter-row">
               <label>Industry</label>
-              <select
-                id="filterIndustry"
-                class="multi-select"
-                multiple
-                size="5"
-              ></select>
+              <div class="filter-checkbox-group" data-filter="industry">
+                <!-- Industry checkboxes will be populated here -->
+              </div>
             </div>
             <div class="filter-row">
               <label>Recruitment Type</label>
@@ -988,12 +978,20 @@
               <label>Job Status</label>
               <div class="filter-checkbox-group" data-filter="job_status">
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="Open" />
-                  <span>Open</span>
+                  <input type="checkbox" value="Active" />
+                  <span>Active</span>
                 </label>
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="Closed" />
-                  <span>Closed</span>
+                  <input type="checkbox" value="Inactive" />
+                  <span>Inactive</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Archived" />
+                  <span>Archived</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Suspended" />
+                  <span>Suspended</span>
                 </label>
               </div>
             </div>
@@ -1008,6 +1006,14 @@
                   <input type="checkbox" value="Part-Time" />
                   <span>Part-Time</span>
                 </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Contract" />
+                  <span>Contract</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Freelance" />
+                  <span>Freelance</span>
+                </label>
               </div>
             </div>
             <div class="filter-row">
@@ -1021,8 +1027,16 @@
                   <span>Pending</span>
                 </label>
                 <label class="checkbox-pill">
-                  <input type="checkbox" value="Approved" />
-                  <span>Approved</span>
+                  <input type="checkbox" value="Shortlisted" />
+                  <span>Shortlisted</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="For Interview" />
+                  <span>For Interview</span>
+                </label>
+                <label class="checkbox-pill">
+                  <input type="checkbox" value="Hired" />
+                  <span>Hired</span>
                 </label>
                 <label class="checkbox-pill">
                   <input type="checkbox" value="Rejected" />
@@ -1497,6 +1511,37 @@
         </div>
       </div>
     </section>
+
+    <!-- Custom Modal -->
+    <div class="custom-modal" id="customConfirmationModal">
+      <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+          <div class="custom-modal-header">
+            <h5 class="custom-modal-title" id="customModalTitle">
+              Confirmation
+            </h5>
+            <button
+              type="button"
+              class="custom-modal-close"
+              id="customModalClose"
+            >
+              ×
+            </button>
+          </div>
+          <div class="custom-modal-body" id="customModalBody">
+            Are you sure you want to proceed?
+          </div>
+          <div class="custom-modal-footer">
+            <button type="button" class="btn-secondary" id="customModalCancel">
+              Cancel
+            </button>
+            <button type="button" class="btn-primary" id="customModalConfirm">
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">

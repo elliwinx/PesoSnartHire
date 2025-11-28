@@ -1093,6 +1093,7 @@ def account_security():
                     employer_id
                 )
             else:
+                should_reset_status = True if uploaded_at_updates else False
                 # Normal update: include all fields (no recruitment type change)
                 update_query = """
                     UPDATE employers SET
@@ -1134,7 +1135,12 @@ def account_security():
                         dole_authority_uploaded_at=%s,
                         dmw_no_pending_uploaded_at=%s,
                         license_to_recruit_uploaded_at=%s,
-                        documents_to_reupload=%s
+                        documents_to_reupload=%s,
+                        
+                        -- NEW: FORCE STATUS RESET IF FILE UPLOADED
+                        status = CASE WHEN %s = 1 THEN 'Pending' ELSE status END,
+                        is_active = CASE WHEN %s = 1 THEN 0 ELSE is_active END
+                        
                     WHERE employer_id=%s
                 """
 
@@ -1171,6 +1177,11 @@ def account_security():
                     uploaded_at_updates.get("dmw_no_pending_uploaded_at"),
                     uploaded_at_updates.get("license_to_recruit_uploaded_at"),
                     documents_to_reupload_json,
+
+                    # Pass the flag twice (once for status, once for is_active)
+                    1 if should_reset_status else 0,
+                    1 if should_reset_status else 0,
+
                     employer_id
                 )
 
@@ -1251,6 +1262,26 @@ def account_security():
             fetch="one"
         )
 
+        expiring_docs = {}
+        if employer:
+            # List of expiry columns in DB
+            expiry_columns = {
+                "business_permit": "business_permit_expiry",
+                "philjobnet": "philiobnet_registration_expiry",
+                "job_order": "job_orders_expiry",
+                "dole_no_pending_case": "dole_no_pending_case_expiry",
+                "dole_recruit_authority": "dole_authority_expiry",
+                "dmw_no_pending_case": "dmw_no_pending_case_expiry",
+                "dmw_recruit_authority": "license_to_recruit_expiry",
+            }
+
+            for key, db_col in expiry_columns.items():
+                expiry_val = employer.get(db_col)
+                # It is editable if it is ALREADY expired OR if it WILL expire in 7 days
+                is_editable = is_document_expired(
+                    expiry_val) or will_expire_in_7_days(expiry_val)
+                expiring_docs[key] = is_editable
+
         # Load reupload document list (if applicable)
         documents_to_reupload = []
         if employer and employer.get("documents_to_reupload"):
@@ -1276,7 +1307,8 @@ def account_security():
         "Employer/acc&secu.html",
         employer=employer,
         employer_status=employer.get("status") if employer else None,
-        documents_to_reupload=documents_to_reupload
+        documents_to_reupload=documents_to_reupload,
+        expiring_docs=expiring_docs  # <--- PASS THIS
     )
 
 
@@ -2083,7 +2115,39 @@ def get_notifications():
         conn.close()
 
 
+@employers_bp.route('/api/notifications/unread-count')
+def get_unread_notif_count():
+    if 'employer_id' not in session:
+        return jsonify({'success': False, 'count': 0})
+
+    employer_id = session['employer_id']
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'count': 0})
+
+    try:
+        # Match the logic in your existing get_notifications route
+        # currently set to only show 'job_application' types
+        query = """
+        SELECT COUNT(*) as count 
+        FROM notifications 
+        WHERE employer_id = %s 
+          AND is_read = 0 
+          AND notification_type = 'job_application'
+        """
+        result = run_query(conn, query, (employer_id,), fetch="one")
+        count = result['count'] if result else 0
+
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        print(f"[v0] Error fetching employer unread count: {e}")
+        return jsonify({'success': False, 'count': 0})
+    finally:
+        conn.close()
+
 # New endpoint to mark single notification as read (matches front-end usage)
+
+
 @employers_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
 def mark_notification_read_by_id(notification_id):
     """Mark a single employer notification as read (matches frontend call)."""

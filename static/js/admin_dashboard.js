@@ -170,7 +170,7 @@
       return [el.value];
     };
 
-    currentFilters.industry = multi("filterIndustry");
+    currentFilters.industry = readCheckboxValues("industry");
 
     currentFilters.applicant_province = single("filterApplicantProvince");
     currentFilters.applicant_city = single("filterApplicantCity");
@@ -284,12 +284,11 @@
   }
 
   function resetFilterUI() {
-    const multiSelectIds = ["filterIndustry"];
-    multiSelectIds.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) {
-        Array.from(el.options).forEach((opt) => (opt.selected = false));
-      }
+    const industryCheckboxes = document.querySelectorAll(
+      '[data-filter="industry"] input[type="checkbox"]'
+    );
+    industryCheckboxes.forEach((checkbox) => {
+      checkbox.checked = false;
     });
 
     const provinceSelects = [
@@ -517,12 +516,15 @@
       chip?.classList.add("active");
     }
 
-    const industrySelect = document.getElementById("filterIndustry");
-    if (industrySelect) {
-      Array.from(industrySelect.options).forEach((opt) => {
-        opt.selected = currentFilters.industry.includes(opt.value);
-      });
-    }
+    CHECKBOX_FILTERS.forEach((key) => {
+      document
+        .querySelectorAll(
+          `.filter-checkbox-group[data-filter="${key}"] input[type="checkbox"]`
+        )
+        .forEach((checkbox) => {
+          checkbox.checked = currentFilters[key]?.includes(checkbox.value);
+        });
+    });
 
     CHECKBOX_FILTERS.forEach((key) => {
       document
@@ -857,28 +859,52 @@
       applicant_city: currentFilters.applicant_city,
       applicant_barangay: currentFilters.applicant_barangay,
     });
+
+    console.log("🔍 DEBUG loadApplicantsExperience:");
+    console.log("   Query:", qs);
+    console.log("   Age bracket filter:", currentFilters.age_bracket);
+
     const res = await fetchAnalytics(
       `/admin/api/analytics/applicants/experience?${qs}`
     );
+
+    console.log("   API Response:", res);
+
     const data = res?.data;
-    if (!data) return;
+    if (!data) {
+      console.log("   No data returned");
+      return;
+    }
 
     const experienceData = data.by_experience || [];
+    console.log("   Experience data:", experienceData);
+
     const hasExperienceData =
       experienceData.length > 0 &&
       experienceData.some((x) => (x.count || 0) > 0);
+    console.log("   Has experience data:", hasExperienceData);
+
     if (!hasExperienceData) {
+      console.log("   Showing empty state");
       toggleChartState(
-        "applicantsByExperienceChart",
+        "applicantsYearsExperienceChart",
         false,
-        "No experience data available."
+        "No experience data available for the selected filters."
       );
     } else {
-      toggleChartState("applicantsByExperienceChart", true);
+      console.log("   Rendering chart with data");
+      toggleChartState("applicantsYearsExperienceChart", true);
+
+      const labels = experienceData.map((x) => x.range);
+      const values = experienceData.map((x) => x.count || 0);
+
+      console.log("   Chart labels:", labels);
+      console.log("   Chart values:", values);
+
       renderGenericChart(
         "applicantsYearsExperienceChart",
-        experienceData.map((x) => x.range),
-        experienceData.map((x) => x.count || 0),
+        labels,
+        values,
         "Applicants"
       );
     }
@@ -974,20 +1000,9 @@
     const industryData = data.by_industry || [];
     const recData = data.by_recruitment_type || [];
 
-    // Populate industry filter options dynamically once
-    const industrySelect = document.getElementById("filterIndustry");
-    if (
-      industrySelect &&
-      industrySelect.options.length <= 1 &&
-      industryData.length
-    ) {
-      industryData.forEach((item) => {
-        const opt = document.createElement("option");
-        opt.value = item.industry || "Unspecified";
-        opt.textContent = item.industry || "Unspecified";
-        industrySelect.appendChild(opt);
-      });
-    }
+    // DON'T populate industry filter options from filtered data here
+    // Instead, load all available industries separately
+    await loadIndustryFilterOptions();
 
     // Render charts if containers exist
     const industryCanvasId = "employersByIndustryChart";
@@ -1033,6 +1048,97 @@
       }
     }
   }
+  async function loadIndustryFilterOptions() {
+    // Fetch all available industries from the database
+    const res = await fetch("/admin/api/filters/employers/industries");
+    if (res.ok) {
+      const data = await res.json();
+      const industries = data.data || [];
+
+      const industryContainer = document.querySelector(
+        '[data-filter="industry"]'
+      );
+      if (industryContainer && industries.length > 0) {
+        // Clear existing options
+        industryContainer.innerHTML = "";
+
+        // Add all available industries as checkbox pills
+        industries.forEach((industry) => {
+          const label = document.createElement("label");
+          label.className = "checkbox-pill";
+          label.innerHTML = `
+          <input type="checkbox" value="${industry}" />
+          <span>${industry}</span>
+        `;
+          industryContainer.appendChild(label);
+        });
+
+        // Add event listeners to trigger your filter updates
+        const industryCheckboxes = industryContainer.querySelectorAll(
+          'input[type="checkbox"]'
+        );
+        industryCheckboxes.forEach((checkbox) => {
+          checkbox.addEventListener("change", function () {
+            // This should trigger your existing filter logic
+            updateFilters(); // or whatever your filter update function is called
+          });
+        });
+      }
+    }
+  }
+
+  // Fallback function using your hardcoded list
+  function populateIndustryFilterOptions() {
+    const industryContainer = document.querySelector(
+      '[data-filter="industry"]'
+    );
+    if (!industryContainer) return;
+
+    // Clear existing options
+    industryContainer.innerHTML = "";
+
+    // Add all possible industries (from your registration form)
+    const industries = [
+      "TECHNOLOGY & IT",
+      "FINANCE & INSURANCE",
+      "HEALTHCARE & PHARMACEUTICALS",
+      "EDUCATION",
+      "MANUFACTURING & INDUSTRY",
+      "RETAIL & E-COMMERCE",
+      "MEDIA & ENTERTAINMENT",
+      "REAL ESTATE & CONSTRUCTION",
+      "TRANSPORTATION & LOGISTICS",
+      "ENERGY & UTILITIES",
+      "GOVERNMENT & NONPROFIT",
+      "PROFESSIONAL SERVICES",
+      "HOSPITALITY, FOOD & TRAVEL",
+    ];
+
+    industries.forEach((industry) => {
+      const label = document.createElement("label");
+      label.className = "checkbox-pill";
+      label.innerHTML = `
+      <input type="checkbox" value="${industry}" />
+      <span>${industry}</span>
+    `;
+      industryContainer.appendChild(label);
+    });
+
+    // Add event listeners
+    const industryCheckboxes = industryContainer.querySelectorAll(
+      'input[type="checkbox"]'
+    );
+    industryCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener("change", function () {
+        updateFilters(); // or whatever your filter update function is called
+      });
+    });
+  }
+
+  // Call this when the page loads
+  document.addEventListener("DOMContentLoaded", function () {
+    populateIndustryFilterOptions();
+  });
 
   async function loadEmployersLocation() {
     const qs = buildQuery({
@@ -1250,18 +1356,21 @@
       date_to: currentFilters.date_to,
       quick_range: currentFilters.quick_range,
       application_status: currentFilters.application_status,
+      work_schedule: currentFilters.work_schedule,
     });
     const res = await fetchAnalytics(
       `/admin/api/analytics/applications/trend?${qs}`
     );
     const list = res?.data || [];
     const chartId = "applicationsTrendChart";
+
     // Check if we have meaningful data (at least one entry with count > 0)
     const hasData = list.length > 0 && list.some((x) => (x.count || 0) > 0);
     if (!hasData) {
       toggleChartState(chartId, false, "No application trend data available.");
       return;
     }
+
     toggleChartState(chartId, true);
     renderGenericChart(
       chartId,
@@ -1368,50 +1477,204 @@
 
     btn.addEventListener("click", async () => {
       const format = formatSelect.value || "csv";
-      const filters = { ...currentFilters };
+
+      // Show loading state
+      const originalText = btn.textContent;
+      btn.textContent = "Exporting...";
+      btn.disabled = true;
 
       try {
-        const res = await fetch("/admin/api/analytics/export", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "same-origin",
-          body: JSON.stringify({
+        // Build query parameters from current filters
+        const queryParams = buildExportQueryParams();
+
+        let endpoint, method, body;
+
+        if (format === "pdf") {
+          // For PDF, we'll use a GET request with query parameters
+          endpoint = `/admin/api/analytics/export?${queryParams}&format=pdf&module=${activeModule}`;
+          method = "GET";
+          body = null;
+        } else {
+          // For CSV/XLSX, use POST with JSON body (existing approach)
+          endpoint = "/admin/api/analytics/export";
+          method = "POST";
+          body = JSON.stringify({
             module:
               activeModule === "jobs" ? "jobs_applications" : activeModule,
-            format,
-            filters,
-          }),
+            format: format,
+            filters: currentFilters,
+          });
+        }
+
+        const res = await fetch(endpoint, {
+          method: method,
+          headers:
+            format === "pdf" ? {} : { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: body,
         });
 
         if (!res.ok) {
+          const errorText = await res.text();
           let message = "Export failed. Please try again.";
+
           try {
-            const err = await res.json();
-            if (err && err.message) message = err.message;
-          } catch (_) {
-            // ignore, fallback to default
+            const errorData = JSON.parse(errorText);
+            message = errorData.message || errorData.error || message;
+          } catch {
+            message = errorText || message;
           }
-          alert(message);
-          return;
+
+          // Use your flash system instead of alert
+          showFlashMessage(message, "danger");
+          throw new Error(message);
         }
 
-        const blob = await res.blob();
+        // Handle the response based on content type
+        const contentType = res.headers.get("content-type");
+        let blob;
+
+        if (contentType && contentType.includes("application/pdf")) {
+          blob = await res.blob();
+        } else if (contentType && contentType.includes("application/json")) {
+          // Some APIs return JSON with file data
+          const data = await res.json();
+          if (data.file_data) {
+            blob = base64ToBlob(data.file_data, getMimeType(format));
+          } else {
+            throw new Error("Invalid response format");
+          }
+        } else {
+          // Assume it's a direct file download
+          blob = await res.blob();
+        }
+
+        // Create and trigger download
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        const ext = format.toLowerCase();
-        a.download = `${activeModule}_export.${ext}`;
+
+        // Generate filename with timestamp
+        const timestamp = new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace(/:/g, "-");
+        const filename = `${activeModule}_export_${timestamp}.${format}`;
+        a.download = filename;
+
         document.body.appendChild(a);
         a.click();
-        a.remove();
+        document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-      } catch (e) {
-        console.error("Export error", e);
-        alert("Export failed. Please try again.");
+
+        // Show success flash message
+        showFlashMessage(
+          `${activeModule} exported successfully as ${format.toUpperCase()}!`,
+          "success"
+        );
+      } catch (error) {
+        console.error("Export error", error);
+        // Error flash message already shown above
+      } finally {
+        // Restore button state
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
     });
+  }
+
+  // Flash message function that matches your existing system
+  function showFlashMessage(message, category = "success") {
+    // Create flash element matching your template
+    const flashDiv = document.createElement("div");
+    flashDiv.className = `flash ${
+      category === "success" ? "success" : "danger"
+    }`;
+    flashDiv.innerHTML = `
+        ${message}
+        <button class="close" onclick="this.parentElement.remove()">×</button>
+    `;
+
+    // Find where to insert the flash message
+    // Try to insert after existing flashes, or create container
+    const existingFlashes = document.querySelector(".flash");
+    const flashContainer = document.querySelector("body"); // or specific container
+
+    if (existingFlashes) {
+      existingFlashes.parentNode.insertBefore(
+        flashDiv,
+        existingFlashes.nextSibling
+      );
+    } else {
+      // Insert at the top of the body or specific container
+      flashContainer.insertBefore(flashDiv, flashContainer.firstChild);
+    }
+
+    // Auto-remove after 3 seconds with fade-out effect (matching your template)
+    setTimeout(() => {
+      flashDiv.classList.add("fade-out");
+      setTimeout(() => {
+        if (flashDiv.parentNode) {
+          flashDiv.remove();
+        }
+      }, 500);
+    }, 3000);
+  }
+
+  // Helper function to build query parameters for export
+  function buildExportQueryParams() {
+    const params = new URLSearchParams();
+
+    // Add module
+    params.append(
+      "module",
+      activeModule === "jobs" ? "jobs_applications" : activeModule
+    );
+
+    // Add filters
+    Object.entries(currentFilters).forEach(([key, value]) => {
+      if (value === null || value === undefined) return;
+      if (Array.isArray(value) && value.length === 0) return;
+
+      if (Array.isArray(value)) {
+        params.append(key, value.join(","));
+      } else {
+        params.append(key, value);
+      }
+    });
+
+    return params.toString();
+  }
+
+  // Helper function to convert base64 to blob
+  function base64ToBlob(base64, mimeType) {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+      const byteNumbers = new Array(slice.length);
+
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, { type: mimeType });
+  }
+
+  // Helper function to get MIME type based on format
+  function getMimeType(format) {
+    const mimeTypes = {
+      csv: "text/csv",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      pdf: "application/pdf",
+    };
+
+    return mimeTypes[format] || "application/octet-stream";
   }
 
   async function fetchAnalytics(endpoint) {
@@ -2013,11 +2276,12 @@
   }
 
   async function resetDashboard() {
-    if (
-      !confirm(
-        "Are you sure you want to reset the dashboard? This will restore all widgets to their default state."
-      )
-    ) {
+    const confirmed = await showConfirmationModal(
+      "Are you sure you want to reset the dashboard? This will restore all widgets to their default state.",
+      "Reset Dashboard"
+    );
+
+    if (!confirmed) {
       return;
     }
 
@@ -2031,14 +2295,17 @@
         widgetLayout = normalizeWidgetLayout(data.data);
         applyWidgetPreferences();
         renderWidgetToggles();
-        alert("Dashboard reset successfully! All widgets are now visible.");
+        showFlashMessage(
+          "Dashboard reset successfully! All widgets are now visible.",
+          "success"
+        );
         clearLayoutDirtyState();
       } else {
-        alert("Failed to reset dashboard");
+        showFlashMessage("Failed to reset dashboard", "danger");
       }
     } catch (error) {
       console.error("Failed to reset dashboard:", error);
-      alert("Failed to reset dashboard");
+      showFlashMessage("Failed to reset dashboard", "danger");
     }
   }
 
@@ -2309,12 +2576,12 @@
             note?.content || ""
           }</textarea>
         </div>
-        <div class="note-form-group">
+        <div class="note-form-group note-inline">
           <label>
             <input type="checkbox" id="notePinnedInput" ${
               note?.is_pinned ? "checked" : ""
             }>
-            Pin this note
+            Pin
           </label>
         </div>
         <div class="note-form-actions">
@@ -2337,7 +2604,7 @@
     const isPinned = document.getElementById("notePinnedInput").checked;
 
     if (!content) {
-      alert("Note content is required");
+      showFlashMessage("Note content is required", "danger");
       return;
     }
 
@@ -2358,12 +2625,16 @@
       if (data.success) {
         document.querySelector(".note-modal").remove();
         await loadNotes();
+        showFlashMessage(
+          noteId ? "Note updated successfully!" : "Note created successfully!",
+          "success"
+        );
       } else {
-        alert(data.message || "Failed to save note");
+        showFlashMessage(data.message || "Failed to save note", "danger");
       }
     } catch (error) {
       console.error("Failed to save note:", error);
-      alert("Failed to save note");
+      showFlashMessage("Failed to save note", "danger");
     }
   }
 
@@ -2397,7 +2668,13 @@
   window.pinNote = pinNote;
 
   async function deleteNote(noteId) {
-    if (!confirm("Are you sure you want to delete this note?")) return;
+    // Use custom modal instead of confirm
+    const confirmed = await showConfirmationModal(
+      "Are you sure you want to delete this note?",
+      "Delete Note"
+    );
+
+    if (!confirmed) return;
 
     try {
       const res = await fetch(`/admin/api/widgets/notes/${noteId}`, {
@@ -2408,12 +2685,13 @@
       const data = await res.json();
       if (data.success) {
         await loadNotes();
+        showFlashMessage("Note deleted successfully!", "success");
       } else {
-        alert(data.message || "Failed to delete note");
+        showFlashMessage(data.message || "Failed to delete note", "danger");
       }
     } catch (error) {
       console.error("Failed to delete note:", error);
-      alert("Failed to delete note");
+      showFlashMessage("Failed to delete note", "danger");
     }
   }
 
@@ -2716,7 +2994,7 @@
     const dateInput = document.getElementById("countdownDateInput").value;
 
     if (!title || !dateInput) {
-      alert("Please fill in all fields");
+      showFlashMessage("Please fill in all fields", "danger");
       return;
     }
 
@@ -2731,6 +3009,7 @@
     renderCountdowns();
     updateCountdowns();
     document.querySelector(".note-modal").remove();
+    showFlashMessage("Countdown event added successfully!", "success");
   };
 
   window.deleteCountdown = (id) => {
@@ -2751,28 +3030,61 @@
     const quoteWidget = document.getElementById("quoteWidget");
     if (!quoteWidget) return;
 
-    // Using a free quotes API (quotable.io)
     try {
-      const res = await fetch("https://api.quotable.io/random");
+      const res = await fetch("https://type.fit/api/quotes");
       const data = await res.json();
+      const randomQuote = data[Math.floor(Math.random() * data.length)];
       quoteWidget.innerHTML = `
-        <p class="quote-text">"${data.content}"</p>
-        <p class="quote-author">— ${data.author}</p>
-        <button class="btn-small" onclick="refreshQuote()" style="margin-top: 0.5rem;">
-          <i class="fas fa-sync"></i> New Quote
-        </button>
-      `;
+      <p class="quote-text">"${randomQuote.text}"</p>
+      <p class="quote-author">— ${randomQuote.author || "Unknown"}</p>
+      <button class="btn-small" onclick="refreshQuote()" style="margin-top: 0.5rem;">
+        <i class="fas fa-sync"></i> New Quote
+      </button>
+    `;
     } catch (error) {
       console.error("Failed to load quote:", error);
-      quoteWidget.innerHTML = `
-        <p class="quote-text">"The only way to do great work is to love what you do."</p>
-        <p class="quote-author">— Steve Jobs</p>
-        <button class="btn-small" onclick="refreshQuote()" style="margin-top: 0.5rem;">
-          <i class="fas fa-sync"></i> New Quote
-        </button>
-      `;
+      showFallbackQuote(quoteWidget);
     }
   }
+
+  function showFallbackQuote(quoteWidget) {
+    const fallbackQuotes = [
+      {
+        text: "The only way to do great work is to love what you do.",
+        author: "Steve Jobs",
+      },
+      {
+        text: "Your time is limited, so don't waste it living someone else's life.",
+        author: "Steve Jobs",
+      },
+      {
+        text: "The future belongs to those who believe in the beauty of their dreams.",
+        author: "Eleanor Roosevelt",
+      },
+      {
+        text: "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+        author: "Winston Churchill",
+      },
+      {
+        text: "The way to get started is to quit talking and begin doing.",
+        author: "Walt Disney",
+      },
+    ];
+    const randomQuote =
+      fallbackQuotes[Math.floor(Math.random() * fallbackQuotes.length)];
+    quoteWidget.innerHTML = `
+    <p class="quote-text">"${randomQuote.text}"</p>
+    <p class="quote-author">— ${randomQuote.author}</p>
+    <button class="btn-small" onclick="refreshQuote()" style="margin-top: 0.5rem;">
+      <i class="fas fa-sync"></i> New Quote
+    </button>
+  `;
+  }
+
+  window.refreshQuote = loadQuote;
+
+  // Load initial quote when page loads
+  document.addEventListener("DOMContentLoaded", loadQuote);
 
   window.refreshQuote = loadQuote;
 
@@ -2845,3 +3157,56 @@
     }
   });
 })();
+// Minimal modal function
+function showConfirmationModal(message, title = "Confirmation") {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("customConfirmationModal");
+    const modalTitle = document.getElementById("customModalTitle");
+    const modalBody = document.getElementById("customModalBody");
+
+    // Set content
+    modalTitle.textContent = title;
+    modalBody.textContent = message;
+
+    // Show modal
+    modal.style.display = "block";
+    setTimeout(() => modal.classList.add("show"), 10);
+
+    // One-time event handlers
+    const handleConfirm = () => {
+      hideModal();
+      resolve(true);
+    };
+
+    const handleCancel = () => {
+      hideModal();
+      resolve(false);
+    };
+
+    // Add temporary listeners
+    document.getElementById("customModalConfirm").onclick = handleConfirm;
+    document.getElementById("customModalCancel").onclick = handleCancel;
+    document.getElementById("customModalClose").onclick = handleCancel;
+
+    modal.onclick = (e) => {
+      if (e.target === modal) handleCancel();
+    };
+
+    document.onkeydown = (e) => {
+      if (e.key === "Escape") handleCancel();
+    };
+
+    function hideModal() {
+      modal.classList.remove("show");
+      setTimeout(() => {
+        modal.style.display = "none";
+        // Clear listeners
+        document.getElementById("customModalConfirm").onclick = null;
+        document.getElementById("customModalCancel").onclick = null;
+        document.getElementById("customModalClose").onclick = null;
+        modal.onclick = null;
+        document.onkeydown = null;
+      }, 300);
+    }
+  });
+}

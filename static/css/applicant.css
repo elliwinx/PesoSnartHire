@@ -566,25 +566,6 @@ body {
   width: 100%;
 }
 
-/* Custom Modal Styles */
-.custom-modal-unique {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-}
-
-.custom-modal-content-unique {
-  background: #fff;
-  padding: 25px;
-  width: 430px;
-  border-radius: 10px;
-  text-align: center;
-}
-
 /* Employment Type Badge */
 .employment-badge {
   display: inline-block;
@@ -2121,7 +2102,6 @@ div:where(.swal2-icon).swal2-warning {
   border: 1px solid #7b1113;
   font-weight: 600;
 }
-
 .custom-modal {
   display: none; /* hidden by default */
   position: fixed;
@@ -2151,7 +2131,7 @@ div:where(.swal2-icon).swal2-warning {
   margin-bottom: 15px;
 }
 
-.custom-modal {
+.custom-modal .modal-content {
   background: #fff;
   padding: 2rem;
   border-radius: 8px;

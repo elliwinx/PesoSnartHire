@@ -66,8 +66,9 @@
             >Applications</a
           >
           <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Notifications</a
-          >
+            >Notifications
+            <span id="notifBadge" class="notif-badge" style="display: none;">●</span>
+          </a>
           <a
             href="{{ url_for('applicants.account_security') }}"
             class="nav-link-active"
@@ -341,9 +342,14 @@
 
             <!-- Recommendation Letter - only shown for Non-Lipeño -->
             <div class="document-item" id="recommendation-upload-container"
-                {% if applicant.is_from_lipa %}style="display:none"{% else %}style="display:block"{% endif %}>
-              <div class="document-header">
-                <label>Recommendation Letter</label>
+                {% if applicant.is_from_lipa %}style="display:none"{% else %}style="display:block"{% endif %}
+                data-expiring="{{ 'true' if is_reco_expiring else 'false' }}"> <div class="document-header">
+                <label>
+                    Recommendation Letter
+                    {% if is_reco_expiring %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                </label>
                 {% if applicant.recommendation_letter_path %}
                   <a href="{{ url_for('static', filename=applicant.recommendation_letter_path) }}"
                     target="_blank" rel="noopener">View</a>
@@ -358,10 +364,6 @@
                 class="file-input"
                 {% if not applicant.is_from_lipa %}required{% endif %}
               />
-
-              <!--<small class="file-hint">
-                Required for Non-Lipeño residents (PDF format only)
-              </small>-->
             </div>
           </div>
         </div>

@@ -56,8 +56,8 @@
         </div>
         <nav class="nav">
           <a href="{{url_for('employers.employer_home')}}" class="nav-link">Home</a>
-          <a href="{{url_for('employers.application_management')}}" class="nav-link">Application Management</a>
-          <a href="{{url_for('employers.notifications')}}" class="nav-link">Notification</a>
+          <a href="{{url_for('employers.application_management')}}" class="nav-link">Job Applications</a>
+          <a href="{{url_for('employers.notifications')}}" class="nav-link">Notification<span id="employerNotifBadge" class="notif-badge" style="display: none;">●</span></a>
           <a href="{{url_for('employers.account_security')}}" class="nav-link-active">Account & Security</a>
           <a href="{{url_for('employers.logout')}}" id="logoutLink" class="nav-link"
             >Log Out</a
@@ -216,7 +216,6 @@
 
         <!-- DOCUMENTS (clean view - file uploads nested in document items) -->
         <div id="documents" class="content {% if employer_status != 'Reupload' %}hidden{% endif %}">
-          <!-- Reupload message for Reupload status -->
           {% if employer_status == 'Reupload' %}
           <div style="background-color:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:12px;margin-bottom:16px;color:#856404;">
             <strong>Document Reupload Required</strong>
@@ -251,7 +250,7 @@
 
                 <div class="document-item">
                   <div class="document-header">
-                    <label>{{ doc.replace('_', ' ')|title }}</label>
+                    <span>{{ doc.replace('_', ' ')|title }}</span>
                     {% if employer[db_field] %}
                       <a href="{{ url_for('static', filename=employer[db_field]) }}" target="_blank">View</a>
                     {% else %}
@@ -262,10 +261,16 @@
                 </div>
               {% endfor %}
             {% else %}
-              <!-- LOCAL employers: show DOLE documents -->
-              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+            
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}" 
+                   data-expiring="{{ 'true' if expiring_docs['business_permit'] else 'false' }}">
                 <div class="document-header">
-                  <label>Business Permit</label>
+                  <span>
+                    Business Permit
+                    {% if expiring_docs['business_permit'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.business_permit_path %}
                   <a href="{{ url_for('static', filename=employer.business_permit_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -273,9 +278,15 @@
                 <input type="file" name="business_permit" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['philjobnet'] else 'false' }}">
                 <div class="document-header">
-                  <label>PhilJobNet Registration</label>
+                  <span>
+                    PhilJobNet Registration
+                    {% if expiring_docs['philjobnet'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.philiobnet_registration_path %}
                   <a href="{{ url_for('static', filename=employer.philiobnet_registration_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -283,9 +294,15 @@
                 <input type="file" name="philiobnet_registration" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['job_order'] else 'false' }}">
                 <div class="document-header">
-                  <label>Job Orders of Client</label>
+                  <span>
+                    Job Orders of Client
+                    {% if expiring_docs['job_order'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.job_orders_of_client_path %}
                   <a href="{{ url_for('static', filename=employer.job_orders_of_client_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -293,9 +310,15 @@
                 <input type="file" name="job_orders" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['dole_no_pending_case'] else 'false' }}">
                 <div class="document-header">
-                  <label>DOLE - No Pending Case Certificate</label>
+                  <span>
+                    DOLE - No Pending Case Certificate
+                    {% if expiring_docs['dole_no_pending_case'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.dole_no_pending_case_path %}
                   <a href="{{ url_for('static', filename=employer.dole_no_pending_case_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -303,9 +326,15 @@
                 <input type="file" name="dole_no_pending" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}">
+              <div class="document-item dole-docs {% if employer.recruitment_type != 'Local' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['dole_recruit_authority'] else 'false' }}">
                 <div class="document-header">
-                  <label>DOLE - Authority to Recruit</label>
+                  <span>
+                    DOLE - Authority to Recruit
+                    {% if expiring_docs['dole_recruit_authority'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.dole_authority_to_recruit_path %}
                   <a href="{{ url_for('static', filename=employer.dole_authority_to_recruit_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -313,10 +342,15 @@
                 <input type="file" name="dole_authority" accept=".pdf" class="file-input" />
               </div>
 
-              <!-- INTERNATIONAL employers: show DMW documents -->
-              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['business_permit'] else 'false' }}">
                 <div class="document-header">
-                  <label>Business Permit</label>
+                  <span>
+                    Business Permit
+                    {% if expiring_docs['business_permit'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.business_permit_path %}
                   <a href="{{ url_for('static', filename=employer.business_permit_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -324,9 +358,15 @@
                 <input type="file" name="business_permit" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['philjobnet'] else 'false' }}">
                 <div class="document-header">
-                  <label>PhilJobNet Registration</label>
+                  <span>
+                    PhilJobNet Registration
+                    {% if expiring_docs['philjobnet'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.philiobnet_registration_path %}
                   <a href="{{ url_for('static', filename=employer.philiobnet_registration_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -334,9 +374,15 @@
                 <input type="file" name="philiobnet_registration" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['job_order'] else 'false' }}">
                 <div class="document-header">
-                  <label>Job Orders of Client</label>
+                  <span>
+                    Job Orders of Client
+                    {% if expiring_docs['job_order'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.job_orders_of_client_path %}
                   <a href="{{ url_for('static', filename=employer.job_orders_of_client_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -344,9 +390,15 @@
                 <input type="file" name="job_orders" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['dmw_no_pending_case'] else 'false' }}">
                 <div class="document-header">
-                  <label>DMW - No Pending Case Certificate</label>
+                  <span>
+                    DMW - No Pending Case Certificate
+                    {% if expiring_docs['dmw_no_pending_case'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.dmw_no_pending_case_path %}
                   <a href="{{ url_for('static', filename=employer.dmw_no_pending_case_path) }}" target="_blank">View</a>
                   {% endif %}
@@ -354,9 +406,15 @@
                 <input type="file" name="dmw_no_pending" accept=".pdf" class="file-input" />
               </div>
 
-              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}">
+              <div class="document-item dmw-docs {% if employer.recruitment_type != 'International' %}hidden-doc{% endif %}"
+                   data-expiring="{{ 'true' if expiring_docs['dmw_recruit_authority'] else 'false' }}">
                 <div class="document-header">
-                  <label>DMW - License to Recruit</label>
+                  <span>
+                    DMW - License to Recruit
+                    {% if expiring_docs['dmw_recruit_authority'] %}
+                        <span style="color:red; font-size: 0.8em; margin-left: 5px;">(Update Required)</span>
+                    {% endif %}
+                  </span>
                   {% if employer.license_to_recruit_path %}
                   <a href="{{ url_for('static', filename=employer.license_to_recruit_path) }}" target="_blank">View</a>
                   {% endif %}

@@ -57,12 +57,17 @@
           <a
             href="{{url_for('employers.application_management')}}"
             class="nav-link"
-            >Application Management</a
+            >Job Applications</a
           >
           <a
             href="{{url_for('employers.notifications')}}"
             class="nav-link-active"
-            >Notification</a
+            >Notification<span
+              id="employerNotifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
           >
           <a href="{{url_for('employers.account_security')}}" class="nav-link"
             >Account & Security</a

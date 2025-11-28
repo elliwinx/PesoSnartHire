@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from werkzeug.security import check_password_hash, generate_password_hash
 from db_connection import create_connection, run_query
 from .notifications import get_notifications, mark_notification_read, get_unread_count
@@ -38,12 +38,40 @@ def _parse_multi(args, key):
     return [raw]
 
 
+def _matches_age_bracket(age, age_brackets):
+    """Check if age matches any of the specified age brackets."""
+    # If no age brackets are selected, include ALL ages
+    if not age_brackets:
+        return True
+
+    if not age:
+        return False
+
+    age_int = int(age)
+
+    for bracket in age_brackets:
+        if bracket == "60+":
+            if age_int >= 60:
+                return True
+        elif '-' in bracket:
+            try:
+                start, end = bracket.split('-')
+                start_age = int(start)
+                end_age = int(end)
+                if start_age <= age_int <= end_age:
+                    return True
+            except ValueError:
+                continue
+
+    return False
+
+
 def build_applicants_filters(args, alias="a"):
     """Build WHERE clause + params for applicant analytics filters."""
     clauses = ["1=1"]
     params = []
 
-    # Time period (created_at)
+    # Time period (created_at) - no changes needed
     date_from = args.get("date_from")
     date_to = args.get("date_to")
     quick_range = args.get("quick_range")
@@ -69,7 +97,7 @@ def build_applicants_filters(args, alias="a"):
         clauses.append(f"{alias}.created_at < DATE_ADD(%s, INTERVAL 1 DAY)")
         params.append(date_to)
 
-    # Status / is_active
+    # Status / is_active - no changes needed (these are usually standardized)
     statuses = _parse_multi(args, "applicant_status")
     if statuses:
         placeholders = ",".join(["%s"] * len(statuses))
@@ -82,19 +110,20 @@ def build_applicants_filters(args, alias="a"):
         clauses.append(f"{alias}.is_active IN ({placeholders})")
         params.extend(is_active_vals)
 
-    # Demographics
+    # Demographics - MAKE CASE-INSENSITIVE
     sexes = _parse_multi(args, "sex")
     if sexes:
         placeholders = ",".join(["%s"] * len(sexes))
-        clauses.append(f"{alias}.sex IN ({placeholders})")
-        params.extend(sexes)
+        clauses.append(f"UPPER({alias}.sex) IN ({placeholders})")
+        params.extend([sex.upper() for sex in sexes])
 
     educations = _parse_multi(args, "education")
     if educations:
         placeholders = ",".join(["%s"] * len(educations))
-        clauses.append(f"{alias}.education IN ({placeholders})")
-        params.extend(educations)
+        clauses.append(f"UPPER({alias}.education) IN ({placeholders})")
+        params.extend([education.upper() for education in educations])
 
+    # Boolean fields - no changes needed
     is_pwd_vals = _parse_multi(args, "is_pwd")
     if is_pwd_vals:
         placeholders = ",".join(["%s"] * len(is_pwd_vals))
@@ -104,27 +133,32 @@ def build_applicants_filters(args, alias="a"):
     has_work_exp_vals = _parse_multi(args, "has_work_exp")
     if has_work_exp_vals:
         placeholders = ",".join(["%s"] * len(has_work_exp_vals))
-        clauses.append(f"{alias}.has_work_experience IN ({placeholders})")
+        clauses.append(f"{alias}.has_work_exp IN ({placeholders})")
         params.extend(has_work_exp_vals)
 
-    # Location
+    # Location - MAKE CASE-INSENSITIVE
     provinces = _parse_multi(args, "applicant_province")
     if provinces:
         placeholders = ",".join(["%s"] * len(provinces))
-        clauses.append(f"{alias}.province IN ({placeholders})")
-        params.extend(provinces)
+        clauses.append(f"UPPER({alias}.province) IN ({placeholders})")
+        params.extend([province.upper() for province in provinces])
 
     cities = _parse_multi(args, "applicant_city")
     if cities:
         placeholders = ",".join(["%s"] * len(cities))
-        clauses.append(f"{alias}.city IN ({placeholders})")
-        params.extend(cities)
+        clauses.append(f"UPPER({alias}.city) IN ({placeholders})")
+        params.extend([city.upper() for city in cities])
 
     barangays = _parse_multi(args, "applicant_barangay")
     if barangays:
         placeholders = ",".join(["%s"] * len(barangays))
-        clauses.append(f"{alias}.barangay IN ({placeholders})")
-        params.extend(barangays)
+        clauses.append(f"UPPER({alias}.barangay) IN ({placeholders})")
+        params.extend([barangay.upper() for barangay in barangays])
+
+    # Age bracket filtering - parse the parameter so it's available for post-processing
+    age_brackets = _parse_multi(args, "age_bracket")
+    # Note: Age bracket filtering is applied in Python after SQL query
+    # We just need to ensure the parameter is parsed
 
     return " AND ".join(clauses), tuple(params)
 
@@ -134,7 +168,7 @@ def build_employers_filters(args, alias="e"):
     clauses = ["1=1"]
     params = []
 
-    # Time period (created_at)
+    # Time period (created_at) - no changes needed here
     date_from = args.get("date_from")
     date_to = args.get("date_to")
     quick_range = args.get("quick_range")
@@ -160,7 +194,7 @@ def build_employers_filters(args, alias="e"):
         clauses.append(f"{alias}.created_at < DATE_ADD(%s, INTERVAL 1 DAY)")
         params.append(date_to)
 
-    # Status / is_active
+    # Status / is_active - no changes needed (these are usually standardized)
     statuses = _parse_multi(args, "employer_status")
     if statuses:
         placeholders = ",".join(["%s"] * len(statuses))
@@ -173,55 +207,57 @@ def build_employers_filters(args, alias="e"):
         clauses.append(f"{alias}.is_active IN ({placeholders})")
         params.extend(is_active_vals)
 
-    # Industry / recruitment type
+    # Industry - MAKE CASE-INSENSITIVE
     industries = _parse_multi(args, "industry")
+    print(f"DEBUG - Industries filter: {industries}")  # ADD THIS LINE
+
     if industries:
         placeholders = ",".join(["%s"] * len(industries))
-        clauses.append(f"{alias}.industry IN ({placeholders})")
-        params.extend(industries)
+        clauses.append(f"UPPER({alias}.industry) IN ({placeholders})")
+        params.extend([industry.upper() for industry in industries])
 
+    # Recruitment type - MAKE CASE-INSENSITIVE
     rec_types = _parse_multi(args, "recruitment_type")
+    print(f"DEBUG - Recruitment types filter: {rec_types}")  # ADD THIS LINE
+
     if rec_types:
         placeholders = ",".join(["%s"] * len(rec_types))
-        clauses.append(f"{alias}.recruitment_type IN ({placeholders})")
-        params.extend(rec_types)
+        clauses.append(f"UPPER({alias}.recruitment_type) IN ({placeholders})")
+        params.extend([rec_type.upper() for rec_type in rec_types])
 
+    # Location - Handle Manila specially
     provinces = _parse_multi(args, "employer_province")
+    cities = _parse_multi(args, "employer_city")
+    barangays = _parse_multi(args, "employer_barangay")
+
+    print(f"DEBUG - Provinces filter: {provinces}")
+    print(f"DEBUG - Cities filter: {cities}")
+
     if provinces:
         placeholders = ",".join(["%s"] * len(provinces))
-        clauses.append(f"{alias}.province IN ({placeholders})")
-        params.extend(provinces)
+        manila_indicators = {"MANILA", "METRO MANILA",
+                             "NCR", "NATIONAL CAPITAL REGION"}
+        has_manila = any(p.upper() in manila_indicators for p in provinces)
 
-    cities = _parse_multi(args, "employer_city")
+        if has_manila:
+            print("DEBUG - Manila special case triggered")
+            clauses.append(f"UPPER({alias}.city) = 'MANILA'")
+        else:
+            clauses.append(f"UPPER({alias}.province) IN ({placeholders})")
+            params.extend([province.upper() for province in provinces])
+
     if cities:
         placeholders = ",".join(["%s"] * len(cities))
-        clauses.append(f"{alias}.city IN ({placeholders})")
-        params.extend(cities)
+        clauses.append(f"UPPER({alias}.city) IN ({placeholders})")
+        params.extend([city.upper() for city in cities])
 
-    barangays = _parse_multi(args, "employer_barangay")
     if barangays:
         placeholders = ",".join(["%s"] * len(barangays))
-        clauses.append(f"{alias}.barangay IN ({placeholders})")
-        params.extend(barangays)
+        clauses.append(f"UPPER({alias}.barangay) IN ({placeholders})")
+        params.extend([barangay.upper() for barangay in barangays])
 
-    # Location (if present in schema)
-    provinces = _parse_multi(args, "employer_province")
-    if provinces:
-        placeholders = ",".join(["%s"] * len(provinces))
-        clauses.append(f"{alias}.province IN ({placeholders})")
-        params.extend(provinces)
-
-    cities = _parse_multi(args, "employer_city")
-    if cities:
-        placeholders = ",".join(["%s"] * len(cities))
-        clauses.append(f"{alias}.city IN ({placeholders})")
-        params.extend(cities)
-
-    barangays = _parse_multi(args, "employer_barangay")
-    if barangays:
-        placeholders = ",".join(["%s"] * len(barangays))
-        clauses.append(f"{alias}.barangay IN ({placeholders})")
-        params.extend(barangays)
+    print(f"DEBUG - Final WHERE clauses: {clauses}")
+    print(f"DEBUG - Final params: {params}")
 
     return " AND ".join(clauses), tuple(params)
 
@@ -258,15 +294,35 @@ def build_jobs_filters(args, alias="j"):
 
     job_statuses = _parse_multi(args, "job_status")
     if job_statuses:
-        placeholders = ",".join(["%s"] * len(job_statuses))
+        # Map filter values to database values
+        status_mapping = {
+            "Active": "active",
+            "Inactive": "inactive",
+            "Archived": "archived",
+            "Suspended": "suspended"
+        }
+        db_statuses = [status_mapping.get(status, status)
+                       for status in job_statuses]
+
+        placeholders = ",".join(["%s"] * len(db_statuses))
         clauses.append(f"{alias}.status IN ({placeholders})")
-        params.extend(job_statuses)
+        params.extend(db_statuses)
 
     work_schedules = _parse_multi(args, "work_schedule")
     if work_schedules:
-        placeholders = ",".join(["%s"] * len(work_schedules))
-        clauses.append(f"{alias}.work_schedule IN ({placeholders})")
-        params.extend(work_schedules)
+        # Map user-friendly filter values to actual database values
+        schedule_mapping = {
+            "Full-Time": "full-time",
+            "Part-Time": "part-time",
+            "Contract": "contract",
+            "Freelance": "freelance"
+        }
+        db_schedules = [schedule_mapping.get(
+            schedule, schedule) for schedule in work_schedules]
+
+        placeholders = ",".join(["%s"] * len(db_schedules))
+        clauses.append(f"UPPER({alias}.work_schedule) IN ({placeholders})")
+        params.extend([schedule.upper() for schedule in db_schedules])
 
     return " AND ".join(clauses), tuple(params)
 
@@ -294,45 +350,76 @@ def build_applications_filters(args, alias="a"):
             date_from = f"{today.year}-{start_month:02d}-01"
             date_to = today.isoformat()
 
+    # Use applied_at for applications
     if date_from:
-        clauses.append(f"{alias}.created_at >= %s")
+        clauses.append(f"{alias}.applied_at >= %s")
         params.append(date_from)
     if date_to:
-        clauses.append(f"{alias}.created_at < DATE_ADD(%s, INTERVAL 1 DAY)")
+        clauses.append(f"{alias}.applied_at < DATE_ADD(%s, INTERVAL 1 DAY)")
         params.append(date_to)
 
     statuses = _parse_multi(args, "application_status")
     if statuses:
+        # Application status values - these should match your modal exactly
+        # No mapping needed since filter values match database values
         placeholders = ",".join(["%s"] * len(statuses))
-        clauses.append(f"{alias}.status IN ({placeholders})")
-        params.extend(statuses)
+        clauses.append(f"UPPER({alias}.status) IN ({placeholders})")
+        params.extend([status.upper() for status in statuses])
 
-    # optional: filter by work_schedule via join alias "j"
+    # Filter by work_schedule via join alias "j"
     work_schedules = _parse_multi(args, "work_schedule")
     if work_schedules:
-        placeholders = ",".join(["%s"] * len(work_schedules))
-        clauses.append(f"j.work_schedule IN ({placeholders})")
-        params.extend(work_schedules)
+        # Map user-friendly filter values to actual database values
+        schedule_mapping = {
+            "Full-Time": "full-time",
+            "Part-Time": "part-time",
+            "Contract": "contract",
+            "Freelance": "freelance"
+        }
+        db_schedules = [schedule_mapping.get(
+            schedule, schedule) for schedule in work_schedules]
+
+        placeholders = ",".join(["%s"] * len(db_schedules))
+        clauses.append(f"UPPER(j.work_schedule) IN ({placeholders})")
+        params.extend([schedule.upper() for schedule in db_schedules])
 
     return " AND ".join(clauses), tuple(params)
 
 
-@admin_bp.route("/api/analytics/export", methods=["POST"])
+@admin_bp.route("/api/analytics/export", methods=["POST", "GET"])
 def analytics_export():
-    """Export filtered data for a module as CSV or XLSX (basic implementation)."""
+    """Export filtered data for a module as CSV, XLSX, or PDF."""
     if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
 
-    payload = request.get_json(silent=True) or {}
-    module = payload.get("module")
-    export_format = (payload.get("format") or "csv").lower()
-    filters = payload.get("filters") or {}
+    # Handle both POST (JSON) and GET (query params) for PDF
+    if request.method == "GET":
+        module = request.args.get("module")
+        export_format = request.args.get("format", "csv").lower()
+        filters = {}
+        # Parse filters from query parameters
+        for key in request.args:
+            if key not in ['module', 'format']:
+                value = request.args.get(key)
+                if value and ',' in value:
+                    filters[key] = value.split(',')
+                else:
+                    filters[key] = value
+    else:
+        payload = request.get_json(silent=True) or {}
+        module = payload.get("module")
+        export_format = (payload.get("format") or "csv").lower()
+        filters = payload.get("filters") or {}
+
+    # Input validation with JSON responses
+    if not module:
+        return jsonify({"success": False, "message": "Module parameter is required"}), 400
 
     if module not in {"applicants", "employers", "jobs_applications"}:
         return jsonify({"success": False, "message": "Invalid module"}), 400
 
-    if export_format not in {"csv", "xlsx"}:
-        return jsonify({"success": False, "message": "Only CSV and XLSX export are implemented at the moment."}), 400
+    if export_format not in {"csv", "xlsx", "pdf"}:
+        return jsonify({"success": False, "message": "Format not supported"}), 400
 
     # Build args-like object for helpers
     class _Args:
@@ -359,19 +446,27 @@ def analytics_export():
                 f"""
                 SELECT
                   a.applicant_id,
+                  a.applicant_code,
                   a.first_name,
                   a.last_name,
+                  a.middle_name,
+                  a.age,
                   a.sex,
-                  a.education,
-                  a.is_pwd,
-                  a.has_work_experience,
-                  a.years_experience,
+                  a.phone,
+                  a.email,
+                  a.is_from_lipa,
                   a.province,
                   a.city,
                   a.barangay,
+                  a.education,
+                  a.is_pwd,
+                  a.pwd_type,
+                  a.has_work_exp as has_work_exp,
+                  a.years_experience,
+                  a.registration_reason,
                   a.status,
                   a.is_active,
-                  a.created_at
+                  DATE(a.created_at) as created_date
                 FROM applicants a
                 WHERE {where_sql}
                 ORDER BY a.created_at DESC
@@ -379,6 +474,13 @@ def analytics_export():
                 params,
                 fetch="all",
             ) or []
+
+            # Apply age bracket filtering in Python since it's complex for SQL
+            age_brackets = _parse_multi(args_obj, "age_bracket")
+            if age_brackets:
+                rows = [row for row in rows if _matches_age_bracket(
+                    row['age'], age_brackets)]
+
         elif module == "employers":
             where_sql, params = build_employers_filters(args_obj, alias="e")
             rows = run_query(
@@ -386,15 +488,19 @@ def analytics_export():
                 f"""
                 SELECT
                   e.employer_id,
+                  e.employer_code,
                   e.employer_name,
                   e.industry,
                   e.recruitment_type,
+                  e.contact_person,
+                  e.phone,
+                  e.email,
                   e.province,
                   e.city,
                   e.barangay,
                   e.status,
                   e.is_active,
-                  e.created_at
+                  DATE(e.created_at) as created_date
                 FROM employers e
                 WHERE {where_sql}
                 ORDER BY e.created_at DESC
@@ -403,23 +509,29 @@ def analytics_export():
                 fetch="all",
             ) or []
         else:  # jobs_applications
-            where_sql, params = build_applications_filters(args_obj, alias="a")
+            where_sql, params = build_applications_filters(
+                args_obj, alias="app")
             rows = run_query(
                 conn,
                 f"""
                 SELECT
-                  a.id AS application_id,
-                  a.applicant_id,
-                  a.job_id,
-                  a.status AS application_status,
-                  a.created_at AS application_created_at,
+                  app.id AS application_id,
+                  app.applicant_id,
+                  app.job_id,
+                  app.status AS application_status,
+                  DATE(app.applied_at) AS application_date,
                   j.job_position,
                   j.work_schedule,
-                  j.status AS job_status
-                FROM applications a
-                LEFT JOIN jobs j ON a.job_id = j.job_id
+                  j.status AS job_status,
+                  a.first_name,
+                  a.last_name,
+                  e.employer_name
+                FROM applications app
+                LEFT JOIN jobs j ON app.job_id = j.job_id
+                LEFT JOIN applicants a ON app.applicant_id = a.applicant_id
+                LEFT JOIN employers e ON j.employer_id = e.employer_id
                 WHERE {where_sql}
-                ORDER BY a.created_at DESC
+                ORDER BY app.applied_at DESC
                 """,
                 params,
                 fetch="all",
@@ -438,7 +550,6 @@ def analytics_export():
                 writer.writerow(r)
             mem = io.BytesIO(output.getvalue().encode("utf-8-sig"))
             filename = f"{module}_export.csv"
-            from flask import send_file
 
             return send_file(
                 mem,
@@ -446,24 +557,52 @@ def analytics_export():
                 as_attachment=True,
                 download_name=filename,
             )
-        else:  # xlsx
+        elif export_format == "xlsx":
             try:
                 from openpyxl import Workbook
+                from openpyxl.styles import Font
+                from openpyxl.utils import get_column_letter
             except ImportError:
                 return jsonify({"success": False, "message": "openpyxl is required for XLSX export"}), 500
 
             wb = Workbook()
             ws = wb.active
+
+            # Add headers
             ws.append(fieldnames)
+
+            # Make header row bold
+            for col in range(1, len(fieldnames) + 1):
+                ws.cell(row=1, column=col).font = Font(bold=True)
+
+            # Add data rows
             for r in rows:
                 ws.append([r.get(f) for f in fieldnames])
+
+            # Auto-adjust column widths
+            for column_cells in ws.columns:
+                max_length = 0
+                column_letter = get_column_letter(column_cells[0].column)
+
+                for cell in column_cells:
+                    try:
+                        if cell.value:
+                            # Calculate length of cell content
+                            cell_length = len(str(cell.value))
+                            if cell_length > max_length:
+                                max_length = cell_length
+                    except:
+                        pass
+
+                # Set column width with some padding (max 50 characters wide)
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
 
             mem = io.BytesIO()
             wb.save(mem)
             mem.seek(0)
 
             filename = f"{module}_export.xlsx"
-            from flask import send_file
 
             return send_file(
                 mem,
@@ -471,9 +610,100 @@ def analytics_export():
                 as_attachment=True,
                 download_name=filename,
             )
+        else:  # pdf
+            try:
+                from reportlab.lib.pagesizes import letter, landscape
+                from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+                from reportlab.lib.styles import getSampleStyleSheet
+                from reportlab.lib import colors
+                from reportlab.lib.units import inch
+            except ImportError:
+                return jsonify({"success": False, "message": "reportlab is required for PDF export"}), 500
+
+            mem = io.BytesIO()
+
+            # Use landscape for better table viewing
+            doc = SimpleDocTemplate(mem, pagesize=landscape(letter))
+            elements = []
+
+            # Add title
+            styles = getSampleStyleSheet()
+            title = Paragraph(
+                f"{module.replace('_', ' ').title()} Export", styles['Title'])
+            elements.append(title)
+
+            # Add export timestamp
+            timestamp = Paragraph(
+                f"Exported on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal'])
+            elements.append(timestamp)
+            elements.append(Spacer(1, 0.2 * inch))
+
+            # Prepare data for table - limit columns for PDF readability
+            max_columns = 8  # Limit columns for PDF readability
+            if len(fieldnames) > max_columns:
+                # Select most important columns for PDF
+                important_fields = []
+                if module == "applicants":
+                    important_fields = ['applicant_code', 'first_name',
+                                        'last_name', 'age', 'sex', 'city', 'status', 'created_date']
+                elif module == "employers":
+                    important_fields = ['employer_code', 'employer_name', 'industry',
+                                        'recruitment_type', 'city', 'status', 'created_date']
+                else:  # jobs_applications
+                    important_fields = ['application_id', 'first_name', 'last_name',
+                                        'job_position', 'application_status', 'employer_name', 'application_date']
+
+                # Use important fields that actually exist in the data
+                fieldnames_display = [
+                    f for f in important_fields if f in fieldnames]
+                # Add any missing important fields from original data
+                for f in fieldnames:
+                    if f not in fieldnames_display and len(fieldnames_display) < max_columns:
+                        fieldnames_display.append(f)
+            else:
+                fieldnames_display = fieldnames
+
+            data = [fieldnames_display]  # Header row
+
+            for row in rows:
+                data.append([str(row.get(field, ''))
+                            for field in fieldnames_display])
+
+            # Create table
+            table = Table(data, repeatRows=1)
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1b5e20')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+                 [colors.white, colors.lightgrey])
+            ]))
+            elements.append(table)
+
+            doc.build(elements)
+            mem.seek(0)
+
+            filename = f"{module}_export.pdf"
+
+            return send_file(
+                mem,
+                mimetype="application/pdf",
+                as_attachment=True,
+                download_name=filename,
+            )
+
     except Exception as exc:
         print("[analytics] export error:", exc)
-        return jsonify({"success": False, "message": "Failed to export data"}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "message": f"Failed to export data: {str(exc)}"}), 500
     finally:
         conn.close()
 
@@ -531,12 +761,12 @@ def admin_analytics_applicants_per_month():
         return jsonify({"success": False, "message": "Database connection failed"}), 500
 
     try:
-        # Reuse filters (including date range and demographics)
         where_sql, params = build_applicants_filters(request.args, alias="a")
         if year_filter:
             where_sql += " AND YEAR(a.created_at) = %s"
             params = (*params, year_filter)
 
+        # Get all applicants with their creation month and age
         rows = run_query(
             conn,
             f"""
@@ -545,25 +775,35 @@ def admin_analytics_applicants_per_month():
                 DATE_FORMAT(a.created_at, '%b %Y') AS label,
                 MONTH(a.created_at) AS month_num,
                 YEAR(a.created_at) AS year_num,
-                COUNT(*) AS total
+                a.age
             FROM applicants a
             WHERE {where_sql}
-            GROUP BY year_num, month_num
             ORDER BY year_num ASC, month_num ASC
             """,
             params,
             fetch="all",
         ) or []
 
-        data = [
-            {
-                "month": _to_int(row.get("month_num")),
-                "year": _to_int(row.get("year_num")),
-                "label": row.get("label"),
-                "count": _to_int(row.get("total")),
-            }
-            for row in rows
-        ]
+        # Apply age bracket filtering in Python
+        age_brackets = _parse_multi(request.args, "age_bracket")
+        if age_brackets:
+            rows = [row for row in rows if _matches_age_bracket(
+                row['age'], age_brackets)]
+
+        # Group by month after filtering
+        monthly_counts = {}
+        for row in rows:
+            month_key = row.get("month_key")
+            if month_key not in monthly_counts:
+                monthly_counts[month_key] = {
+                    "month": _to_int(row.get("month_num")),
+                    "year": _to_int(row.get("year_num")),
+                    "label": row.get("label"),
+                    "count": 0
+                }
+            monthly_counts[month_key]["count"] += 1
+
+        data = list(monthly_counts.values())
         return jsonify({"success": True, "data": data})
     except Exception as exc:
         print("[analytics] applicants-per-month error:", exc)
@@ -690,11 +930,12 @@ def applicants_location_filters():
         return jsonify({"success": False, "message": "Database connection failed"}), 500
 
     try:
+        # For filter dropdowns, we want ALL available locations, not filtered ones
         if level == "province":
             rows = run_query(
                 conn,
                 """
-                SELECT DISTINCT province AS value
+                SELECT DISTINCT UPPER(province) AS value
                 FROM applicants
                 WHERE province IS NOT NULL AND province <> ''
                 ORDER BY value ASC
@@ -707,9 +948,9 @@ def applicants_location_filters():
             rows = run_query(
                 conn,
                 """
-                SELECT DISTINCT city AS value
+                SELECT DISTINCT UPPER(city) AS value
                 FROM applicants
-                WHERE province = %s AND city IS NOT NULL AND city <> ''
+                WHERE UPPER(province) = UPPER(%s) AND city IS NOT NULL AND city <> ''
                 ORDER BY value ASC
                 """,
                 (parent,),
@@ -721,9 +962,9 @@ def applicants_location_filters():
             rows = run_query(
                 conn,
                 """
-                SELECT DISTINCT barangay AS value
+                SELECT DISTINCT UPPER(barangay) AS value
                 FROM applicants
-                WHERE city = %s AND barangay IS NOT NULL AND barangay <> ''
+                WHERE UPPER(city) = UPPER(%s) AND barangay IS NOT NULL AND barangay <> ''
                 ORDER BY value ASC
                 """,
                 (parent,),
@@ -754,11 +995,12 @@ def employers_location_filters():
         return jsonify({"success": False, "message": "Database connection failed"}), 500
 
     try:
+        # For filter dropdowns, we want ALL available locations, not filtered ones
         if level == "province":
             rows = run_query(
                 conn,
                 """
-                SELECT DISTINCT province AS value
+                SELECT DISTINCT UPPER(province) AS value
                 FROM employers
                 WHERE province IS NOT NULL AND province <> ''
                 ORDER BY value ASC
@@ -771,9 +1013,9 @@ def employers_location_filters():
             rows = run_query(
                 conn,
                 """
-                SELECT DISTINCT city AS value
+                SELECT DISTINCT UPPER(city) AS value
                 FROM employers
-                WHERE province = %s AND city IS NOT NULL AND city <> ''
+                WHERE UPPER(province) = UPPER(%s) AND city IS NOT NULL AND city <> ''
                 ORDER BY value ASC
                 """,
                 (parent,),
@@ -785,9 +1027,9 @@ def employers_location_filters():
             rows = run_query(
                 conn,
                 """
-                SELECT DISTINCT barangay AS value
+                SELECT DISTINCT UPPER(barangay) AS value
                 FROM employers
-                WHERE city = %s AND barangay IS NOT NULL AND barangay <> ''
+                WHERE UPPER(city) = UPPER(%s) AND barangay IS NOT NULL AND barangay <> ''
                 ORDER BY value ASC
                 """,
                 (parent,),
@@ -818,32 +1060,48 @@ def admin_analytics_applicants_by_province():
         return jsonify({"success": False, "message": "Database connection failed"}), 500
 
     try:
-        query = """
-            SELECT
-                COALESCE(NULLIF(province, ''), 'Unspecified') AS province,
-                COUNT(*) AS total
-            FROM applicants
-            WHERE 1=1
-        """
-        params = []
+        where_sql, params = build_applicants_filters(request.args, alias="a")
 
+        # Add month/year filters if provided
         if month_filter:
-            query += " AND MONTH(created_at) = %s"
-            params.append(month_filter)
+            where_sql += " AND MONTH(a.created_at) = %s"
+            params = (*params, month_filter)
         if year_filter:
-            query += " AND YEAR(created_at) = %s"
-            params.append(year_filter)
+            where_sql += " AND YEAR(a.created_at) = %s"
+            params = (*params, year_filter)
 
-        query += " GROUP BY province ORDER BY total DESC"
+        # Get all applicants with province and age
+        rows = run_query(
+            conn,
+            f"""
+            SELECT
+                COALESCE(NULLIF(a.province, ''), 'Unspecified') AS province,
+                a.age
+            FROM applicants a
+            WHERE {where_sql}
+            """,
+            params,
+            fetch="all",
+        ) or []
 
-        rows = run_query(conn, query, tuple(params)
-                         if params else None, fetch="all") or []
+        # Apply age bracket filtering in Python
+        age_brackets = _parse_multi(request.args, "age_bracket")
+        if age_brackets:
+            rows = [row for row in rows if _matches_age_bracket(
+                row['age'], age_brackets)]
+
+        # Count by province after filtering
+        province_counts = {}
+        for row in rows:
+            province = row.get("province")
+            province_counts[province] = province_counts.get(province, 0) + 1
 
         data = [
-            {"province": row.get("province"),
-             "count": _to_int(row.get("total"))}
-            for row in rows
+            {"province": province, "count": count}
+            for province, count in province_counts.items()
         ]
+        data.sort(key=lambda x: x["count"], reverse=True)
+
         return jsonify({"success": True, "data": data})
     except Exception as exc:
         print("[analytics] applicants-by-province error:", exc)
@@ -900,27 +1158,63 @@ def applicants_summary():
 
     try:
         where_sql, params = build_applicants_filters(request.args, alias="a")
-        row = run_query(
+
+        # Get all applicants first
+        rows = run_query(
             conn,
             f"""
             SELECT
-              COUNT(*) AS total_registered,
-              SUM(CASE WHEN a.is_active = 1 THEN 1 ELSE 0 END) AS active_count
+              a.applicant_id,
+              a.age
             FROM applicants a
             WHERE {where_sql}
+            """,
+            params,
+            fetch="all",
+        ) or []
+
+        # Apply age bracket filtering in Python
+        age_brackets = _parse_multi(request.args, "age_bracket")
+        if age_brackets:
+            rows = [row for row in rows if _matches_age_bracket(
+                row['age'], age_brackets)]
+
+        # Now calculate summary based on filtered rows
+        total_registered = len(rows)
+        active_count = run_query(
+            conn,
+            f"""
+            SELECT COUNT(*) AS active_count
+            FROM applicants a
+            WHERE {where_sql} AND a.is_active = 1
             """,
             params,
             fetch="one",
         ) or {}
 
-        total_registered = _to_int(row.get("total_registered"))
-        active_count = _to_int(row.get("active_count"))
+        # Apply age bracket filtering to active count too
+        if age_brackets:
+            active_rows = run_query(
+                conn,
+                f"""
+                SELECT a.applicant_id, a.age
+                FROM applicants a
+                WHERE {where_sql} AND a.is_active = 1
+                """,
+                params,
+                fetch="all",
+            ) or []
+            active_rows = [row for row in active_rows if _matches_age_bracket(
+                row['age'], age_brackets)]
+            active_count = {"active_count": len(active_rows)}
+        else:
+            active_count = {"active_count": _to_int(
+                active_count.get("active_count"))}
 
         data = {
             "total_registered": total_registered,
-            "active_applicants": active_count,
-            # For now, treat "new registrations" as total in filtered window
-            "new_registrations": total_registered,
+            "active_applicants": active_count["active_count"],
+            "new_registrations": total_registered,  # This might need adjustment
         }
         return jsonify({"success": True, "data": data})
     except Exception as exc:
@@ -943,86 +1237,78 @@ def applicants_demographics():
     try:
         where_sql, params = build_applicants_filters(request.args, alias="a")
 
-        # Sex distribution
-        sex_rows = run_query(
-            conn,
-            f"""
-            SELECT COALESCE(NULLIF(a.sex, ''), 'Unspecified') AS label,
-                   COUNT(*) AS total
-            FROM applicants a
-            WHERE {where_sql}
-            GROUP BY label
-            """,
-            params,
-            fetch="all",
-        ) or []
-
-        # Education distribution
-        edu_rows = run_query(
-            conn,
-            f"""
-            SELECT COALESCE(NULLIF(a.education, ''), 'Unspecified') AS label,
-                   COUNT(*) AS total
-            FROM applicants a
-            WHERE {where_sql}
-            GROUP BY label
-            """,
-            params,
-            fetch="all",
-        ) or []
-
-        # Age groups (based on age column)
-        age_rows = run_query(
+        # Get all applicants first
+        all_applicants = run_query(
             conn,
             f"""
             SELECT
-              CASE
-                WHEN a.age IS NULL THEN 'Unspecified'
-                WHEN a.age < 18 THEN 'Under 18'
-                WHEN a.age BETWEEN 18 AND 24 THEN '18-24'
-                WHEN a.age BETWEEN 25 AND 34 THEN '25-34'
-                WHEN a.age BETWEEN 35 AND 44 THEN '35-44'
-                WHEN a.age >= 45 THEN '45+'
-                ELSE 'Unspecified'
-              END AS age_group,
-              COUNT(*) AS total
+              a.applicant_id,
+              a.sex,
+              a.education,
+              a.age
             FROM applicants a
             WHERE {where_sql}
-            GROUP BY CASE
-              WHEN a.age IS NULL THEN 'Unspecified'
-              WHEN a.age < 18 THEN 'Under 18'
-              WHEN a.age BETWEEN 18 AND 24 THEN '18-24'
-              WHEN a.age BETWEEN 25 AND 34 THEN '25-34'
-              WHEN a.age BETWEEN 35 AND 44 THEN '35-44'
-              WHEN a.age >= 45 THEN '45+'
-              ELSE 'Unspecified'
-            END
-            ORDER BY CASE
-              WHEN age_group = 'Under 18' THEN 1
-              WHEN age_group = '18-24' THEN 2
-              WHEN age_group = '25-34' THEN 3
-              WHEN age_group = '35-44' THEN 4
-              WHEN age_group = '45+' THEN 5
-              ELSE 6
-            END
             """,
             params,
             fetch="all",
         ) or []
 
+        # Apply age bracket filtering in Python
+        age_brackets = _parse_multi(request.args, "age_bracket")
+        if age_brackets:
+            all_applicants = [row for row in all_applicants if _matches_age_bracket(
+                row['age'], age_brackets)]
+
+        # Calculate demographics from filtered data
+        sex_counts = {}
+        education_counts = {}
+        age_group_counts = {
+            "Under 18": 0,
+            "18-24": 0,
+            "25-34": 0,
+            "35-44": 0,
+            "45+": 0,
+            "Unspecified": 0
+        }
+
+        for applicant in all_applicants:
+            # Sex distribution
+            sex = applicant.get("sex") or "Unspecified"
+            sex_counts[sex] = sex_counts.get(sex, 0) + 1
+
+            # Education distribution
+            education = applicant.get("education") or "Unspecified"
+            education_counts[education] = education_counts.get(
+                education, 0) + 1
+
+            # Age groups
+            age = applicant.get("age")
+            if not age:
+                age_group_counts["Unspecified"] += 1
+            elif age < 18:
+                age_group_counts["Under 18"] += 1
+            elif 18 <= age <= 24:
+                age_group_counts["18-24"] += 1
+            elif 25 <= age <= 34:
+                age_group_counts["25-34"] += 1
+            elif 35 <= age <= 44:
+                age_group_counts["35-44"] += 1
+            else:
+                age_group_counts["45+"] += 1
+
         data = {
             "by_sex": [
-                {"label": r.get("label"), "count": _to_int(r.get("total"))}
-                for r in sex_rows
+                {"label": label, "count": count}
+                for label, count in sex_counts.items()
             ],
             "by_education": [
-                {"label": r.get("label"), "count": _to_int(r.get("total"))}
-                for r in edu_rows
+                {"label": label, "count": count}
+                for label, count in education_counts.items()
             ],
             "by_age_group": [
-                {"age_group": r.get("age_group"),
-                 "count": _to_int(r.get("total"))}
-                for r in age_rows
+                {"age_group": age_group, "count": count}
+                for age_group, count in age_group_counts.items()
+                if count > 0
             ],
         }
         return jsonify({"success": True, "data": data})
@@ -1046,46 +1332,56 @@ def applicants_location():
     try:
         where_sql, params = build_applicants_filters(request.args, alias="a")
 
-        # Top 10 cities
-        city_rows = run_query(
+        # Get all applicants with location data and age
+        rows = run_query(
             conn,
             f"""
             SELECT
+              a.applicant_id,
               COALESCE(NULLIF(a.city, ''), 'Unspecified') AS city,
-              COUNT(*) AS total
+              a.is_from_lipa,
+              a.age
             FROM applicants a
             WHERE {where_sql}
-            GROUP BY city
-            ORDER BY total DESC
-            LIMIT 10
             """,
             params,
             fetch="all",
         ) or []
 
-        # Is from Lipa status
-        lipa_rows = run_query(
-            conn,
-            f"""
-            SELECT
-              CASE WHEN a.is_from_lipa = 1 THEN 'From Lipa' ELSE 'Not From Lipa' END AS status,
-              COUNT(*) AS total
-            FROM applicants a
-            WHERE {where_sql}
-            GROUP BY status
-            """,
-            params,
-            fetch="all",
-        ) or []
+        # Apply age bracket filtering in Python
+        age_brackets = _parse_multi(request.args, "age_bracket")
+        if age_brackets:
+            rows = [row for row in rows if _matches_age_bracket(
+                row['age'], age_brackets)]
+
+        # Calculate city counts from filtered data
+        city_counts = {}
+        lipa_counts = {"From Lipa": 0, "Not From Lipa": 0}
+
+        for row in rows:
+            # City counts
+            city = row.get("city")
+            city_counts[city] = city_counts.get(city, 0) + 1
+
+            # Lipa status counts
+            is_from_lipa = row.get("is_from_lipa")
+            if is_from_lipa == 1:
+                lipa_counts["From Lipa"] += 1
+            else:
+                lipa_counts["Not From Lipa"] += 1
+
+        # Get top 10 cities
+        top_cities = sorted(city_counts.items(),
+                            key=lambda x: x[1], reverse=True)[:10]
 
         data = {
             "by_city": [
-                {"city": r.get("city"), "count": _to_int(r.get("total"))}
-                for r in city_rows
+                {"city": city, "count": count}
+                for city, count in top_cities
             ],
             "by_is_from_lipa": [
-                {"status": r.get("status"), "count": _to_int(r.get("total"))}
-                for r in lipa_rows
+                {"status": status, "count": count}
+                for status, count in lipa_counts.items()
             ],
         }
         return jsonify({"success": True, "data": data})
@@ -1109,45 +1405,151 @@ def applicants_experience():
     try:
         where_sql, params = build_applicants_filters(request.args, alias="a")
 
-        exp_rows = run_query(
+        print(f"DEBUG - WHERE clause: {where_sql}")
+        print(f"DEBUG - Params: {params}")
+
+        # Get all applicants first
+        rows = run_query(
             conn,
             f"""
             SELECT
-              CASE
-                WHEN a.years_experience IS NULL OR a.years_experience = 0 THEN 'No Experience'
-                WHEN a.years_experience BETWEEN 1 AND 2 THEN '1-2 Years'
-                WHEN a.years_experience BETWEEN 3 AND 5 THEN '3-5 Years'
-                WHEN a.years_experience BETWEEN 6 AND 10 THEN '6-10 Years'
-                WHEN a.years_experience > 10 THEN '10+ Years'
-                ELSE 'Unspecified'
-              END AS exp_range,
-              COUNT(*) AS total
+              a.applicant_id,
+              a.years_experience,
+              a.age
             FROM applicants a
             WHERE {where_sql}
-            GROUP BY exp_range
-            ORDER BY 
-              CASE exp_range
-                WHEN 'No Experience' THEN 1
-                WHEN '1-2 Years' THEN 2
-                WHEN '3-5 Years' THEN 3
-                WHEN '6-10 Years' THEN 4
-                WHEN '10+ Years' THEN 5
-                ELSE 6
-              END
             """,
             params,
             fetch="all",
         ) or []
 
+        print(f"DEBUG - Rows before age filtering: {len(rows)}")
+        for i, row in enumerate(rows[:5]):  # Show first 5 rows
+            print(
+                f"  Row {i}: age={row.get('age')}, years_experience='{row.get('years_experience')}'")
+
+        # Apply age bracket filtering in Python
+        age_brackets = _parse_multi(request.args, "age_bracket")
+        print(f"DEBUG - Age brackets from request: {age_brackets}")
+
+        if age_brackets:
+            filtered_rows = []
+            for row in rows:
+                age = row.get('age')
+                matches = _matches_age_bracket(age, age_brackets)
+                print(
+                    f"  Age {age} matches brackets {age_brackets}: {matches}")
+                if matches:
+                    filtered_rows.append(row)
+            rows = filtered_rows
+
+        print(f"DEBUG - Rows after age filtering: {len(rows)}")
+
+        # Calculate experience ranges from filtered data
+        exp_ranges = {
+            "No Experience": 0,
+            "1-2 Years": 0,
+            "3-5 Years": 0,
+            "6-10 Years": 0,
+            "10+ Years": 0,
+            "Unspecified": 0
+        }
+
+        for row in rows:
+            years_exp = row.get("years_experience")
+            print(f"DEBUG - Processing: years_experience='{years_exp}'")
+
+            # Handle your actual data formats
+            if (years_exp is None or
+                years_exp == '' or
+                years_exp == '0' or
+                    str(years_exp).lower() == 'none'):
+                exp_ranges["No Experience"] += 1
+
+            # Handle range formats like "1-2", "3-4"
+            elif isinstance(years_exp, str) and '-' in years_exp:
+                try:
+                    start, end = years_exp.split('-')
+                    start_num = int(start.strip())
+                    end_num = int(end.strip())
+
+                    if 1 <= start_num <= 2 and 1 <= end_num <= 2:
+                        exp_ranges["1-2 Years"] += 1
+                    elif 3 <= start_num <= 5 and 3 <= end_num <= 5:
+                        exp_ranges["3-5 Years"] += 1
+                    elif 6 <= start_num <= 10 and 6 <= end_num <= 10:
+                        exp_ranges["6-10 Years"] += 1
+                    else:
+                        exp_ranges["Unspecified"] += 1
+                except (ValueError, TypeError):
+                    exp_ranges["Unspecified"] += 1
+
+            # Handle plus formats like "5+"
+            elif isinstance(years_exp, str) and years_exp.endswith('+'):
+                try:
+                    years_num = int(years_exp.replace('+', '').strip())
+                    if 1 <= years_num <= 2:
+                        exp_ranges["1-2 Years"] += 1
+                    elif 3 <= years_num <= 5:
+                        exp_ranges["3-5 Years"] += 1
+                    elif 6 <= years_num <= 10:
+                        exp_ranges["6-10 Years"] += 1
+                    elif years_num > 10:
+                        exp_ranges["10+ Years"] += 1
+                    else:
+                        exp_ranges["Unspecified"] += 1
+                except (ValueError, TypeError):
+                    exp_ranges["Unspecified"] += 1
+
+            # Handle single number formats
+            elif years_exp in ('1', '2'):
+                exp_ranges["1-2 Years"] += 1
+            elif years_exp in ('3', '4', '5'):
+                exp_ranges["3-5 Years"] += 1
+            elif years_exp in ('6', '7', '8', '9', '10'):
+                exp_ranges["6-10 Years"] += 1
+
+            else:
+                try:
+                    # Handle any other numeric values
+                    years_int = int(years_exp)
+                    if years_int == 0:
+                        exp_ranges["No Experience"] += 1
+                    elif 1 <= years_int <= 2:
+                        exp_ranges["1-2 Years"] += 1
+                    elif 3 <= years_int <= 5:
+                        exp_ranges["3-5 Years"] += 1
+                    elif 6 <= years_int <= 10:
+                        exp_ranges["6-10 Years"] += 1
+                    elif years_int > 10:
+                        exp_ranges["10+ Years"] += 1
+                    else:
+                        exp_ranges["Unspecified"] += 1
+                except (ValueError, TypeError):
+                    exp_ranges["Unspecified"] += 1
+
+        print(f"DEBUG - Final experience counts: {exp_ranges}")
+
         data = {
             "by_experience": [
-                {"range": r.get("exp_range"), "count": _to_int(r.get("total"))}
-                for r in exp_rows
+                {"range": exp_range, "count": count}
+                for exp_range, count in exp_ranges.items()
+                if count > 0
             ],
         }
+
+        # Sort by predefined order
+        order = {"No Experience": 1, "1-2 Years": 2,
+                 "3-5 Years": 3, "6-10 Years": 4, "10+ Years": 5}
+        data["by_experience"].sort(key=lambda x: order.get(x["range"], 6))
+
+        print(f"DEBUG - Final data to return: {data}")
+
         return jsonify({"success": True, "data": data})
     except Exception as exc:
         print("[analytics] applicants_experience error:", exc)
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "message": "Failed to load applicant experience data"}), 500
     finally:
         conn.close()
@@ -1166,28 +1568,42 @@ def applicants_pwd():
     try:
         where_sql, params = build_applicants_filters(request.args, alias="a")
 
-        pwd_rows = run_query(
+        # Get all PWD applicants with their type and age
+        rows = run_query(
             conn,
             f"""
             SELECT
+              a.applicant_id,
               COALESCE(NULLIF(a.pwd_type, ''), 'Not Specified') AS pwd_type,
-              COUNT(*) AS total
+              a.age
             FROM applicants a
             WHERE {where_sql} AND a.is_pwd = 1
-            GROUP BY pwd_type
-            ORDER BY total DESC
             """,
             params,
             fetch="all",
         ) or []
 
+        # Apply age bracket filtering in Python
+        age_brackets = _parse_multi(request.args, "age_bracket")
+        if age_brackets:
+            rows = [row for row in rows if _matches_age_bracket(
+                row['age'], age_brackets)]
+
+        # Calculate PWD type counts from filtered data
+        pwd_counts = {}
+        for row in rows:
+            pwd_type = row.get("pwd_type")
+            pwd_counts[pwd_type] = pwd_counts.get(pwd_type, 0) + 1
+
         data = {
             "by_pwd_type": [
-                {"pwd_type": r.get("pwd_type"),
-                 "count": _to_int(r.get("total"))}
-                for r in pwd_rows
+                {"pwd_type": pwd_type, "count": count}
+                for pwd_type, count in pwd_counts.items()
             ],
         }
+        # Sort by count descending
+        data["by_pwd_type"].sort(key=lambda x: x["count"], reverse=True)
+
         return jsonify({"success": True, "data": data})
     except Exception as exc:
         print("[analytics] applicants_pwd error:", exc)
@@ -1613,15 +2029,13 @@ def get_productivity_stats():
     try:
         today = datetime.today().date()
 
-        # Tasks completed today (from todos - would need a todos table)
-        # For now, return placeholder data
-        # Applications reviewed today
+        # Applications reviewed today (use applied_at since updated_at doesn't exist)
         apps_reviewed = run_query(
             conn,
             """
             SELECT COUNT(*) AS count
             FROM applications
-            WHERE DATE(updated_at) = %s AND status IN ('Approved', 'Rejected')
+            WHERE DATE(applied_at) = %s AND status IN ('Approved', 'Rejected')
             """,
             (today,),
             fetch="one",
@@ -1639,10 +2053,24 @@ def get_productivity_stats():
             fetch="one",
         ) or {}
 
+        # New employers registered today
+        new_employers = run_query(
+            conn,
+            """
+            SELECT COUNT(*) AS count
+            FROM employers
+            WHERE DATE(created_at) = %s
+            """,
+            (today,),
+            fetch="one",
+        ) or {}
+
         data = {
-            "tasks_completed": 0,  # Placeholder
+            # Use applications reviewed as tasks
+            "tasks_completed": _to_int(apps_reviewed.get("count")),
             "applications_reviewed": _to_int(apps_reviewed.get("count")),
             "new_registrations": _to_int(new_regs.get("count")),
+            "new_employers": _to_int(new_employers.get("count")),
         }
         return jsonify({"success": True, "data": data})
     except Exception as exc:
@@ -1892,14 +2320,24 @@ def jobs_summary():
 
     try:
         where_sql, params = build_jobs_filters(request.args, alias="j")
+
+        # For "open jobs" metric, we want active jobs that haven't expired
+        # Check if user has specifically filtered for job status
+        job_statuses = _parse_multi(request.args, "job_status")
+
+        if not job_statuses:
+            # No job status filter applied - show only active, non-expired jobs for "open jobs" metric
+            open_jobs_where = f"({where_sql}) AND j.status = 'active' AND (j.job_expiration_date IS NULL OR j.job_expiration_date >= CURDATE())"
+        else:
+            # User applied job status filters - respect their selection but still check expiration for "open jobs"
+            open_jobs_where = f"({where_sql}) AND (j.job_expiration_date IS NULL OR j.job_expiration_date >= CURDATE())"
+
         row = run_query(
             conn,
             f"""
             SELECT COUNT(*) AS open_jobs
             FROM jobs j
-            WHERE j.status = 'active'
-            AND (j.job_expiration_date IS NULL OR j.job_expiration_date >= CURDATE())
-            AND {where_sql}
+            WHERE {open_jobs_where}
             """,
             params,
             fetch="one",
@@ -2013,12 +2451,13 @@ def applications_summary():
         ]
 
         total_applications = sum(item["count"] for item in by_status)
-        approved = next(
+        # Update success rate calculation to use "Hired" instead of "Approved"
+        hired = next(
             (item["count"]
-             for item in by_status if item["status"] == "Approved"), 0
+             for item in by_status if item["status"] == "Hired"), 0
         )
         success_rate = (
-            approved / total_applications) if total_applications else 0
+            hired / total_applications) if total_applications else 0
 
         data = {
             "total_applications": total_applications,
@@ -2076,6 +2515,14 @@ def applications_trend():
             }
             for r in rows
         ]
+
+        # Check if we have meaningful data (same logic as other charts)
+        has_data = len(data) > 0 and any(item["count"] > 0 for item in data)
+
+        if not has_data:
+            # Return empty array to trigger the "no data" state in frontend
+            return jsonify({"success": True, "data": []})
+
         return jsonify({"success": True, "data": data})
     except Exception as exc:
         print("[analytics] applications_trend error:", exc)
@@ -2358,24 +2805,48 @@ def update_nonlipeno_status(applicant_id):
             success_message = "Non-Lipeño applicant approved successfully! Credentials sent via email."
 
         elif action == "rejected":
-            new_status = "Rejected"
-            reason = data.get("reason") if isinstance(data, dict) else None
+            reason = data.get("reason")
             subject = "PESO SmartHire - Application Status Update"
             reason_block = f"<p><strong>Reason:</strong> {reason}</p>" if reason else ""
+
             body = f"""
             <p>Hi {applicant['first_name']},</p>
             <p>This is PESO SmartHire Team.</p>
             <p>We regret to inform you that your application for PESO SmartHire has been reviewed but did not meet the current requirements.</p>
             {reason_block}
             <p>You may reapply in the future once you meet the qualifications.</p>
-            <p>Thank you for your interest.</p>
             <p>— PESO SmartHire Admin</p>
             """
-            success_message = "Non-Lipeño applicant has been rejected. Notification email sent."
+
+            # 1. Send Email FIRST (before deleting data)
+            msg = Message(subject=subject, recipients=[
+                          applicant["email"]], html=body)
+            try:
+                mail.send(msg)
+            except Exception as e:
+                logger.error(f"Failed to send rejection email: {e}")
+
+            # 2. Delete Associated Files (Clean up storage)
+            file_fields = ["recommendation_letter_path",
+                           "profile_picture_path", "resume_path"]
+            for field in file_fields:
+                file_path = applicant.get(field)
+                if file_path:
+                    try:
+                        full_path = os.path.join("static", file_path)
+                        if os.path.exists(full_path):
+                            os.remove(full_path)
+                    except Exception as e:
+                        print(f"Error deleting file {file_path}: {e}")
+
+            # 3. DELETE the record from Database
             cursor.execute(
-                "UPDATE applicants SET password_hash = NULL, temp_password = NULL WHERE applicant_id = %s",
-                (applicant_id,)
-            )
+                "DELETE FROM applicants WHERE applicant_id = %s", (applicant_id,))
+            conn.commit()
+
+            cursor.close()
+            conn.close()
+            return jsonify({"success": True, "message": "Applicant rejected and account deleted."})
 
         elif action == "reupload":
             new_status = "Reupload"
@@ -2927,12 +3398,20 @@ def update_local_employer_status(employer_id):
             <p>— PESO SmartHire Admin</p>
             """
 
-            # Do NOT delete if they're an existing employer or if recruitment type change was rejected
-            should_delete = is_new_employer and employer.get(
-                "recruitment_type_change_pending") == 0
+            is_new_registration = (employer['status'] == 'Pending') and (
+                employer.get("recruitment_type_change_pending", 0) == 0)
 
-            if should_delete:
-                success_message = "Local employer rejected and record deleted. Notification email sent."
+            if is_new_registration:
+                success_message = "Employer application rejected and record deleted."
+
+                try:
+                    msg = Message(subject=subject, recipients=[
+                                  employer["email"]], html=body)
+                    mail.send(msg)
+                except Exception as email_error:
+                    logger.error(
+                        f"Failed to send rejection email: {email_error}")
+                    # Even if email fails, we still want to delete the record
 
                 file_fields = [
                     "company_logo_path",
@@ -2956,11 +3435,6 @@ def update_local_employer_status(employer_id):
                         except Exception as e:
                             logger.warning(
                                 f"Failed to delete file {file_path}: {e}")
-
-                # Send email BEFORE deletion
-                msg = Message(subject=subject, recipients=[
-                              employer["email"]], html=body)
-                mail.send(msg)
 
                 # Delete the record
                 cursor.execute(
@@ -3111,12 +3585,20 @@ def update_international_employer_status(employer_id):
             <p>— PESO SmartHire Admin</p>
             """
 
-            # Do NOT delete if they're an existing employer or if recruitment type change was rejected
-            should_delete = is_new_employer and employer.get(
-                "recruitment_type_change_pending") == 0
+            is_new_registration = (employer['status'] == 'Pending') and (
+                employer.get("recruitment_type_change_pending", 0) == 0)
 
-            if should_delete:
-                success_message = "International employer rejected and record deleted. Notification email sent."
+            if is_new_registration:
+                success_message = "Employer application rejected and record deleted."
+
+                try:
+                    msg = Message(subject=subject, recipients=[
+                                  employer["email"]], html=body)
+                    mail.send(msg)
+                except Exception as email_error:
+                    logger.error(
+                        f"Failed to send rejection email: {email_error}")
+                    # Even if email fails, we still want to delete the record
 
                 file_fields = [
                     "company_logo_path",
@@ -3140,11 +3622,6 @@ def update_international_employer_status(employer_id):
                         except Exception as e:
                             logger.warning(
                                 f"Failed to delete file {file_path}: {e}")
-
-                # Send email BEFORE deletion
-                msg = Message(subject=subject, recipients=[
-                              employer["email"]], html=body)
-                mail.send(msg)
 
                 # Delete the record
                 cursor.execute(

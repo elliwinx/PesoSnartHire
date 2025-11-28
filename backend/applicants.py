@@ -190,7 +190,17 @@ def register_applicant(form, files):
             return False, "You are already registered. Please log in or contact admin."
 
         # ==== Determine applicant type ====
-        is_from_lipa = int(form.get("fromLipa") == "on")
+        province = form.get("applicantProvince", "").strip()
+        is_from_lipa_checkbox = form.get("fromLipa") == "on"
+
+        if is_from_lipa_checkbox:
+            city = form.get("applicantCity").strip()
+        else:
+            city = form.get("applicantCityText").strip()
+
+        is_from_lipa = is_from_lipa_checkbox or (
+            province == "Batangas" and city == "Lipa City")
+
         is_pwd = int(form.get("pwd") == "on")
         has_work_exp = int(form.get("workExperience") == "on")
         accepted_terms = int(session.get("accepted_terms", 0))
@@ -843,6 +853,39 @@ def notifications():
 
     return render_template("Applicant/notif.html", notifications=notifications)
 
+# In applicants.py
+
+
+@applicants_bp.route('/api/notifications/unread-count')
+def get_unread_notif_count():
+    if 'applicant_id' not in session:
+        return jsonify({'success': False, 'count': 0})
+
+    applicant_id = session['applicant_id']
+    conn = create_connection()
+    if not conn:
+        return jsonify({'success': False, 'count': 0})
+
+    try:
+        # Count only unread notifications for this specific applicant
+        # Filtering out admin-only types to be safe
+        query = """
+        SELECT COUNT(*) as count 
+        FROM notifications 
+        WHERE applicant_id = %s 
+          AND is_read = 0 
+          AND notification_type NOT IN ('employer_approval', 'applicant_approval', 'employer_reported', 'employer_outdated_docu', 'applicant_batch', 'job_application')
+        """
+        result = run_query(conn, query, (applicant_id,), fetch="one")
+        count = result['count'] if result else 0
+
+        return jsonify({'success': True, 'count': count})
+    except Exception as e:
+        print(f"[v0] Error fetching unread count: {e}")
+        return jsonify({'success': False, 'count': 0})
+    finally:
+        conn.close()
+
 
 @applicants_bp.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
 def mark_applicant_notification_read(notif_id):
@@ -1041,6 +1084,7 @@ def delete_application(app_id):
     """
     DELETE endpoint for cancelling applications
     Updated to use correct database schema with applications_history table
+    AND notify the employer.
     """
     if 'applicant_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'}), 401
@@ -1051,9 +1095,19 @@ def delete_application(app_id):
         return jsonify({'success': False, 'message': 'DB connection failed'}), 500
 
     try:
+        # 1. UPDATED QUERY: We join 'jobs' and 'applicants' to get details for the notification
         app = run_query(
             conn,
-            'SELECT id, status, job_id FROM applications WHERE id = %s AND applicant_id = %s',
+            '''
+            SELECT 
+                a.id, a.status, a.job_id, 
+                j.employer_id, j.job_position,
+                ap.first_name, ap.last_name
+            FROM applications a
+            JOIN jobs j ON a.job_id = j.job_id
+            JOIN applicants ap ON a.applicant_id = ap.applicant_id
+            WHERE a.id = %s AND a.applicant_id = %s
+            ''',
             (app_id, applicant_id),
             fetch='one'
         )
@@ -1064,13 +1118,16 @@ def delete_application(app_id):
 
         job_id = app.get('job_id')
         old_status = app.get('status', 'Pending')
+        employer_id = app.get('employer_id')  # Needed for notification
 
+        # Update status
         run_query(
             conn,
             'UPDATE applications SET status = %s WHERE id = %s',
             ('Cancelled', app_id)
         )
 
+        # Insert history
         run_query(
             conn,
             '''
@@ -1081,11 +1138,33 @@ def delete_application(app_id):
              'Applicant cancelled their application')
         )
 
+        # Decrement count
         run_query(
             conn,
             'UPDATE jobs SET application_count = CASE WHEN application_count > 0 THEN application_count - 1 ELSE 0 END WHERE job_id = %s',
             (job_id,)
         )
+
+        # 2. INSERT NOTIFICATION HERE
+        try:
+            # Create notification for the employer
+            # We use 'job_application' type so it appears in their main filter
+            applicant_name = f"{app['first_name']} {app['last_name']}"
+            job_title = app['job_position']
+
+            create_notification(
+                notification_type='job_application',
+                title=f"Application Cancelled - {job_title}",
+                message=f"{applicant_name} has cancelled their application for {job_title}.",
+                count=1,
+                related_ids=[job_id],
+                employer_id=employer_id
+            )
+            print(f"[v0] Notification created for employer {employer_id}")
+        except Exception as notif_error:
+            # Don't fail the cancellation if notification fails
+            print(
+                f"[v0] Error sending cancellation notification: {notif_error}")
 
         conn.commit()
         print(
@@ -1349,17 +1428,17 @@ def account_security():
 
             is_from_lipa_new = int(request.form.get("is_from_lipa", 0))
             was_lipa = 1 if applicant["is_from_lipa"] else 0
+
+            # Helper to check if file was uploaded
+            new_reco_uploaded = (reco_file and reco_file.filename)
+
             status = applicant["status"]
             is_active = applicant.get("is_active", 1)
-
-            # This flag should NEVER be reset during updates - it was set during registration
-            # Only admin approval of NEW applicants should set it to 1
-            must_change_password = applicant.get("must_change_password", 0)
 
             residency_changed = (was_lipa != is_from_lipa_new)
 
             if residency_changed and is_from_lipa_new == 0:
-                if not (reco_file and reco_file.filename):
+                if not new_reco_uploaded:
                     conn.close()
                     flash(
                         "You are changing your residency to Non-Lipeño. Please upload your recommendation letter before saving.", "warning")
@@ -1367,6 +1446,7 @@ def account_security():
 
             if residency_changed:
                 if is_from_lipa_new == 1:
+                    # Switched to Lipeno: Approve
                     if reco_path:
                         old = os.path.join("static", reco_path)
                         if os.path.exists(old):
@@ -1387,12 +1467,11 @@ def account_security():
                         applicant_id
                     )
                     run_query(conn, update_query, params)
-
                     flash(
                         "Your residency has been updated to Lipeño. Your account is now approved and active.", "success")
 
                 else:
-                    # Lipeño -> Non-Lipeño: require approval and save recommendation letter
+                    # Switched to Non-Lipeno: Pending
                     status = "Pending"
                     is_active = 0
 
@@ -1414,57 +1493,54 @@ def account_security():
                         applicant_id
                     )
                     run_query(conn, update_query, params)
-
                     flash("Your residency has been changed to Non-Lipeño. Your recommendation letter has been uploaded. Please wait for admin approval. You will be logged out.", "info")
 
-            elif is_from_lipa_new == 0 and reco_file and reco_file.filename:
+            # === SECURITY FIX: Handle Re-upload WITHOUT Residency Change ===
+            elif is_from_lipa_new == 0 and new_reco_uploaded:
                 if reco_path:
                     old = os.path.join("static", reco_path)
                     if os.path.exists(old):
                         os.remove(old)
                 reco_path = save_file(reco_file, "recommendations")
 
-                if status == "Pending":
-                    update_query = """
-                    UPDATE notifications
-                    SET title = %s, message = %s, is_read = 0, updated_at = NOW()
-                    WHERE applicant_id = %s AND notification_type = 'applicant_approval'
-                    """
-                    params = (
-                        "Non-Lipeño Applicant Document Uploaded",
-                        f"Applicant #{applicant_id} ({first_name} {last_name}) has uploaded their recommendation letter and is ready for review.",
-                        applicant_id
-                    )
-                    run_query(conn, update_query, params)
+                # FORCE PENDING STATUS
+                status = "Pending"
+                is_active = 0
 
-            # Determine recommendation expiry to store:
-            # - If there's a recommendation file now and it's newly uploaded, set expiry 1 year from now
-            # - If the path was unchanged, keep existing expiry from the fetched applicant
-            # - If no recommendation, set expiry to None
+                # Notify Admin (regardless of previous status)
+                update_query = """
+                UPDATE notifications
+                SET title = %s, message = %s, is_read = 0, updated_at = NOW()
+                WHERE applicant_id = %s AND notification_type = 'applicant_approval'
+                """
+                params = (
+                    "Non-Lipeño Applicant Document Updated",
+                    f"Applicant #{applicant_id} ({first_name} {last_name}) has updated their recommendation letter and requires re-verification.",
+                    applicant_id
+                )
+                run_query(conn, update_query, params)
+
+            # Determine recommendation expiry to store
             try:
                 original_reco_path = applicant.get(
                     "recommendation_letter_path")
             except Exception:
                 original_reco_path = None
 
-            # preserve previous warning flag if present
             try:
                 original_warning_sent = applicant.get(
                     "recommendation_warning_sent")
             except Exception:
                 original_warning_sent = None
 
-            original_reco_path = applicant.get("recommendation_letter_path")
             original_uploaded_at = applicant.get(
                 "recommendation_letter_uploaded_at")
-            original_warning_sent = applicant.get(
-                "recommendation_warning_sent")
 
             if reco_path:
                 if reco_path != original_reco_path:  # new file uploaded
                     recommendation_uploaded_at = datetime.now()
                     recommendation_expiry = datetime.now() + relativedelta(months=DOCUMENT_VALIDITY_MONTHS)
-                    recommendation_warning_sent = 0  # <-- Reset flag on new upload
+                    recommendation_warning_sent = 0  # Reset flag on new upload
                 else:  # file unchanged
                     recommendation_uploaded_at = original_uploaded_at
                     recommendation_expiry = applicant.get(
@@ -1508,7 +1584,8 @@ def account_security():
 
             session["applicant_status"] = status
 
-            if residency_changed and is_from_lipa_new == 0:
+            # Logout if status became Pending (via residency change OR file update)
+            if status == "Pending":
                 conn.close()
                 return redirect(url_for("home"))
 
@@ -1522,11 +1599,23 @@ def account_security():
             flash(f"Error updating information: {e}", "danger")
             return redirect(url_for("applicants.account_security"))
 
+    # --- GET REQUEST ---
     applicant = run_query(
         conn,
         "SELECT * FROM applicants WHERE applicant_id=%s",
         (applicant_id,),
         fetch="one",
     )
+
+    # Calculate expiry flag for Frontend
+    is_reco_expiring = False
+    if applicant and not applicant.get('is_from_lipa') and applicant.get('recommendation_letter_expiry'):
+        expiry = applicant.get('recommendation_letter_expiry')
+        # Reuse existing helpers: expired OR within 7 days
+        is_reco_expiring = is_document_expired(
+            expiry) or will_expire_in_7_days(expiry)
+
     conn.close()
-    return render_template("Applicant/acc&secu.html", applicant=applicant)
+
+    # Pass 'is_reco_expiring' to the template
+    return render_template("Applicant/acc&secu.html", applicant=applicant, is_reco_expiring=is_reco_expiring)

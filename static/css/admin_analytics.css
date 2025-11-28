@@ -47,11 +47,34 @@
 }
 
 .summary-card {
+  position: relative;
   background: var(--color-bg-card);
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--color-border);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.summary-card::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(to right, #7b1113, #a71c1e);
+  transition: background 0.45s ease-in-out;
+}
+
+.summary-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.summary-card:hover::after {
+  background: linear-gradient(to right, #a71c1e, #7b1113);
 }
 
 .summary-card h3 {
@@ -206,17 +229,20 @@
 
 .chart-empty-state {
   display: none;
-  height: 100%;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   text-align: center;
   color: var(--color-text-secondary);
   font-style: italic;
   font-size: 0.9rem;
+  width: 100%; /* Ensure it takes full width for proper centering */
 }
 
 .chart-empty-state.show {
-  display: flex;
+  display: block;
+  align-items: center;
 }
 
 /* New export section matching Figma */
@@ -280,8 +306,8 @@
 
 /* ===== New Admin Analytics Layout ===== */
 .analytics-dashboard {
-  background: var(--color-bg-light);
-  padding: 3rem 0 0 0;
+  background: white;
+  padding: 0;
   margin-bottom: 0;
   display: flex;
   justify-content: center;
@@ -601,16 +627,17 @@
 
 .todo-input-group {
   display: flex;
-  gap: 0.5rem;
+  gap: 3px;
   margin-bottom: 0.75rem;
+  align-items: center;
 }
 
 .todo-input {
   flex: 1;
-  padding: 0.5rem;
+  padding: 9px 6px;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
-  font-size: 0.875rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
 }
 
 .todo-list {
@@ -945,6 +972,14 @@
 .note-form-group textarea {
   min-height: 150px;
   resize: vertical;
+}
+
+.note-inline label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: auto; /* important: removes full-width label problem */
 }
 
 .note-form-actions {
@@ -1554,7 +1589,144 @@
   color: var(--accent-color);
 }
 
+/* Custom Modal Styles */
+.custom-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.45); /* Slightly softer */
+  z-index: 99999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.custom-modal.show {
+  opacity: 1;
+}
+
+.custom-modal-dialog {
+  position: relative;
+  width: 90%;
+  max-width: 500px;
+  margin: 100px auto;
+}
+
+.custom-modal-content {
+  background: var(--bg-card);
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+.custom-modal-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: var(--primary-color);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.custom-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.custom-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  color: white;
+}
+
+.custom-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.custom-modal-body {
+  padding: 1.5rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.custom-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Buttons */
+.btn-primary {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: 0.2s;
+}
+
+.btn-primary:hover {
+  background: #5f0d0e; /* Darker variant of primary */
+}
+
+.btn-secondary {
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #4c3838; /* Darker secondary */
+}
+
+/* Responsive design */
+@media (max-width: 576px) {
+  .analytics-dashboard {
+    padding: 1rem 0.5rem;
+    align-items: flex-start;
+  }
+
+  .custom-modal-dialog {
+    width: 95%;
+    margin: 50px auto;
+  }
+
+  .custom-modal-header,
+  .custom-modal-body,
+  .custom-modal-footer {
+    padding: 1rem;
+  }
+}
+
 @media (max-width: 768px) {
+  .analytics-dashboard {
+    padding: 1.5rem 1rem;
+  }
+
   .chart-grid {
     grid-template-columns: 1fr;
   }
@@ -1593,5 +1765,12 @@
     height: calc(100vh - 72px);
     width: 100%;
     right: -100%;
+  }
+}
+
+@media (max-width: 1024px) {
+  .analytics-dashboard {
+    padding: 1rem;
+    flex-direction: column;
   }
 }

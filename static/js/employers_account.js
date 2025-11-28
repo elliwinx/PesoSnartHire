@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
     editBtn.addEventListener("click", (e) => {
       e.preventDefault();
 
-      // store initial values before enabling edit
+      // Store initial values before enabling edit
       originalValues = {};
       inputs.forEach((el) => (originalValues[el.name] = el.value));
       selects.forEach((el) => (originalValues[el.name] = el.value));
@@ -105,23 +105,40 @@ document.addEventListener("DOMContentLoaded", () => {
         originalValues["recruitment_type"] = recruitmentSelect.value;
       }
 
-      // ✅ store original company logo
+      // Store original company logo
       const logoImg = document.getElementById("companyLogoPreview");
       if (logoImg) originalValues["logoSrc"] = logoImg.src;
 
       profileTop.classList.add("edit-mode");
       avatar.classList.add("editable");
 
-      fileInputs.forEach((el) => {
-        el.style.display = "block";
-        el.removeAttribute("disabled");
-      });
+      // 1. Unlock Text Inputs & Selects
       inputs.forEach((el) => el.removeAttribute("readonly"));
       selects.forEach((el) => {
         el.removeAttribute("disabled");
         el.classList.remove("select-readonly");
       });
 
+      // 2. FILE INPUT LOGIC (UPDATED FOR SECURITY)
+      // First, ensure ALL file inputs are hidden/disabled by default
+      fileInputs.forEach((el) => {
+        el.style.display = "none";
+        el.setAttribute("disabled", "true");
+      });
+
+      // Second, Unlock ONLY expiring files
+      // (This works with the HTML update: data-expiring="true")
+      document.querySelectorAll(".document-item").forEach((item) => {
+        const isExpiring = item.getAttribute("data-expiring") === "true";
+        const input = item.querySelector(".file-input");
+
+        if (input && isExpiring) {
+          input.style.display = "block";
+          input.removeAttribute("disabled");
+        }
+      });
+
+      // Show Save/Cancel, Hide Edit
       editBtn.style.display = "none";
       saveBtn.style.display = "inline-block";
       cancelBtn.style.display = "inline-block";
@@ -145,13 +162,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       });
 
-      // ✅ restore original company logo
+      // Restore original company logo
       const logoImg = document.getElementById("companyLogoPreview");
       if (logoImg && originalValues["logoSrc"]) {
         logoImg.src = originalValues["logoSrc"];
       }
 
-      // disable again
+      // Disable again
       profileTop.classList.remove("edit-mode");
       avatar.classList.remove("editable");
 
@@ -170,7 +187,7 @@ document.addEventListener("DOMContentLoaded", () => {
       saveBtn.style.display = "none";
       cancelBtn.style.display = "none";
 
-      // 🔄 trigger change handler for recruitment_type (so DOLE/DMW toggles back)
+      // Trigger change handler for recruitment_type to reset UI
       const recruitmentSelect = document.getElementById("recruitment_type");
       if (recruitmentSelect) {
         recruitmentSelect.dispatchEvent(new Event("change"));
@@ -188,20 +205,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentType = recruitmentSelect.value;
         const oldType = originalValues["recruitment_type"];
 
-        console.log("[v0] Save clicked - Checking recruitment type change:", {
-          oldType,
-          currentType,
-        });
-
         // If recruitment type changed, add hidden inputs to signal backend
         if (oldType && currentType && oldType !== currentType) {
-          console.log(
-            "[v0] Recruitment type changed! Old:",
-            oldType,
-            "New:",
-            currentType
-          );
-
           // Remove any existing hidden inputs first
           const existingInputs = accountForm.querySelectorAll(
             'input[name="recruitment_type_changed"], input[name="old_recruitment_type"], input[name="new_recruitment_type"]'
@@ -226,12 +231,48 @@ document.addEventListener("DOMContentLoaded", () => {
           newTypeInput.name = "new_recruitment_type";
           newTypeInput.value = currentType;
           accountForm.appendChild(newTypeInput);
-
-          console.log("[v0] Hidden inputs added to form");
         }
       }
 
       accountForm.submit();
+    });
+  }
+
+  // --- RECRUITMENT TYPE CHANGE HANDLER (NEW) ---
+  // If user changes recruitment type while editing, we MUST unlock all files
+  const recruitmentSelect = document.getElementById("recruitment_type");
+  if (recruitmentSelect) {
+    recruitmentSelect.addEventListener("change", () => {
+      // Only run this logic if we are in Edit Mode (Save button is visible)
+      if (saveBtn.style.display === "none") return;
+
+      const currentType = recruitmentSelect.value;
+      const oldType = originalValues["recruitment_type"];
+      const allFileInputs = document.querySelectorAll("#documents .file-input");
+
+      if (currentType !== oldType) {
+        // CASE: Type Changed -> Unlock ALL file inputs (user needs to upload new docs)
+        allFileInputs.forEach((input) => {
+          input.style.display = "block";
+          input.removeAttribute("disabled");
+        });
+      } else {
+        // CASE: Switched BACK to Original -> Lock all except expiring
+        allFileInputs.forEach((input) => {
+          const parent = input.closest(".document-item");
+          const isExpiring =
+            parent && parent.getAttribute("data-expiring") === "true";
+
+          if (isExpiring) {
+            input.style.display = "block";
+            input.removeAttribute("disabled");
+          } else {
+            input.style.display = "none";
+            input.setAttribute("disabled", "true");
+            input.value = ""; // Clear any file they might have selected
+          }
+        });
+      }
     });
   }
 });

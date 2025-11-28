@@ -66,10 +66,10 @@
           <a
             href="{{ url_for('admin.applicants_management') }}"
             class="nav-link-active"
-            >Applicants Management</a
+            >Applicants</a
           >
           <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
-            >Employers Management</a
+            >Employers</a
           >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications<span
@@ -286,26 +286,24 @@
           <div class="modal-header">
             <h4>Update Applicant Status</h4>
           </div>
-        <div class="modal-content-edit-status"> 
-          <br>
-          <button class="status-btn btn-success" data-action="approved">
-            <i class="fa-solid fa-check-circle"></i>
-            <span>Approve</span>
-          </button>
-          <button class="status-btn btn-danger" data-action="rejected">
-            <i class="fa-solid fa-xmark"></i>
-            <span>Reject</span>
-          </button>
-          <button class="status-btn btn-warning" data-action="reupload">
-            <i class="fa-solid fa-upload"></i>
-            <span>Request Reupload</span>
-          </button>
-          <br /><br />
-          <button id="closeModal" class="status-btn btn-secondary">
-            <i class="fa-solid fa-ban"></i>
-            <span>Cancel</span>
-          </button>
-        </div>
+          <div class="modal-content-edit-status">
+            <button class="status-btn btn-success" data-action="approved">
+              <i class="fa-solid fa-check-circle"></i>
+              <span>Approve</span>
+            </button>
+            <button class="status-btn btn-danger" data-action="rejected">
+              <i class="fa-solid fa-xmark"></i>
+              <span>Reject</span>
+            </button>
+            <button class="status-btn btn-warning" data-action="reupload">
+              <i class="fa-solid fa-upload"></i>
+              <span>Request Reupload</span>
+            </button>
+            <button id="closeModal" class="status-btn btn-secondary">
+              <i class="fa-solid fa-ban"></i>
+              <span>Cancel</span>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     menuToggle.addEventListener("click", (e) => {
       e.stopPropagation();
-      const isOpen = dropdownMenu.toggleClass("show");
+      const isOpen = dropdownMenu.classList.toggle("show");
       dropdownMenu.classList.toggle("open", isOpen);
       dropdownMenu.style.display = isOpen ? "block" : "none";
       menuToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
@@ -193,25 +193,31 @@ document.addEventListener("DOMContentLoaded", () => {
   if (editBtn) {
     editBtn.addEventListener("click", (e) => {
       e.preventDefault();
+      isEditMode = true;
+      isCanceling = false;
+
+      // ... (Keep your existing 'originalValues' capture logic) ...
       originalValues = {};
       inputs.forEach((el) => (originalValues[el.name] = el.value));
       selects.forEach((el) => (originalValues[el.name] = el.value));
       radios.forEach((el) => {
-        if (el.id) {
-          originalValues[el.id] = el.checked;
-        }
+        if (el.id) originalValues[el.id] = el.checked;
       });
-
       const avatarImg = document.getElementById("profilePicPreview");
       if (avatarImg) originalValues["avatarSrc"] = avatarImg.src;
+      // ...
 
+      // Store original state variables
+      originalIsLipeno = residencyYes.checked;
+      originalCity = cityInput ? cityInput.value : "";
+      originalProvince = provinceInput ? provinceInput.value : "";
+      originalBarangay = barangayInput ? barangayInput.value : "";
+
+      // UI Updates
       profileTop?.classList.add("edit-mode");
       avatar?.classList.add("editable");
 
-      fileInputs.forEach((el) => {
-        el.style.display = "block";
-        el.removeAttribute("disabled");
-      });
+      // 1. Unlock Text Inputs & Radios
       inputs.forEach((el) => el.removeAttribute("readonly"));
       selects.forEach((el) => {
         el.removeAttribute("disabled");
@@ -219,6 +225,29 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       radios.forEach((el) => el.removeAttribute("disabled"));
       setConditionalInputsEditable(true);
+
+      // 2. LOCK ALL FILES BY DEFAULT
+      fileInputs.forEach((el) => {
+        el.style.display = "none";
+        el.setAttribute("disabled", "true");
+      });
+
+      // 3. EXPLICITLY UNLOCK RESUME (Always allowed)
+      const resumeInp = document.getElementById("resume_file");
+      if (resumeInp) {
+        resumeInp.style.display = "block";
+        resumeInp.removeAttribute("disabled");
+      }
+
+      // 4. UNLOCK AVATAR UPLOAD
+      const avatarInp = document.querySelector(".avatar input[type='file']");
+      if (avatarInp) {
+        avatarInp.removeAttribute("disabled");
+      }
+
+      // 5. CALL FUNCTION TO CHECK RECOMMENDATION EXPIRY
+      // This will unlock recommendation_file ONLY if isExpiring=true
+      updateResidencyRequirements();
 
       editBtn.style.display = "none";
       saveBtn.style.display = "inline-block";
@@ -589,71 +618,72 @@ document.addEventListener("DOMContentLoaded", () => {
       const isLipeno = residencyYes.checked;
       const residencyChanged = isEditMode && isLipeno !== originalIsLipeno;
 
-      console.log("[v0] updateResidencyRequirements:", {
-        isEditMode,
-        isLipeno,
-        originalIsLipeno,
-        residencyChanged,
-        isCanceling,
-      });
+      // Get the container and input
+      const recContainer = document.getElementById(
+        "recommendation-upload-container"
+      );
+      const recInput = document.getElementById("recommendation_file");
 
+      // Check if backend flagged this as expiring (read from HTML)
+      const isExpiring = recContainer
+        ? recContainer.getAttribute("data-expiring") === "true"
+        : false;
+
+      // 1. Handle "Reupload" status (User is already locked out, just needs to upload)
       if (applicantStatus === "Reupload") {
         if (!isLipeno) {
           if (resumeContainer) resumeContainer.style.display = "none";
-          if (recommendationContainer)
-            recommendationContainer.style.display = "block";
-          if (recommendationFile) {
-            recommendationFile.setAttribute("required", "true");
-          }
+          if (recContainer) recContainer.style.display = "block";
+          if (recInput) recInput.setAttribute("required", "true");
         } else {
           if (resumeContainer) resumeContainer.style.display = "block";
-          if (recommendationContainer)
-            recommendationContainer.style.display = "none";
-          if (recommendationFile) {
-            recommendationFile.removeAttribute("required");
-          }
+          if (recContainer) recContainer.style.display = "none";
+          if (recInput) recInput.removeAttribute("required");
         }
-
+        // Show banner for reupload
         if (warningBanner) {
           warningBanner.classList.add("show");
           if (bannerTitle)
             bannerTitle.textContent = "Document Reupload Required";
           if (bannerMessage)
             bannerMessage.textContent =
-              "Please reupload the requested document(s) below. Once submitted, the admin will review your documents and update your status.";
+              "Please reupload the requested document(s) below.";
         }
         return;
       }
 
+      // 2. Handle Normal "Approved" / "Pending" status (Edit Mode logic)
       if (resumeContainer) resumeContainer.style.display = "block";
 
+      // Toggle Banner based on residency change
       if (warningBanner) {
         if (residencyChanged) {
           warningBanner.classList.add("show");
           if (bannerTitle) bannerTitle.textContent = "Residency Type Changed";
-
+          // ... (Keep your existing banner message logic here) ...
           if (isLipeno) {
             if (bannerMessage)
               bannerMessage.innerHTML =
-                "<strong>Changed to Lipeño:</strong> Your recommendation letter is no longer required. Only your resume is needed. All documents must be in PDF format.";
+                "<strong>Changed to Lipeño:</strong> Recommendation letter no longer required.";
           } else {
             if (bannerMessage)
               bannerMessage.innerHTML =
-                "<strong>Changed to Non-Lipeño:</strong> You must now upload a recommendation letter from your barangay or local government unit along with your resume. All documents must be in PDF format.";
+                "<strong>Changed to Non-Lipeño:</strong> You must now upload a recommendation letter.";
           }
         } else {
           warningBanner.classList.remove("show");
-          console.log("[v0] Banner hidden - residencyChanged is false");
         }
       }
 
+      // Visibility & Locking Logic
       if (isLipeno) {
-        if (recommendationContainer)
-          recommendationContainer.style.display = "none";
-        if (recommendationFile) {
-          recommendationFile.removeAttribute("required");
-          recommendationFile.value = "";
+        // HIDE if Lipeno
+        if (recContainer) recContainer.style.display = "none";
+        if (recInput) {
+          recInput.removeAttribute("required");
+          recInput.value = "";
         }
+        // ... (Keep your existing address auto-fill logic for Lipa) ...
         if (isEditMode && !isCanceling) {
           if (provinceInput) provinceInput.value = "Batangas";
           if (cityInput) cityInput.value = "Lipa City";
@@ -664,11 +694,25 @@ document.addEventListener("DOMContentLoaded", () => {
           removeBarangaySelect();
         }
       } else {
-        if (recommendationContainer)
-          recommendationContainer.style.display = "block";
-        if (recommendationFile) {
-          recommendationFile.setAttribute("required", "true");
+        // SHOW if Non-Lipeno
+        if (recContainer) recContainer.style.display = "block";
+
+        // SECURITY CHECK: Should the input be unlocked?
+        // Unlock ONLY if: (Edit Mode is ON) AND (Residency Changed OR Document is Expiring)
+        if (recInput) {
+          if (isEditMode && (residencyChanged || isExpiring)) {
+            recInput.style.display = "block";
+            recInput.removeAttribute("disabled");
+            recInput.setAttribute("required", "true");
+          } else {
+            // Otherwise, keep it physically present but hidden/disabled
+            // This prevents users from "accidentally" uploading a file when they shouldn't
+            recInput.style.display = "none";
+            recInput.setAttribute("disabled", "true");
+          }
         }
+
+        // ... (Keep your existing address clear logic) ...
         if (isEditMode && !isCanceling) {
           if (provinceInput) provinceInput.value = "";
           if (cityInput) cityInput.value = "";

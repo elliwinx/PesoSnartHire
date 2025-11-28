@@ -121,10 +121,15 @@
           <a
             href="{{url_for('employers.application_management')}}"
             class="nav-link"
-            >Application Management</a
+            >Job Applications</a
           >
           <a href="{{url_for('employers.notifications')}}" class="nav-link"
-            >Notification</a
+            >Notification<span
+              id="employerNotifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
           >
           <a href="{{url_for('employers.account_security')}}" class="nav-link"
             >Account & Security</a
@@ -282,11 +287,11 @@
         </section>
 
         <!-- Hidden the "Add Job Vacancy" button to prevent duplicate job creation -->
-        <div class="add-btn-container" style="display: none">
+        <!--<div class="add-btn-container" style="display: none">
           <button class="add-job-btn" id="addJobVacancy">
             Add Job Vacancy
           </button>
-        </div>
+        </div>-->
       </div>
     </main>
 

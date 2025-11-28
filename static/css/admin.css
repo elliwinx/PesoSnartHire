@@ -875,10 +875,24 @@ input[type="email"] {
   z-index: 10000;
 }
 
-.modal-content-edit-status {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
+.modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 600px;
+  width: 90%;
+  animation: slideIn 0.3s ease-out;
+  z-index: 10000;
+  /* Ensure text alignment if needed */
+  text-align: center;
+}
+
+.modal-header h4 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0;
 }
 
 .modal-content h5 {
@@ -887,15 +901,6 @@ input[type="email"] {
   font-weight: 700;
   color: #2d3748;
   letter-spacing: -0.3px;
-}
-
-.status-btn {
-  display: flex !important;
-  flex-direction: column; /* ICON sa taas, TEXT sa baba */
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 16px;
 }
 
 /* Rejection modal specific styling */
@@ -961,6 +966,40 @@ input[type="email"] {
   border-radius: 6px;
   border: 1px solid #d0d0d0;
   font-size: 14px;
+}
+
+.status-modal-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.status-modal-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.status-modal-option:hover {
+  border-color: #7b1113;
+  background-color: #fef5f5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.status-modal-option i {
+  font-size: 22px;
 }
 
 .action-buttons {
@@ -1104,40 +1143,6 @@ input[type="email"] {
   transform: none !important;
 }
 
-.status-btn .btn-success,
-.status-btn .btn-danger,
-.status-btn .btn-warning,
-.status-btn .btn-secondary {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 15px;
-  border: 2px solid #e0e0e0;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 14px;
-  font-weight: 500;
-  gap: 8px;
-}
-
-.status-btn .btn-success:hover,
-.status-btn .btn-danger:hover,
-.status-btn .btn-warning:hover,
-.status-btn .btn-secondary:hover {
-  border-color: #b44d4f;
-  background-color: #f0f7ff;
-  transform: translateY(-2px);
-}
-
-.status-btn .btn-success i,
-.status-btn .btn-danger i,
-.status-btn .btn-warning i,
-.status-btn .btn-secondary i {
-  font-size: 20px;
-}
 .fa-check-circle:before,
 .fa-close:before,
 .fa-upload:before,

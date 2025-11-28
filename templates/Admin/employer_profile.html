@@ -70,12 +70,12 @@
           <a
             href="{{ url_for('admin.applicants_management') }}"
             class="nav-link"
-            >Applicants Management</a
+            >Applicants</a
           >
           <a
             href="{{ url_for('admin.employers_management') }}"
             class="nav-link-active"
-            >Employers Management</a
+            >Employers</a
           >
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications<span
@@ -382,20 +382,33 @@
     <!-- Loader modal for async operations -->
     {% include 'partials/loader.html' %}
 
-    <!-- Status update modal -->
     <div id="statusModal" class="modal">
-      <div class="modal-content">
-        <h5>UPDATE EMPLOYER STATUS</h5>
-        <button class="status-btn btn-success" data-action="approved">
-          Approve
-        </button>
-        <button class="status-btn btn-danger" data-action="rejected">
-          Reject
-        </button>
-        <button class="status-btn btn-warning" data-action="reupload">
-          Request Reupload
-        </button>
-        <button id="closeModal" class="status-btn btn-secondary">Cancel</button>
+      <div class="modal-overlay">
+        <div class="modal-header">
+          <h4>Update Employer Status</h4>
+        </div>
+
+        <div class="modal-content-edit-status">
+          <button class="status-btn btn-success" data-action="approved">
+            <i class="fa-solid fa-check-circle"></i>
+            <span>Approve</span>
+          </button>
+
+          <button class="status-btn btn-danger" data-action="rejected">
+            <i class="fa-solid fa-xmark"></i>
+            <span>Reject</span>
+          </button>
+
+          <button class="status-btn btn-warning" data-action="reupload">
+            <i class="fa-solid fa-upload"></i>
+            <span>Request Reupload</span>
+          </button>
+
+          <button id="closeModal" class="status-btn btn-secondary">
+            <i class="fa-solid fa-ban"></i>
+            <span>Cancel</span>
+          </button>
+        </div>
       </div>
     </div>
 

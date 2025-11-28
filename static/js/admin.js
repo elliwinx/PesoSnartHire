@@ -120,11 +120,15 @@ const statusModal = document.getElementById("statusModal");
 const statusButtons = statusModal
   ? Array.from(statusModal.querySelectorAll(".status-btn[data-action]"))
   : [];
-const editStatusBtns = document.querySelectorAll(".edit-status-btn, #editStatusBtn");
+const editStatusBtns = document.querySelectorAll(
+  ".edit-status-btn, #editStatusBtn"
+);
 const closeModalBtn = document.getElementById("closeModal");
 
 // Document selection modal
-const documentSelectionModal = document.getElementById("documentSelectionModal");
+const documentSelectionModal = document.getElementById(
+  "documentSelectionModal"
+);
 const confirmDocumentBtn = document.getElementById("confirmDocumentBtn");
 const cancelDocumentBtn = document.getElementById("cancelDocumentBtn");
 const documentCheckboxList = document.getElementById("documentCheckboxList");
@@ -144,12 +148,15 @@ editStatusBtns.forEach((btn) => {
 
     // Populate modal dataset from button or closest container
     const getDataset = (key) =>
-      btn.getAttribute(`data-${key}`) || (btn.closest(`[data-${key}]`)?.dataset?.[key]);
+      btn.getAttribute(`data-${key}`) ||
+      btn.closest(`[data-${key}]`)?.dataset?.[key];
 
-    ["employerId", "applicantId", "recruitmentType", "changePending"].forEach((key) => {
-      const value = getDataset(key);
-      if (value !== undefined) statusModal.dataset[key] = value;
-    });
+    ["employerId", "applicantId", "recruitmentType", "changePending"].forEach(
+      (key) => {
+        const value = getDataset(key);
+        if (value !== undefined) statusModal.dataset[key] = value;
+      }
+    );
 
     // Show modal
     statusModal.style.display = "flex";
@@ -158,13 +165,17 @@ editStatusBtns.forEach((btn) => {
 
 // ---------- Close Modal ----------
 if (closeModalBtn) {
-  closeModalBtn.addEventListener("click", () => (statusModal.style.display = "none"));
+  closeModalBtn.addEventListener(
+    "click",
+    () => (statusModal.style.display = "none")
+  );
 }
 
 // Close modal on outside click
 window.addEventListener("click", (e) => {
   if (e.target === statusModal) statusModal.style.display = "none";
-  if (e.target === documentSelectionModal) documentSelectionModal.style.display = "none";
+  if (e.target === documentSelectionModal)
+    documentSelectionModal.style.display = "none";
 });
 
 // ---------- Handle Status Button Clicks ----------
@@ -212,7 +223,8 @@ if (cancelDocumentBtn) {
 
 // ---------- Functions ----------
 function updateStatus(action) {
-  const entityId = statusModal.dataset.employerId || statusModal.dataset.applicantId;
+  const entityId =
+    statusModal.dataset.employerId || statusModal.dataset.applicantId;
   const recruitmentType = statusModal.dataset.recruitmentType;
 
   let endpoint = null;
@@ -241,11 +253,17 @@ function updateStatus(action) {
     .then((data) => {
       hideLoader();
       if (data.success) {
-        showFlashAboveModal(data.message || "Status updated successfully", "success");
+        showFlashAboveModal(
+          data.message || "Status updated successfully",
+          "success"
+        );
         statusModal.style.display = "none";
         setTimeout(() => location.reload(), 900);
       } else {
-        showFlashAboveModal("Error: " + (data.message || "Failed to update status"), "danger");
+        showFlashAboveModal(
+          "Error: " + (data.message || "Failed to update status"),
+          "danger"
+        );
       }
     })
     .catch((err) => {
@@ -256,7 +274,8 @@ function updateStatus(action) {
 }
 
 function proceedWithReupload() {
-  const entityId = statusModal.dataset.employerId || statusModal.dataset.applicantId;
+  const entityId =
+    statusModal.dataset.employerId || statusModal.dataset.applicantId;
   const recruitmentType = statusModal.dataset.recruitmentType;
 
   let endpoint = null;
@@ -274,7 +293,9 @@ function proceedWithReupload() {
 
   const payload = {
     action: "reupload",
-    document_name: selectedDocuments.length ? selectedDocuments : selectedDocument,
+    document_name: selectedDocuments.length
+      ? selectedDocuments
+      : selectedDocument,
   };
 
   console.debug("[admin.js] reupload payload:", payload);
@@ -290,17 +311,26 @@ function proceedWithReupload() {
     .then((data) => {
       hideLoader();
       if (data.success) {
-        showFlashAboveModal(data.message || "Request sent successfully", "success");
+        showFlashAboveModal(
+          data.message || "Request sent successfully",
+          "success"
+        );
         statusModal.style.display = "none";
         setTimeout(() => location.reload(), 900);
       } else {
-        showFlashAboveModal("Error: " + (data.message || "Failed to request reupload"), "danger");
+        showFlashAboveModal(
+          "Error: " + (data.message || "Failed to request reupload"),
+          "danger"
+        );
       }
     })
     .catch((err) => {
       console.error(err);
       hideLoader();
-      showInlineFlash("Something went wrong while requesting reupload", "danger");
+      showInlineFlash(
+        "Something went wrong while requesting reupload",
+        "danger"
+      );
     });
 }
 
@@ -512,10 +542,17 @@ document.querySelectorAll(".edit-status-btn, #editStatusBtn").forEach((btn) => {
   });
 });
 
-statusButtons.forEach((button) => {
-  button.addEventListener("click", function () {
+// ---------- Handle Status Button Clicks (Fixed) ----------
+// We use cloneNode(true) to remove any previous/ghost event listeners
+statusButtons.forEach((oldBtn) => {
+  const newBtn = oldBtn.cloneNode(true);
+  oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+  newBtn.addEventListener("click", function (e) {
+    e.preventDefault(); // Prevent any default form submission
     const action = this.getAttribute("data-action");
 
+    // --- REUPLOAD LOGIC ---
     if (action === "reupload") {
       // For applicants, auto-request the recommendation letter (no selection modal)
       if (statusModal.dataset.applicantId) {
@@ -524,19 +561,26 @@ statusButtons.forEach((button) => {
         return;
       }
 
-      // For employers, hide the status modal (so modal stacking is clear), then show document selection modal
+      // For employers, hide the status modal, then show document selection modal
       if (statusModal) statusModal.style.display = "none";
       documentSelectionModal.style.display = "flex";
       return;
     }
 
+    // --- REJECT LOGIC (The Fix) ---
     if (action === "rejected") {
-      // Open rejection modal instead of immediately sending the request
+      // 1. Hide the Status Modal (so they don't overlap)
+      if (statusModal) statusModal.style.display = "none";
+
+      // 2. Open the Rejection Modal
       const rejectionModal = document.getElementById("rejectionModal");
       if (rejectionModal) rejectionModal.style.display = "flex";
+
+      // 3. STOP HERE. Do not execute the fetch below.
       return;
     }
 
+    // --- APPROVE LOGIC (Immediate Fetch) ---
     const entityId =
       statusModal.dataset.employerId || statusModal.dataset.applicantId;
     const recruitmentType = statusModal.dataset.recruitmentType;
@@ -553,11 +597,13 @@ statusButtons.forEach((button) => {
 
     if (!endpoint || !entityId)
       return showFlashMessage("Error: Could not process request", "danger");
-    // Prevent duplicate clicks and show loader — only disable actionable status buttons
-    const actionableButtons = statusModal
-      ? Array.from(statusModal.querySelectorAll(".status-btn[data-action]"))
-      : Array.from(document.querySelectorAll(".status-btn[data-action]"));
+
+    // Disable buttons to prevent double-click
+    const actionableButtons = document.querySelectorAll(
+      ".status-btn[data-action]"
+    );
     actionableButtons.forEach((b) => (b.disabled = true));
+
     showLoader("Updating status...");
 
     fetch(endpoint, {

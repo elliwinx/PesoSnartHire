@@ -1,4 +1,41 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // 1. Define the checker function globally
+  window.checkAndUpdateNotificationDot = async function () {
+    try {
+      const response = await fetch(
+        "/applicants/api/notifications/unread-count"
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const count = data.count || 0;
+
+        // TARGET YOUR SPECIFIC BADGE ID HERE
+        const badge = document.getElementById("notifBadge");
+
+        if (badge) {
+          if (count > 0) {
+            // Show the dot (inline usually works best for spans inside links)
+            badge.style.display = "inline";
+            // Optional: If you want to show the number, uncomment the next line
+            // badge.textContent = count > 99 ? '99+' : count;
+          } else {
+            // Hide the dot
+            badge.style.display = "none";
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("[v0] Failed to check notification dot:", err);
+    }
+  };
+
+  // 2. Run immediately on load
+  window.checkAndUpdateNotificationDot();
+
+  // 3. Keep checking every 30 seconds (polling)
+  setInterval(window.checkAndUpdateNotificationDot, 30000);
+
+  // --- Existing Modal Logic Below (Kept from your original file) ---
   const modal = document.getElementById("notifModal");
   const jobDetailsModal =
     document.getElementById("jobDetailsModal") || document.createElement("div");
@@ -11,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
       });
 
-      // Update dot after marking as read
+      // Update dot immediately after marking as read
       if (window.checkAndUpdateNotificationDot) {
         window.checkAndUpdateNotificationDot();
       }

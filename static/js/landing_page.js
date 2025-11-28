@@ -302,25 +302,42 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Auto-check "Is From Lipa" when Province=Batangas and City=Lipa City
   function checkIsFromLipaAuto() {
-    if (!fromLipaCheckbox || !provinceSelect || !citySelect) return;
-    
+    if (!fromLipaCheckbox || !provinceSelect) return;
+
     const province = provinceSelect.value;
-    const city = citySelect.value;
-    
+
+    // FIX: Determine which city value to check
+    // If the select is visible/has value, use it. Otherwise, check the text input.
+    let city = citySelect ? citySelect.value : "";
+
+    // If the user is typing (checkbox unchecked), we must read the text input
+    if (
+      (!city || city === "") &&
+      cityTextInput &&
+      cityTextInput.offsetParent !== null
+    ) {
+      city = cityTextInput.value;
+    }
+
+    console.log("checkIsFromLipaAuto:", {
+      province,
+      city,
+      checkboxChecked: fromLipaCheckbox.checked,
+    });
+
+    // Normalize strings for comparison (lowercase and trim)
+    const pClean = province.trim().toLowerCase();
+    const cClean = city.trim().toLowerCase();
+
     // Auto-check if Province = Batangas AND City = Lipa City
-    if (province === "Batangas" && city === "Lipa City") {
+    if (pClean === "batangas" && cClean === "lipa city") {
       if (!fromLipaCheckbox.checked) {
+        console.log("Auto-checking the checkbox");
         fromLipaCheckbox.checked = true;
-        // Trigger change event to update UI
+        // Trigger change event to update UI (switch inputs, unlock barangay)
         fromLipaCheckbox.dispatchEvent(new Event("change"));
       }
-    } else if (fromLipaCheckbox.checked && (province !== "Batangas" || city !== "Lipa City")) {
-      // Uncheck if manually changed away from Batangas/Lipa City
-      // Only uncheck if it was auto-checked (we'll track this)
-      // For now, we'll leave it checked if user manually checked it
-      // User can manually uncheck if needed
     }
   }
 
@@ -329,8 +346,8 @@ document.addEventListener("DOMContentLoaded", () => {
     provinceSelect.addEventListener("change", function () {
       // Check if should auto-check "Is From Lipa"
       checkIsFromLipaAuto();
-      
-      if (fromLipaCheckbox && fromLipaCheckbox.checked) return;
+
+      // if (fromLipaCheckbox && fromLipaCheckbox.checked) return;
 
       // Always show text inputs for city/barangay when NOT from Lipa
       if (citySelect) {
@@ -358,6 +375,16 @@ document.addEventListener("DOMContentLoaded", () => {
   // City change behavior - also check for auto-check
   if (citySelect) {
     citySelect.addEventListener("change", function () {
+      checkIsFromLipaAuto();
+    });
+  }
+
+  if (cityTextInput) {
+    cityTextInput.addEventListener("input", function () {
+      checkIsFromLipaAuto();
+    });
+
+    cityTextInput.addEventListener("blur", function () {
       checkIsFromLipaAuto();
     });
   }
@@ -483,11 +510,18 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
       }
-
-      // If everything passes, let the browser submit the form normally.
-      // Do not call e.preventDefault() here.
     });
   }
+  setTimeout(() => {
+    console.log("Initializing on page load...");
+    checkIsFromLipaAuto();
+
+    // Also manually trigger the province change to ensure UI updates
+    if (provinceSelect && provinceSelect.value === "Batangas") {
+      console.log("Manually triggering province change");
+      provinceSelect.dispatchEvent(new Event("change"));
+    }
+  }, 100);
 });
 
 //EMPLOYER REGISTRATION JS
@@ -655,16 +689,16 @@ document.querySelectorAll(".toggle-password").forEach((toggle) => {
   });
 });
 
-document.querySelectorAll('.faq-question').forEach(button => {
-  button.addEventListener('click', () => {
+document.querySelectorAll(".faq-question").forEach((button) => {
+  button.addEventListener("click", () => {
     const faqItem = button.parentElement;
 
     // Close other FAQ items
-    document.querySelectorAll('.faq-item').forEach(item => {
-      if (item !== faqItem) item.classList.remove('active');
+    document.querySelectorAll(".faq-item").forEach((item) => {
+      if (item !== faqItem) item.classList.remove("active");
     });
 
     // Toggle current FAQ item
-    faqItem.classList.toggle('active');
+    faqItem.classList.toggle("active");
   });
 });

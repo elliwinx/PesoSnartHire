@@ -73,8 +73,11 @@
             >Applications</a
           >
           <a href="{{ url_for('applicants.notifications') }}" class="nav-link"
-            >Notifications</a
-          >
+            >Notifications
+            <span id="notifBadge" class="notif-badge" style="display: none"
+              >●</span
+            >
+          </a>
           <a
             href="{{ url_for('applicants.account_security') }}"
             class="nav-link"
