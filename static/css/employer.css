@@ -2037,14 +2037,12 @@ input[type="password"]:focus {
   transition: 0.2s ease;
 }
 
-/* Hover effect — elegant, hindi makalat */
 .application-row:hover {
-  border-color: #cbd5e1; /* slightly darker gray */
+  border-color: #cbd5e1;
   background: #f8fafc;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
-/* Status dropdown styling para magmukhang modern */
 .status-select {
   margin-left: 10px;
   padding: 6px 10px;
@@ -2056,10 +2054,9 @@ input[type="password"]:focus {
   transition: 0.2s ease;
 }
 
-/* On focus */
 .status-select:focus {
   outline: none;
-  border-color: #7b1113; /* blue highlight */
+  border-color: #7b1113;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
 
