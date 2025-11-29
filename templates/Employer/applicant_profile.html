@@ -42,14 +42,12 @@
           />
         </div>
         <nav class="nav">
-          <a
-            href="{{url_for('employers.employer_home')}}"
-            class="nav-link-active"
+          <a href="{{url_for('employers.employer_home')}}" class="nav-link"
             >Home</a
           >
           <a
             href="{{url_for('employers.application_management')}}"
-            class="nav-link"
+            class="nav-link-active"
             >Job Applications</a
           >
           <a href="{{url_for('employers.notifications')}}" class="nav-link"
@@ -508,5 +506,6 @@
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/report-modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notification_dot.js') }}"></script>
   </body>
 </html>

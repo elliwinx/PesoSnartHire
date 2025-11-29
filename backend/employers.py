@@ -2025,43 +2025,44 @@ def delete_job(job_id):
 
     try:
         cursor = conn.cursor(dictionary=True)
-        
+
         # FIRST: Check if job exists and get its status
         cursor.execute("""
             SELECT status, employer_id 
             FROM jobs 
             WHERE job_id = %s
         """, (job_id,))
-        
+
         job = cursor.fetchone()
-        
+
         if not job:
             return jsonify({"success": False, "message": "Job not found"}), 404
-        
+
         # SECOND: Verify the employer owns this job
         if job['employer_id'] != session['employer_id']:
             return jsonify({"success": False, "message": "Unauthorized to delete this job"}), 403
-        
+
         # THIRD: Check if job is suspended - PREVENT DELETION
         if job['status'] == 'suspended':
             return jsonify({
-                "success": False, 
+                "success": False,
                 "message": "Cannot delete suspended job. This job has been reported and suspended. Please contact PESO SmartHire admin."
             }), 403
-        
+
         # FOURTH: Only if not suspended, proceed with deletion
         cursor.execute("DELETE FROM jobs WHERE job_id = %s", (job_id,))
         conn.commit()
-        
+
         return jsonify({"success": True, "message": "Job post deleted successfully."})
-        
+
     except Exception as e:
         conn.rollback()
         return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
     finally:
         if conn:
             conn.close()
-            
+
+
 @employers_bp.route("/api/notifications", methods=["GET"])
 def get_notifications():
     """Fetch notifications for the current employer"""
@@ -2085,7 +2086,7 @@ def get_notifications():
         if filter_type == 'unread':
             query += " AND is_read = 0"
 
-        query += " ORDER BY created_at DESC LIMIT 50"
+        query += " ORDER BY is_read ASC, created_at DESC LIMIT 50"
 
         notifications = run_query(conn, query, tuple(params), fetch="all")
 
@@ -2304,7 +2305,8 @@ def report_applicant(applicant_id):
     payload = request.get_json(silent=True) or {}
     reason = (payload.get("reason") or "").strip()
     details = (payload.get("details") or "").strip()
-    job_id = payload.get("job_id") or payload.get("context") or payload.get("context_id")
+    job_id = payload.get("job_id") or payload.get(
+        "context") or payload.get("context_id")
 
     if len(reason) < 10:
         return jsonify({'success': False, 'message': 'Please provide at least 10 characters for the reason.'}), 400
@@ -2337,7 +2339,8 @@ def report_applicant(applicant_id):
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         """)
 
-        cursor.execute("SELECT employer_name FROM employers WHERE employer_id = %s", (employer_id,))
+        cursor.execute(
+            "SELECT employer_name FROM employers WHERE employer_id = %s", (employer_id,))
         reporter = cursor.fetchone() or {}
 
         cursor.execute("""
@@ -2369,7 +2372,8 @@ def report_applicant(applicant_id):
         ))
         conn.commit()
 
-        applicant_name = f"{applicant.get('first_name', '').strip()} {applicant.get('last_name', '').strip()}".strip() or "Applicant"
+        applicant_name = f"{applicant.get('first_name', '').strip()} {applicant.get('last_name', '').strip()}".strip(
+        ) or "Applicant"
         reporter_name = reporter.get("employer_name", "An employer")
         try:
             create_notification(
@@ -2380,7 +2384,8 @@ def report_applicant(applicant_id):
                 applicant_id=applicant_id
             )
         except Exception as notif_err:
-            print(f"[v1] Failed to log applicant report notification: {notif_err}")
+            print(
+                f"[v1] Failed to log applicant report notification: {notif_err}")
 
         return jsonify({'success': True, 'message': 'Report submitted. Our admins were notified.'})
     except Exception as exc:

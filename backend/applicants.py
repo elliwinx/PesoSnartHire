@@ -862,6 +862,9 @@ def notifications():
             except Exception:
                 # be resilient to malformed related_ids
                 continue
+        notifications.sort(key=lambda x: x.get(
+            'created_at') or '', reverse=True)
+        notifications.sort(key=lambda x: int(x.get('is_read', 1)))
     except Exception as e:
         print('[v0] Failed to load notifications:', e)
         notifications = []

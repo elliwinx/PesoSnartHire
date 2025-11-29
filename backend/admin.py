@@ -2586,7 +2586,7 @@ def api_unread_count():
     if "admin_id" not in session:
         return jsonify({"error": "Unauthorized"}), 401
 
-    count = get_unread_count()
+    count = get_unread_count(exclude_types=['job_application'])
     return jsonify({"success": True, "unread_count": count})
 
 

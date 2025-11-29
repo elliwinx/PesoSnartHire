@@ -1524,7 +1524,6 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="header-row" id="header-row-${app.id}">
         <h2>Current Application Status</h2>
         <p class="status">
-          <strong>Status:</strong>
           <span class="status-badge ${app.status
             .toLowerCase()
             .replace(/\s+/g, "-")}">${app.status}</span>

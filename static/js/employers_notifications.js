@@ -44,9 +44,8 @@ async function loadNotifications() {
 function displayNotifications(notifications) {
   const container = document.getElementById("notificationList");
 
-  const unread = notifications.filter((n) => !n.is_read).length;
-  if (window.updateNotificationDot) {
-    window.updateNotificationDot(unread);
+  if (window.checkAndUpdateEmployerDot) {
+    window.checkAndUpdateEmployerDot();
   }
 
   if (!notifications || notifications.length === 0) {

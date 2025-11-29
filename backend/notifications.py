@@ -249,7 +249,7 @@ def get_notifications(notification_type=None, is_read=None, limit=50, exclude_ty
         query += f" AND notification_type NOT IN ({placeholders})"
         params.extend(exclude_types)
 
-    query += " ORDER BY created_at DESC LIMIT %s"
+    query += " ORDER BY is_read ASC, created_at DESC LIMIT %s"
     params.append(limit)
 
     rows = run_query(conn, query, tuple(params), fetch="all")
@@ -328,14 +328,22 @@ def mark_notification_read(notification_id):
     return result
 
 
-def get_unread_count():
-    """Get count of unread notifications"""
+def get_unread_count(exclude_types=None):
+    """Get count of unread notifications, excluding specific types"""
     conn = create_connection()
     if not conn:
         return 0
 
     query = "SELECT COUNT(*) as count FROM notifications WHERE is_read = 0"
-    result = run_query(conn, query, fetch="one")
+    params = []
+
+    # Add the exclusion logic here
+    if exclude_types and len(exclude_types) > 0:
+        placeholders = ", ".join(["%s"] * len(exclude_types))
+        query += f" AND notification_type NOT IN ({placeholders})"
+        params.extend(exclude_types)
+
+    result = run_query(conn, query, tuple(params), fetch="one")
     conn.close()
 
     return result['count'] if result else 0
