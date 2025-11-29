@@ -2937,21 +2937,27 @@ def update_nonlipeno_status(applicant_id):
         return jsonify({"success": False, "message": f"An error occurred: {str(e)}"}), 500
 
 
-# ===== Admin Login =====
-@admin_bp.route("/login", methods=["POST"])
+@admin_bp.route("/login", methods=["GET", "POST"])  # 1. Allow GET requests
 def login():
+    # 2. Handle GET request (Show the HTML Page)
+    if request.method == "GET":
+        # Points to templates/admin/admin_login.html
+        return render_template("admin/admin_login.html")
+
+    # 3. Handle POST request (Process the Login Form)
     admin_code = request.form.get("adminID")
     email = request.form.get("adminEmail")
     password = request.form.get("adminPassword")
 
     if not admin_code or not email or not password:
         flash("Please fill in all fields.", "danger")
-        return redirect(url_for("home"))
+        # Redirect back to login, not home
+        return redirect(url_for("admin.login"))
 
     conn = create_connection()
     if not conn:
         flash("Database connection failed.", "danger")
-        return redirect(url_for("home"))
+        return redirect(url_for("admin.login"))
 
     query = "SELECT * FROM admin WHERE admin_code = %s AND email = %s"
     result = run_query(conn, query, (admin_code, email), fetch="one")
@@ -2970,7 +2976,8 @@ def login():
     else:
         flash("Invalid Admin ID or Email.", "danger")
 
-    return redirect(url_for("home"))
+    # If login fails, stay on the login page
+    return redirect(url_for("admin.login"))
 
 
 @admin_bp.route("/notifications")
@@ -3632,14 +3639,14 @@ def ensure_applicant_suspension_column(cursor):
 
 @admin_bp.route("/applicant_reports/<int:report_id>/action", methods=['POST'])
 def handle_applicant_report_action(report_id):
-    """Moderate reported applicants (confirm/reject)."""
+    """Moderate reported applicants (confirm/reject) - COMPANY SPECIFIC BLACKLIST"""
     if "admin_id" not in session:
         return jsonify({"success": False, "message": "Unauthorized"}), 401
 
     data = request.get_json(silent=True) or {}
     action = data.get("action")
     moderator_note = data.get("moderator_note", "").strip()
-    suspension_days = int(data.get("suspension_days") or 0)
+    blacklist_days = int(data.get("blacklist_days") or 365)  # Default 1 year
 
     valid_actions = {"confirm", "reject"}
     if action not in valid_actions:
@@ -3661,8 +3668,10 @@ def handle_applicant_report_action(report_id):
                 ar.status AS report_status,
                 CONCAT(COALESCE(app.first_name, ''), ' ', COALESCE(app.last_name, '')) AS applicant_name,
                 app.email AS applicant_email,
+                app.applicant_code,
                 emp.employer_name,
-                emp.email AS employer_email
+                emp.email AS employer_email,
+                emp.employer_id
             FROM applicant_reports ar
             LEFT JOIN applicants app ON ar.applicant_id = app.applicant_id
             LEFT JOIN employers emp ON ar.employer_id = emp.employer_id
@@ -3675,90 +3684,165 @@ def handle_applicant_report_action(report_id):
 
         applicant_id = report.get("applicant_id")
         employer_id = report.get("employer_id")
+        employer_name = report.get("employer_name", "the company")
 
         if action == "confirm":
-            ensure_applicant_suspension_column(cursor)
-            suspension_end = None
-            if suspension_days > 0:
-                suspension_end = datetime.utcnow() + timedelta(days=suspension_days)
-            cursor.execute(
-                "UPDATE applicants SET status = %s, is_active = %s, suspension_end_at = %s, updated_at = NOW() WHERE applicant_id = %s",
-                ("Suspended", 0, suspension_end, applicant_id)
-            )
-            cursor.execute(
-                "UPDATE applications SET status = %s WHERE applicant_id = %s",
-                ("On Hold", applicant_id)
-            )
+            # Calculate expiration date
+            expires_at = datetime.utcnow() + timedelta(days=blacklist_days)
+
+            # Add to company-specific blacklist
+            cursor.execute("""
+                INSERT INTO applicant_blacklist 
+                (applicant_id, employer_id, reported_by_employer_id, reason, expires_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE 
+                reason = VALUES(reason), 
+                expires_at = VALUES(expires_at),
+                blacklisted_at = CURRENT_TIMESTAMP
+            """, (
+                applicant_id,
+                employer_id,
+                employer_id,  # The company that reported them
+                report.get('reason', ''),
+                expires_at
+            ))
+
+            # Update any existing applications to this employer to "Blacklisted"
+            cursor.execute("""
+                UPDATE applications 
+                SET status = 'Blacklisted' 
+                WHERE applicant_id = %s 
+                AND job_id IN (SELECT job_id FROM jobs WHERE employer_id = %s)
+            """, (applicant_id, employer_id))
+
+            # Mark report as confirmed
             cursor.execute(
                 "UPDATE applicant_reports SET status = %s, updated_at = NOW() WHERE id = %s",
                 ("Confirmed", report_id)
             )
+
             conn.commit()
 
+            # Notify Applicant
             create_notification(
                 notification_type="applicant_reported",
-                title="Account suspended",
-                message="Your account was suspended after an employer report.",
+                title="Application Restrictions Applied",
+                message=f"You have been restricted from applying to {employer_name}.",
                 applicant_id=applicant_id
             )
+
+            safe_send_email(
+                "Application Restrictions - PESO SmartHire",
+                report.get("applicant_email"),
+                f"""
+                <p>Hi {report.get('applicant_name', 'Applicant')},</p>
+                <p>A report from <strong>{employer_name}</strong> has been confirmed by our moderation team.</p>
+                <p>As a result, you have been <strong>restricted from applying to job posts at {employer_name}</strong>.</p>
+                
+                <p><strong>What this means:</strong></p>
+                <ul>
+                    <li>✅ You can still apply to all other companies on our platform</li>
+                    <li>✅ You can still login and use all platform features</li>
+                    <li>✅ You can still update your profile and resume</li>
+                    <li>❌ You cannot apply to {employer_name}'s job posts</li>
+                </ul>
+                
+                <p>This restriction will {'expire automatically after ' + str(blacklist_days) + ' days' if blacklist_days > 0 else 'remain in place until further review'}.</p>
+                
+                <p>If you believe this is a mistake, please contact PESO SmartHire support.</p>
+                """
+            )
+
+            # Notify Employer
             create_notification(
                 notification_type="employer_reported",
-                title="Report confirmed",
-                message=f"Your report for {report.get('applicant_name', 'the applicant')} was confirmed.",
+                title="Report Confirmed",
+                message=f"Your report against {report.get('applicant_name', 'an applicant')} was confirmed. They are now restricted from your job posts.",
                 employer_id=employer_id
             )
+
             safe_send_email(
-                "Account suspended",
-                report.get("applicant_email"),
-                f"<p>Hi {report.get('applicant_name', 'Applicant')},</p>"
-                "<p>We confirmed the report filed against your account and applied a suspension.</p>"
-                f"{f'<p>The suspension will lift automatically after {suspension_days} day(s).</p>' if suspension_days >
-                   0 else '<p>The suspension is indefinite until further notice.</p>'}"
-            )
-            safe_send_email(
-                "Report confirmed",
+                "Report Confirmed - PESO SmartHire",
                 report.get("employer_email"),
-                f"<p>Hi {report.get('employer_name', 'Employer')},</p>"
-                "<p>We confirmed the report you filed. The applicant has been suspended.</p>"
+                f"""
+                <p>Hi {report.get('employer_name', 'Employer')},</p>
+                <p>Your report against applicant <strong>{report.get('applicant_name', '')} ({report.get('applicant_code', '')})</strong> has been confirmed.</p>
+                <p>This applicant has been restricted from applying to your job posts.</p>
+                <p>They can still apply to other employers on our platform.</p>
+                <p>The restriction will {'expire after ' + str(blacklist_days) + ' days' if blacklist_days > 0 else 'remain in place until further review'}.</p>
+                <p>Thank you for helping maintain platform quality.</p>
+                """
             )
 
             return jsonify({
                 "success": True,
-                "message": "Applicant suspended and both parties notified.",
-                "applicant_status": "Suspended",
+                "message": f"Applicant restricted from {employer_name} for {blacklist_days} days.",
+                "applicant_status": "Blacklisted from " + employer_name,
                 "report_status": "Confirmed"
             })
 
-        # Reject branch
-        cursor.execute(
-            "UPDATE applicant_reports SET status = %s, updated_at = NOW() WHERE id = %s",
-            ("Rejected", report_id)
-        )
-        conn.commit()
+        # REJECT ACTION (unchanged)
+        elif action == "reject":
+            cursor.execute(
+                "UPDATE applicant_reports SET status = %s, updated_at = NOW() WHERE id = %s",
+                ("Rejected", report_id)
+            )
+            conn.commit()
 
-        create_notification(
-            notification_type="employer_reported",
-            title="Report rejected",
-            message="We reviewed your report and found no violation.",
-            employer_id=employer_id
-        )
-        safe_send_email(
-            "Report rejected",
-            report.get("employer_email"),
-            "<p>Your report was reviewed but we did not find a violation.</p>"
-            f"{f'<p>Moderator note: {moderator_note}</p>' if moderator_note else ''}"
-        )
+            create_notification(
+                notification_type="employer_reported",
+                title="Report Rejected",
+                message="We reviewed your report and found no violation.",
+                employer_id=employer_id
+            )
 
-        return jsonify({
-            "success": True,
-            "message": "Report rejected and reporter notified.",
-            "applicant_status": None,
-            "report_status": "Rejected"
-        })
+            safe_send_email(
+                "Report Rejected - PESO SmartHire",
+                report.get("employer_email"),
+                f"""
+                <p>Hi {report.get('employer_name', 'Employer')},</p>
+                <p>Your report against {report.get('applicant_name', 'an applicant')} was reviewed but we did not find sufficient evidence of violation.</p>
+                {f'<p><strong>Moderator note:</strong> {moderator_note}</p>' if moderator_note else ''}
+                <p>The applicant continues to have full access to the platform.</p>
+                <p>Thank you for your understanding.</p>
+                """
+            )
+
+            return jsonify({
+                "success": True,
+                "message": "Report rejected and employer notified.",
+                "applicant_status": None,
+                "report_status": "Rejected"
+            })
+
     except Exception as exc:
         conn.rollback()
-        print(f"[v1] Failed to update applicant report {report_id}: {exc}")
-        return jsonify({"success": False, "message": "Failed to update applicant status."}), 500
+        print(f"[v2] Failed to update applicant report {report_id}: {exc}")
+        return jsonify({"success": False, "message": "Failed to process report."}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def is_applicant_blacklisted(applicant_id, employer_id):
+    """Check if applicant is blacklisted from a specific employer"""
+    conn = create_connection()
+    if not conn:
+        return False
+
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT COUNT(*) FROM applicant_blacklist 
+            WHERE applicant_id = %s AND employer_id = %s 
+            AND (expires_at IS NULL OR expires_at > NOW())
+        """, (applicant_id, employer_id))
+
+        is_blacklisted = cursor.fetchone()[0] > 0
+        return is_blacklisted
+    except Exception as e:
+        print(f"Error checking blacklist: {e}")
+        return False
     finally:
         cursor.close()
         conn.close()

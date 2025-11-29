@@ -188,7 +188,12 @@
             <div class="applied-ribbon">
               <i class="fas fa-check"></i> Applied
             </div>
+            {% elif job.is_blacklisted > 0 %}
+            <div class="blacklisted-ribbon">
+              <i class="fas fa-ban"></i> Restricted
+            </div>
             {% endif %}
+
             <div class="job-card-top">
               <div class="logo-and-title">
                 <img
@@ -246,6 +251,7 @@
                   class="btn btn-details"
                   data-job-id="{{ job.job_id }}"
                   data-has-applied="{{ 1 if job.has_applied > 0 else 0 }}"
+                  data-is-blacklisted="{{ 1 if job.is_blacklisted > 0 else 0 }}"
                 >
                   Details
                 </a>
@@ -253,6 +259,15 @@
                 {% if job.has_applied > 0 %}
                 <button type="button" class="btn btn-applied" disabled>
                   <i class="fas fa-check-circle"></i>Applied
+                </button>
+                {% elif job.is_blacklisted > 0 %}
+                <button
+                  type="button"
+                  class="btn btn-blacklisted"
+                  disabled
+                  title="You are restricted from applying to this company"
+                >
+                  <i class="fas fa-ban"></i>Restricted
                 </button>
                 {% else %}
                 <form

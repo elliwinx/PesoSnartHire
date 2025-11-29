@@ -98,10 +98,15 @@ def home():
     return render_template("Landing_Page/index.html")
 
 
+# In app.py
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("home"))
+    flash("You have been logged out successfully.", "success")
+
+    response = redirect(url_for("home"))
+    response.delete_cookie('session')
+    return response
 
 
 @app.route('/uploads/<path:filename>')

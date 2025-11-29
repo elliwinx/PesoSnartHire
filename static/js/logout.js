@@ -2,6 +2,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function showLogoutModal() {
     if (document.getElementById("logoutModal")) return;
 
+    // 1. Determine where to redirect based on current URL
+    // If the URL path starts with "/admin", we go to admin login.
+    const isAdmin = window.location.pathname.startsWith("/admin");
+    const redirectUrl = isAdmin ? "/admin/login" : "/";
+
     const overlay = document.createElement("div");
     overlay.id = "logoutModal";
     overlay.className = "logout-modal-overlay";
@@ -201,8 +206,9 @@ document.addEventListener("DOMContentLoaded", () => {
         console.warn("Logout failed, redirecting anyway");
       }
 
+      // 2. Perform the redirect based on the check we did earlier
       setTimeout(() => {
-        window.location.href = "/";
+        window.location.href = redirectUrl;
       }, 1200);
     });
 

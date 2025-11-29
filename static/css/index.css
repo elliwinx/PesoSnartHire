@@ -81,7 +81,7 @@ body {
 /* Hero Section */
 .hero {
   position: relative;
-  height: 90vh;
+  height: 100vh;
   display: flex;
   align-items: center;
   overflow: hidden;
@@ -92,7 +92,7 @@ body {
   top: 0;
   left: 0;
   width: 100%;
-  height: auto;
+  height: 100%;
   opacity: 30%;
   z-index: -2;
 }
@@ -181,10 +181,9 @@ body {
   color: #7b1113 !important;
 }
 
-/* Services Section */
 .services {
+  min-height: 100vh; /* full screen height */
   padding: 40px 0;
-  background: #f8f9fa;
 }
 
 .services-title {
@@ -522,8 +521,11 @@ body {
 
 /* About Us Section */
 .about-us {
+  min-height: 100vh; /* full screen height */
   padding: 40px 0;
   background: white;
+  display: flex; /* para center aligned ang content */
+  align-items: center; /* vertical center */
 }
 
 .about-title {
@@ -593,8 +595,11 @@ body {
 
 /* Service Pledge Section */
 .service-pledge {
+  min-height: 100vh; /* full screen height */
   padding: 40px 0;
   background: #f8f9fa;
+  display: flex; /* enable vertical centering */
+  align-items: center; /* center content vertically */
 }
 
 .pledge-title {
@@ -696,10 +701,43 @@ body {
 
 /* Container for side-by-side layout */
 .info-section {
+  min-height: 100vh;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 20px;
+  justify-content: center;
+  align-items: center;
+}
+
+.info-section1 {
+  min-height: 100vh;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px;
+  background: #f8f9fa;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.info-section1 p {
+  color: #333;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.info-section1 a {
+  text-decoration: none;
+  cursor: pointer;
+  color: #333;
+}
+
+.info-section1 a:hover {
+  color: #7b1113;
+  font-weight: 500;
 }
 
 .left-side h2,

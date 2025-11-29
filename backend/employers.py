@@ -661,14 +661,6 @@ def forced_password_change():
         return redirect(url_for("employers.employer_home"))
 
 
-# ===== Routes =====
-@employers_bp.route("/logout")
-def logout():
-    session.clear()
-    flash("You have been logged out successfully.", "success")
-    return redirect(url_for("home"))
-
-
 # ===== Helper Functions =====
 def check_reupload_restriction():
     """Redirect Reupload status employers to account-security page only."""

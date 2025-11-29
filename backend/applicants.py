@@ -580,13 +580,6 @@ def forced_password_change():
         return redirect(url_for("applicants.applicant_home"))
 
 
-@applicants_bp.route("/logout")
-def logout():
-    session.clear()
-    flash("You have been logged out successfully.", "success")
-    return redirect(url_for("home"))
-
-
 # ===== Applicant Navigation Pages =====
 @applicants_bp.route("/applicant_home")
 def applicant_home():
@@ -613,6 +606,7 @@ def applicant_home():
             SELECT
                 jobs.job_id,
                 jobs.job_position,
+                employers.employer_name AS company_name,
                 jobs.work_schedule,
                 jobs.num_vacancy,
                 jobs.min_salary,
@@ -625,6 +619,11 @@ def applicant_home():
                 employers.industry AS industry,
                 employers.recruitment_type AS type_of_recruitment,
                 employers.city AS location,
+                (SELECT COUNT(*) FROM applicant_blacklist 
+                WHERE applicant_id = %s 
+                AND employer_id = employers.employer_id
+                AND (expires_at IS NULL OR expires_at > NOW())
+                ) as is_blacklisted,
                 (SELECT COUNT(*) FROM applications
                  WHERE applications.job_id = jobs.job_id
                  AND applications.applicant_id = %s
@@ -635,7 +634,7 @@ def applicant_home():
             WHERE jobs.status = 'active'
             ORDER BY jobs.created_at DESC
             """,
-            (applicant_id,),
+            (applicant_id, applicant_id),
             fetch="all"
         )
 
@@ -660,6 +659,40 @@ def apply_job(job_id):
     try:
         applicant_id = session["applicant_id"]
 
+        # ✅ NEW: Check if applicant is blacklisted from this employer
+        job_details = run_query(
+            conn,
+            """SELECT j.job_position, j.employer_id, e.employer_name 
+               FROM jobs j 
+               JOIN employers e ON j.employer_id = e.employer_id 
+               WHERE j.job_id = %s""",
+            (job_id,),
+            fetch="one"
+        )
+
+        if not job_details:
+            return jsonify({"success": False, "message": "Job not found."}), 404
+
+        employer_id = job_details["employer_id"]
+        employer_name = job_details["employer_name"]
+
+        # Check blacklist status
+        is_blacklisted = run_query(
+            conn,
+            """SELECT COUNT(*) as blacklisted 
+               FROM applicant_blacklist 
+               WHERE applicant_id = %s AND employer_id = %s 
+               AND (expires_at IS NULL OR expires_at > NOW())""",
+            (applicant_id, employer_id),
+            fetch="one"
+        )
+
+        if is_blacklisted and is_blacklisted["blacklisted"] > 0:
+            return jsonify({
+                "success": False,
+                "message": f"You are restricted from applying to {employer_name} due to a previous report."
+            }), 403
+
         # 1. CHECK STATUS (Don't just check existence)
         existing_app = run_query(
             conn,
@@ -678,16 +711,6 @@ def apply_job(job_id):
             # If it IS Cancelled, we will Reactivate it instead of inserting new
             is_reactivation = True
             application_id = existing_app['id']
-
-        job_details = run_query(
-            conn,
-            """SELECT j.job_position, j.employer_id, e.employer_name 
-               FROM jobs j 
-               JOIN employers e ON j.employer_id = e.employer_id 
-               WHERE j.job_id = %s""",
-            (job_id,),
-            fetch="one"
-        )
 
         applicant_details = run_query(
             conn,
@@ -723,7 +746,6 @@ def apply_job(job_id):
 
         # 3. NOTIFICATIONS & COUNTS (Same logic for both)
         if job_details and applicant_details:
-            employer_id = job_details["employer_id"]
             job_position = job_details["job_position"]
             applicant_name = f"{applicant_details['first_name']} {applicant_details['last_name']}"
 

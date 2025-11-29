@@ -57,12 +57,12 @@
           <a href="#faq" class="nav-link">FAQs</a>
           <a href="#office" class="nav-link">OFFICE</a>
           <!--The ADMIN LOG IN should have modal structure.-->
-          <a
+          <!--<a
             href="#"
             class="nav-link login-btn"
             data-modal-target="adminLoginModal"
             >ADMIN LOG IN</a
-          >
+          >-->
         </nav>
       </div>
     </header>
@@ -257,7 +257,7 @@
       </div>
     </section>
 
-    <section id="info-section" class="info-section">
+    <section id="info-section" class="info-section1">
       <div class="container">
         <h2 class="faqs-title" id="faq">Frequently Asked Questions (FAQs)</h2>
         <div class="faq-section">
@@ -521,7 +521,7 @@
       </div>
     </footer>
 
-    <!-- Modal Structure for ADMIN LOG IN -->
+    <!-- Modal Structure for ADMIN LOG IN
     <div id="adminLoginModal" class="modal">
       <div class="modal-content">
         <span class="closeBtn" data-modal-close>&times;</span>
@@ -531,7 +531,6 @@
           action="{{url_for('admin.login')}}"
           method="POST"
         >
-          <!--<label for="adminID">Admin ID</label>-->
           <input
             type="text"
             id="adminID"
@@ -539,15 +538,12 @@
             placeholder="Admin ID"
           />
 
-          <!--<label for="adminEmail">Email</label>-->
           <input
             type="email"
             id="adminEmail"
             name="adminEmail"
             placeholder="Email"
           />
-
-          <!--<label for="adminPassword">Password</label>-->
           <div class="password-wrapper">
             <input
               type="password"
@@ -571,7 +567,7 @@
           >
         </form>
       </div>
-    </div>
+    </div>-->
 
     <!-- Modal Structure for APPLICANT-->
     <div id="applicantModal" class="modal">

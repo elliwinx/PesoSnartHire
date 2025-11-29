@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login - PESO SmartHire</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/admin_login.css') }}"
+    />
+  </head>
+  <body>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div id="flash-container">
+      {% for category, msg in messages %}
+      <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll("#flash-container .flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => flashes.forEach((f) => f.remove()), 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
+    <div class="back-to-home">
+      <a href="{{ url_for('home') }}">← Back to Home</a>
+    </div>
+
+    <div class="main-wrapper">
+      <div class="split-container">
+        <div class="login-visual">
+          <img
+            src="{{ url_for('static', filename='Assets/background.png') }}"
+            alt="New City Hall of Lipa City"
+            class="bg-image"
+          />
+          <div class="visual-overlay">
+            <div class="brand-content">
+              <img
+                src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+                alt="PESO Logo"
+                class="visual-logo"
+              />
+              <h2>PESO SmartHire</h2>
+              <p>Streamlining Recruitment for Lipa City</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="login-content">
+          <div class="login-header">
+            <h1>Welcome Back</h1>
+            <p>Please log in to the Admin Panel</p>
+          </div>
+
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div class="error-message show">{{ message }}</div>
+          {% endfor %} {% endif %} {% endwith %}
+
+          <form
+            id="adminLoginForm"
+            action="{{url_for('admin.login')}}"
+            method="POST"
+            class="login-form"
+          >
+            <div class="form-group">
+              <label for="adminID" class="form-label">Admin ID</label>
+              <input
+                type="text"
+                id="adminID"
+                name="adminID"
+                placeholder="Enter your ID"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="adminEmail" class="form-label">Email Address</label>
+              <input
+                type="email"
+                id="adminEmail"
+                name="adminEmail"
+                placeholder="name@work.com"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="adminPassword" class="form-label">Password</label>
+              <div class="password-wrapper">
+                <input
+                  type="password"
+                  id="adminPassword"
+                  name="adminPassword"
+                  placeholder="Enter your password"
+                  required
+                />
+                <span class="toggle-password" data-target="adminPassword"
+                  >Show</span
+                >
+              </div>
+            </div>
+
+            <div class="actions-row">
+              <a
+                href="{{ url_for('forgot_password.forgot_password_email', type='admin') }}"
+                class="forgot-password"
+                >Forgot Password?</a
+              >
+            </div>
+
+            <button type="submit" class="login-btn">Log In</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.querySelectorAll(".toggle-password").forEach((item) => {
+        item.addEventListener("click", function () {
+          const targetId = this.getAttribute("data-target");
+          const input = document.getElementById(targetId);
+          if (input.type === "password") {
+            input.type = "text";
+            this.textContent = "Hide";
+          } else {
+            input.type = "password";
+            this.textContent = "Show";
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

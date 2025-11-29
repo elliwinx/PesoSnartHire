@@ -2315,3 +2315,48 @@ input[type="password"]:focus {
   cursor: not-allowed;
   opacity: 0.8;
 }
+
+/* Blacklisted Ribbon */
+.blacklisted-ribbon {
+  position: absolute;
+  top: 10px;
+  right: -5px;
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+  padding: 5px 15px;
+  font-size: 11px;
+  font-weight: bold;
+  border-radius: 3px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.blacklisted-ribbon::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  bottom: 0;
+  border-right: 10px solid #c82333;
+  border-bottom: 10px solid transparent;
+}
+
+.blacklisted-ribbon i {
+  margin-right: 4px;
+}
+
+/* Blacklisted Button */
+.btn-blacklisted {
+  background-color: #6c757d !important;
+  color: white !important;
+  border: 1px solid #6c757d !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+.btn-blacklisted:hover {
+  background-color: #6c757d !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
