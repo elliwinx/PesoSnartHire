@@ -159,39 +159,26 @@
               <label for="applicantProvince">Province</label>
               <select id="applicantProvince" name="applicantProvince" required>
                 <option value="">Select Province</option>
-                <option value="Batangas">Batangas</option>
-                <option value="Cavite">Cavite</option>
-                <option value="Quezon">Quezon</option>
-                <option value="Laguna">Laguna</option>
-                <option value="Rizal">Rizal</option>
               </select>
             </div>
+
             <div class="form-group">
               <label for="applicantCity">Municipality/City</label>
-              <select id="applicantCity" name="applicantCity" required>
-                <option value="">Select City</option>
-                <option value="Lipa City">Lipa City</option>
+              <select id="applicantCity" name="applicantCity" required disabled>
+                <option value="">Select Province First</option>
               </select>
-              <input
-                type="text"
-                id="applicantCityText"
-                name="applicantCityText"
-                placeholder="Enter your city"
-                style="display: none"
-              />
             </div>
+
             <div class="form-group">
               <label for="applicantBarangay">Barangay</label>
-              <select id="applicantBarangay" name="applicantBarangay" required>
-                <option value="">Select Barangay</option>
+              <select
+                id="applicantBarangay"
+                name="applicantBarangay"
+                required
+                disabled
+              >
+                <option value="">Select City First</option>
               </select>
-              <input
-                type="text"
-                id="applicantBarangayText"
-                name="applicantBarangayText"
-                placeholder="Enter your barangay"
-                style="display: none"
-              />
             </div>
           </div>
 

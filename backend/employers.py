@@ -2424,6 +2424,9 @@ def update_application_status(application_id):
 
         old_status = app_row.get('status') or 'Pending'
 
+        if old_status == 'Cancelled':
+            return jsonify({'success': False, 'message': 'Cannot update a cancelled application.'}), 400
+
         # Update applications table
         run_query(conn, "UPDATE applications SET status = %s WHERE id = %s",
                   (new_status, application_id))

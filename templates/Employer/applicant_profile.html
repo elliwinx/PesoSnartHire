@@ -267,11 +267,26 @@
                     }}</small
                   >
                 </div>
-                <!-- Replaced dropdown with Edit Status button -->
                 <br />
+
+                {% if app.status == 'Cancelled' %}
+                <button
+                  class="edit-status-btn"
+                  disabled
+                  style="
+                    background-color: #ccc;
+                    cursor: not-allowed;
+                    border: 1px solid #ccc;
+                    color: #666;
+                  "
+                >
+                  <i class="fa-solid fa-ban"></i> Cancelled
+                </button>
+                {% else %}
                 <button class="edit-status-btn" data-app-id="{{ app.id }}">
                   <i class="fa-solid fa-pencil"></i> Edit Status
                 </button>
+                {% endif %}
               </div>
             </div>
             {% endfor %}

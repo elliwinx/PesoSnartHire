@@ -247,15 +247,10 @@ def register_applicant(form, files):
 
         # ==== Determine applicant type ====
         province = form.get("applicantProvince", "").strip()
-        is_from_lipa_checkbox = form.get("fromLipa") == "on"
+        city = form.get("applicantCity", "").strip()
+        barangay = form.get("applicantBarangay", "").strip()
 
-        if is_from_lipa_checkbox:
-            city = form.get("applicantCity").strip()
-        else:
-            city = form.get("applicantCityText").strip()
-
-        is_from_lipa = is_from_lipa_checkbox or (
-            province == "Batangas" and city == "Lipa City")
+        is_from_lipa = (province == "Batangas" and city == "Lipa City")
 
         is_pwd = int(form.get("pwd") == "on")
         has_work_exp = int(form.get("workExperience") == "on")
@@ -329,7 +324,7 @@ def register_applicant(form, files):
             "phone": phone,
             "email": email,
             "is_from_lipa": is_from_lipa,
-            "province": form.get("applicantProvince"),
+            "province": province,
             "city": city,
             "barangay": barangay,
             "education": form.get("applicantEducationalAttainment"),

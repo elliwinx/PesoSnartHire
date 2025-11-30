@@ -110,139 +110,47 @@ document.addEventListener("DOMContentLoaded", () => {
   const reminderLipenos = document.getElementById("reminderLipenos");
   const reminderNonLipenos = document.getElementById("reminderNonLipenos");
 
-  // Lipa City barangays (complete list)
-  const lipaBarangays = [
-    "Adya",
-    "Anilao",
-    "Anilao-Labac",
-    "Antipolo Del Norte",
-    "Antipolo Del Sur",
-    "Bagong Pook",
-    "Balintawak",
-    "Banaybanay",
-    "Bolbok",
-    "Bugtong Na Pulo",
-    "Bulacnin",
-    "Bulaklakan",
-    "Calamias",
-    "Cumba",
-    "Dagatan",
-    "Duhatan",
-    "Halang",
-    "Inosluban",
-    "Kayumanggi",
-    "Latag",
-    "Lodlod",
-    "Lumbang",
-    "Mabini",
-    "Malagonlong",
-    "Marawoy",
-    "Mataas Na Lupa",
-    "Munting Pulo",
-    "Pagolingin Bata",
-    "Pagolingin East",
-    "Pagolingin West",
-    "Pangao",
-    "Pinagkawitan",
-    "Pinagtongulan",
-    "Plaridel",
-    "Poblacion Barangay 1",
-    "Poblacion Barangay 2",
-    "Poblacion Barangay 3",
-    "Poblacion Barangay 4",
-    "Poblacion Barangay 5",
-    "Poblacion Barangay 6",
-    "Poblacion Barangay 7",
-    "Poblacion Barangay 8",
-    "Poblacion Barangay 9",
-    "Poblacion Barangay 9-A",
-    "Poblacion Barangay 10",
-    "Poblacion Barangay 11",
-    "Poblacion Barangay 12",
-    "Pusil",
-    "Quezon",
-    "Rizal",
-    "Sabang",
-    "Sampaguita",
-    "San Benito",
-    "San Carlos",
-    "San Celestino",
-    "San Francisco",
-    "San Guillermo",
-    "San Jose",
-    "San Lucas",
-    "San Salvador",
-    "San Sebastian",
-    "Santo Nino",
-    "Santo Toribio",
-    "Sapac",
-    "Sico",
-    "Talisay",
-    "Tambo",
-    "Tangob",
-    "Tanguay",
-    "Tibig",
-    "Tipacan",
-  ];
+  const BASE_URL = "https://psgc.gitlab.io/api";
 
-  phoneInput.addEventListener("focus", () => {
-    // Always ensure the prefix exists when focused
-    if (!phoneInput.value.startsWith("+63")) {
-      phoneInput.value = "+63";
-    }
-  });
-
-  phoneInput.addEventListener("input", () => {
-    // Always keep the +63 prefix
-    if (!phoneInput.value.startsWith("+63")) {
-      phoneInput.value = "+63";
-    }
-
-    // Keep only digits after +63 and limit to 10 digits
-    const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
-    phoneInput.value = "+63" + digits;
-  });
-
-  phoneInput.addEventListener("blur", () => {
-    // If user leaves field empty, restore +63
-    if (phoneInput.value.trim() === "" || phoneInput.value === "+63") {
-      phoneInput.value = "+63";
-    }
-  });
-
-  function populateBarangayDropdown(barangays) {
-    if (!barangaySelect) return;
-    barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-    barangays.forEach((b) => {
-      const opt = document.createElement("option");
-      opt.value = b;
-      opt.textContent = b;
-      barangaySelect.appendChild(opt);
+  if (phoneInput) {
+    phoneInput.addEventListener("focus", () => {
+      if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+    });
+    phoneInput.addEventListener("input", () => {
+      if (!phoneInput.value.startsWith("+63")) phoneInput.value = "+63";
+      const digits = phoneInput.value.slice(3).replace(/\D/g, "").slice(0, 10);
+      phoneInput.value = "+63" + digits;
+    });
+    phoneInput.addEventListener("blur", () => {
+      if (phoneInput.value.trim() === "" || phoneInput.value === "+63") {
+        phoneInput.value = "+63";
+      }
     });
   }
 
-  function toSentenceCase(str) {
-    return str.toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
+  function populateSelect(element, items, defaultText) {
+    element.innerHTML = `<option value="">${defaultText}</option>`;
+    items.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.name; // Save NAME (e.g., "Batangas")
+      option.dataset.code = item.code; // Use CODE for API calls
+      option.textContent = item.name;
+      element.appendChild(option);
+    });
   }
 
-  // Toggle recommendation requirement + UI based on Lipa checkbox
   function updateRecommendationRequirementFromLipa() {
     if (!recommendationInput || !recommendationLetterSection) return;
 
     if (fromLipaCheckbox && fromLipaCheckbox.checked) {
-      // Lipeno: hide recommendation and make NOT required
+      // Lipeno: Hide recommendation
       recommendationLetterSection.style.display = "none";
       recommendationInput.required = false;
-      // clear any previously selected file so it isn't submitted accidentally
-      try {
-        recommendationInput.value = "";
-      } catch (err) {
-        /* ignore */
-      }
+      recommendationInput.value = "";
       if (reminderLipenos) reminderLipenos.style.display = "block";
       if (reminderNonLipenos) reminderNonLipenos.style.display = "none";
     } else {
-      // Non-Lipeno: show recommendation and make REQUIRED
+      // Non-Lipeno: Show recommendation
       recommendationLetterSection.style.display = "block";
       recommendationInput.required = true;
       if (reminderLipenos) reminderLipenos.style.display = "none";
@@ -250,146 +158,135 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Handler when 'from Lipa' toggled
-  if (fromLipaCheckbox) {
-    fromLipaCheckbox.addEventListener("change", () => {
-      if (fromLipaCheckbox.checked) {
-        if (provinceSelect) provinceSelect.value = "Batangas";
-        if (citySelect) {
-          citySelect.value = "Lipa City";
-          citySelect.style.display = "block";
-          citySelect.required = true;
-        }
-        if (cityTextInput) {
-          cityTextInput.style.display = "none";
-          cityTextInput.required = false;
-          cityTextInput.value = "";
-        }
-        if (barangaySelect) {
-          barangaySelect.style.display = "block";
-          barangaySelect.required = true;
-          populateBarangayDropdown(lipaBarangays);
-        }
-        if (barangayTextInput) {
-          barangayTextInput.style.display = "none";
-          barangayTextInput.required = false;
-        }
-      } else {
-        // not from Lipa: allow text input for city/barangay
-        if (provinceSelect) provinceSelect.value = "";
-        if (citySelect) {
-          citySelect.style.display = "none";
-          citySelect.required = false;
-          citySelect.value = "";
-        }
-        if (cityTextInput) {
-          cityTextInput.style.display = "block";
-          cityTextInput.required = true;
-        }
-        if (barangaySelect) {
-          barangaySelect.style.display = "none";
-          barangaySelect.required = false;
-          barangaySelect.value = "";
-        }
-        if (barangayTextInput) {
-          barangayTextInput.style.display = "block";
-          barangayTextInput.required = true;
-        }
-      }
-
-      // update recommendation UI/requirement
-      updateRecommendationRequirementFromLipa();
-    });
-  }
-
-  function checkIsFromLipaAuto() {
-    if (!fromLipaCheckbox || !provinceSelect) return;
-
-    const province = provinceSelect.value;
-
-    // FIX: Determine which city value to check
-    // If the select is visible/has value, use it. Otherwise, check the text input.
-    let city = citySelect ? citySelect.value : "";
-
-    // If the user is typing (checkbox unchecked), we must read the text input
-    if (
-      (!city || city === "") &&
-      cityTextInput &&
-      cityTextInput.offsetParent !== null
-    ) {
-      city = cityTextInput.value;
-    }
-
-    console.log("checkIsFromLipaAuto:", {
-      province,
-      city,
-      checkboxChecked: fromLipaCheckbox.checked,
-    });
-
-    // Normalize strings for comparison (lowercase and trim)
-    const pClean = province.trim().toLowerCase();
-    const cClean = city.trim().toLowerCase();
-
-    // Auto-check if Province = Batangas AND City = Lipa City
-    if (pClean === "batangas" && cClean === "lipa city") {
-      if (!fromLipaCheckbox.checked) {
-        console.log("Auto-checking the checkbox");
-        fromLipaCheckbox.checked = true;
-        // Trigger change event to update UI (switch inputs, unlock barangay)
-        fromLipaCheckbox.dispatchEvent(new Event("change"));
-      }
+  async function loadProvinces() {
+    try {
+      const response = await fetch(`${BASE_URL}/provinces/`);
+      if (!response.ok) throw new Error("Failed to fetch provinces");
+      const data = await response.json();
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      populateSelect(provinceSelect, data, "Select Province");
+    } catch (error) {
+      console.error("Error:", error);
     }
   }
 
-  // Province change behavior (when not Lipeno)
+  async function loadCities(provinceCode) {
+    citySelect.innerHTML = '<option value="">Loading...</option>';
+    citySelect.disabled = true;
+    barangaySelect.innerHTML = '<option value="">Select City First</option>';
+    barangaySelect.disabled = true;
+
+    try {
+      const response = await fetch(
+        `${BASE_URL}/provinces/${provinceCode}/cities-municipalities/`
+      );
+      const data = await response.json();
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      populateSelect(citySelect, data, "Select Municipality/City");
+      citySelect.disabled = false;
+    } catch (error) {
+      console.error("Error:", error);
+      citySelect.innerHTML = '<option value="">Error loading data</option>';
+    }
+  }
+
+  async function loadBarangays(code) {
+    barangaySelect.innerHTML = '<option value="">Loading...</option>';
+    barangaySelect.disabled = true;
+
+    try {
+      const response = await fetch(
+        `${BASE_URL}/cities-municipalities/${code}/barangays/`
+      );
+      const data = await response.json();
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      populateSelect(barangaySelect, data, "Select Barangay");
+      barangaySelect.disabled = false;
+    } catch (error) {
+      console.error("Error:", error);
+      barangaySelect.innerHTML = '<option value="">Error loading data</option>';
+    }
+  }
+
   if (provinceSelect) {
     provinceSelect.addEventListener("change", function () {
-      // Check if should auto-check "Is From Lipa"
-      checkIsFromLipaAuto();
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
 
-      // if (fromLipaCheckbox && fromLipaCheckbox.checked) return;
-
-      // Always show text inputs for city/barangay when NOT from Lipa
-      if (citySelect) {
-        citySelect.style.display = "none";
-        citySelect.required = false;
-        citySelect.value = "";
-      }
-      if (cityTextInput) {
-        cityTextInput.style.display = "block";
-        cityTextInput.required = true;
+      if (code) loadCities(code);
+      else {
+        citySelect.innerHTML =
+          '<option value="">Select Province First</option>';
+        citySelect.disabled = true;
+        barangaySelect.innerHTML =
+          '<option value="">Select City First</option>';
+        barangaySelect.disabled = true;
       }
 
-      if (barangaySelect) {
-        barangaySelect.style.display = "none";
-        barangaySelect.required = false;
-        barangaySelect.value = "";
-      }
-      if (barangayTextInput) {
-        barangayTextInput.style.display = "block";
-        barangayTextInput.required = true;
+      // Uncheck "From Lipa" if they pick a different province
+      if (
+        this.value !== "Batangas" &&
+        fromLipaCheckbox &&
+        fromLipaCheckbox.checked
+      ) {
+        fromLipaCheckbox.checked = false;
+        updateRecommendationRequirementFromLipa();
       }
     });
   }
 
-  // City change behavior - also check for auto-check
   if (citySelect) {
     citySelect.addEventListener("change", function () {
-      checkIsFromLipaAuto();
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
+      if (code) loadBarangays(code);
+
+      // Auto-check logic
+      if (fromLipaCheckbox) {
+        const isLipa =
+          this.value === "Lipa City" && provinceSelect.value === "Batangas";
+        if (fromLipaCheckbox.checked !== isLipa) {
+          fromLipaCheckbox.checked = isLipa;
+          updateRecommendationRequirementFromLipa();
+        }
+      }
     });
   }
 
-  if (cityTextInput) {
-    cityTextInput.addEventListener("input", function () {
-      checkIsFromLipaAuto();
-    });
+  if (fromLipaCheckbox) {
+    fromLipaCheckbox.addEventListener("change", async function () {
+      updateRecommendationRequirementFromLipa();
 
-    cityTextInput.addEventListener("blur", function () {
-      checkIsFromLipaAuto();
+      if (this.checked) {
+        // Auto-select Batangas -> Lipa City
+        const batOption = Array.from(provinceSelect.options).find(
+          (o) => o.value === "Batangas"
+        );
+        if (batOption) {
+          provinceSelect.value = "Batangas";
+          await loadCities(batOption.dataset.code);
+
+          const lipaOption = Array.from(citySelect.options).find(
+            (o) => o.value === "Lipa City"
+          );
+          if (lipaOption) {
+            citySelect.value = "Lipa City";
+            await loadBarangays(lipaOption.dataset.code);
+          }
+        }
+      } else {
+        // Reset
+        provinceSelect.value = "";
+        citySelect.innerHTML =
+          '<option value="">Select Province First</option>';
+        citySelect.disabled = true;
+        barangaySelect.innerHTML =
+          '<option value="">Select City First</option>';
+        barangaySelect.disabled = true;
+      }
     });
   }
 
-  // PWD toggle
   if (pwdCheckbox) {
     pwdCheckbox.addEventListener("change", function () {
       if (this.checked) {
@@ -407,7 +304,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Work experience toggle
   if (workExperienceCheckbox) {
     workExperienceCheckbox.addEventListener("change", function () {
       if (this.checked) {
@@ -426,25 +322,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // City/Barangay formatting
-  cityTextInput &&
-    cityTextInput.addEventListener("blur", function () {
-      if (this.value) this.value = toSentenceCase(this.value);
-    });
-  barangayTextInput &&
-    barangayTextInput.addEventListener("blur", function () {
-      if (this.value) this.value = toSentenceCase(this.value);
-    });
-
-  // Initialize recommendation state on load
-  // Ensure recommendation/visibility is consistent with current checkbox/province state
-  if (fromLipaCheckbox) {
-    // run handler logic once so other UI pieces (city/barangay) are consistent too
-    // (this also calls updateRecommendationRequirementFromLipa indirectly)
-    fromLipaCheckbox.dispatchEvent(new Event("change"));
-  } else {
-    updateRecommendationRequirementFromLipa();
-  }
+  if (provinceSelect) loadProvinces();
+  updateRecommendationRequirementFromLipa();
 
   // === Form submit validation (client-side) ===
   if (form) {

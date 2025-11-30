@@ -218,22 +218,64 @@
 
             <!-- Barangay / City / Province -->
             <div>
-              <label>Barangay</label>
-              <input class="chip" type="text" name="barangay" value="{{ applicant.barangay }}" readonly />
+              <label>Province</label>
+              <select class="chip" id="applicantProvince" name="province" data-default="{{ applicant.province }}" disabled>
+                <option value="">Select Province</option>
+                {% if applicant.province %}
+                  <option value="{{ applicant.province }}" selected>{{ applicant.province }}</option>
+                {% endif %}
+              </select>
             </div>
+
             <div>
               <label>Municipality/City</label>
-              <input class="chip" type="text" name="city" value="{{ applicant.city }}" readonly />
+              <select class="chip" id="applicantCity" name="city" data-default="{{ applicant.city }}" disabled>
+                
+                {% if not applicant.city %}
+                  <option value="">Select Province First</option>
+                {% endif %}
+
+                {% if applicant.city %}
+                  <option value="{{ applicant.city }}" selected>{{ applicant.city }}</option>
+                {% endif %}
+
+              </select>
             </div>
+
             <div>
-              <label>Province</label>
-              <input class="chip" type="text" name="province" value="{{ applicant.province }}" readonly />
+              <label>Barangay</label>
+              <select class="chip" id="applicantBarangay" name="barangay" data-default="{{ applicant.barangay }}" disabled>
+                <option value="">Select City First</option>
+                {% if applicant.barangay %}
+                  <option value="{{ applicant.barangay }}" selected>{{ applicant.barangay }}</option>
+                {% endif %}
+              </select>
             </div>
 
             <!-- Education -->
             <div class="full">
               <label>Educational Attainment</label>
-              <input class="chip full" type="text" name="education" value="{{ applicant.education }}" readonly />
+              <select class="chip full" name="education" disabled>
+                <option value="" {% if not applicant.education %}selected{% endif %}>Select Educational Attainment</option>
+                <option value="No Grade Completed" {% if applicant.education == 'No Grade Completed' %}selected{% endif %}>No Grade Completed</option>
+                <option value="Elementary Level" {% if applicant.education == 'Elementary Level' %}selected{% endif %}>Elementary Level</option>
+                <option value="Elementary Graduate" {% if applicant.education == 'Elementary Graduate' %}selected{% endif %}>Elementary Graduate</option>
+                <option value="Junior High School Undergraduate (K-12)" {% if applicant.education == 'Junior High School Undergraduate (K-12)' %}selected{% endif %}>Junior High School Undergraduate (K-12)</option>
+                <option value="Junior High School Graduate (K-12)" {% if applicant.education == 'Junior High School Graduate (K-12)' %}selected{% endif %}>Junior High School Graduate (K-12)</option>
+                <option value="Senior High School Undergraduate (K-12)" {% if applicant.education == 'Senior High School Undergraduate (K-12)' %}selected{% endif %}>Senior High School Undergraduate (K-12)</option>
+                <option value="Senior High School Graduate (K-12)" {% if applicant.education == 'Senior High School Graduate (K-12)' %}selected{% endif %}>Senior High School Graduate (K-12)</option>
+                <option value="High School Undergraduate (pre-K-12, usually age 30+)" {% if applicant.education == 'High School Undergraduate (pre-K-12, usually age 30+)' %}selected{% endif %}>High School Undergraduate (pre-K-12, usually age 30+)</option>
+                <option value="High School Graduate (pre-K-12, usually age 30+)" {% if applicant.education == 'High School Graduate (pre-K-12, usually age 30+)' %}selected{% endif %}>High School Graduate (pre-K-12, usually age 30+)</option>
+                <option value="Alternative Learning System" {% if applicant.education == 'Alternative Learning System' %}selected{% endif %}>Alternative Learning System</option>
+                <option value="Vocational Level" {% if applicant.education == 'Vocational Level' %}selected{% endif %}>Vocational Level</option>
+                <option value="Vocational Graduate" {% if applicant.education == 'Vocational Graduate' %}selected{% endif %}>Vocational Graduate</option>
+                <option value="College Level" {% if applicant.education == 'College Level' %}selected{% endif %}>College Level</option>
+                <option value="College Graduate" {% if applicant.education == 'College Graduate' %}selected{% endif %}>College Graduate</option>
+                <option value="Some Masteral Units" {% if applicant.education == 'Some Masteral Units' %}selected{% endif %}>Some Masteral Units</option>
+                <option value="Master's Degree Holder" {% if applicant.education == "Master's Degree Holder" %}selected{% endif %}>Master's Degree Holder</option>
+                <option value="Some Doctorate Units" {% if applicant.education == 'Some Doctorate Units' %}selected{% endif %}>Some Doctorate Units</option>
+                <option value="Doctorate Degree Holder" {% if applicant.education == 'Doctorate Degree Holder' %}selected{% endif %}>Doctorate Degree Holder</option>
+              </select>
             </div>
 
             <!-- PWD / Work Experience -->
@@ -298,7 +340,12 @@
 
             <div class="full">
               <label>Reason for Registering in PESO SmartHire</label>
-              <textarea class="chip reason-box" name="registration_reason" rows="2" readonly>{{ applicant.registration_reason }}</textarea>
+              <select class="chip full" name="registration_reason" disabled>
+                <option value="" {% if not applicant.registration_reason %}selected{% endif %}>Select Reason</option>
+                <option value="Find a full-time job" {% if applicant.registration_reason == 'Find a full-time job' %}selected{% endif %}>Find a full-time job</option>
+                <option value="Find a part-time job" {% if applicant.registration_reason == 'Find a part-time job' %}selected{% endif %}>Find a part-time job</option>
+                <option value="For OJT" {% if applicant.registration_reason == 'For OJT' %}selected{% endif %}>For OJT</option>
+              </select>
             </div>
           </div>
         </div>

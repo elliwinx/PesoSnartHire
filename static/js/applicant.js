@@ -247,7 +247,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // 5. CALL FUNCTION TO CHECK RECOMMENDATION EXPIRY
       // This will unlock recommendation_file ONLY if isExpiring=true
-      updateResidencyRequirements();
+      // updateResidencyRequirements();
+
+      if (typeof handleResidencyChange === "function") {
+        handleResidencyChange();
+      }
 
       editBtn.style.display = "none";
       saveBtn.style.display = "inline-block";
@@ -474,348 +478,295 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ========== RESIDENCY TYPE CHANGE HANDLER ==========
-  const recommendationContainer = document.getElementById(
+  // ==========================================
+  //  ADDRESS API & RESIDENCY LOGIC (PSGC Integration)
+  // ==========================================
+
+  // NOTE: provinceSelect, citySelect, barangaySelect, residencyYes, residencyNo
+  // are already defined at the top of applicant.js, so we just use them here.
+
+  // Define NEW variables that were deleted in the previous step
+  const recContainer = document.getElementById(
     "recommendation-upload-container"
   );
-  const recommendationFile = document.getElementById("recommendation_file");
-  const resumeContainer = document.querySelector(
-    ".document-item:has(#resume_file)"
-  );
+  const recInput = document.getElementById("recommendation_file");
   const warningBanner = document.getElementById("residency-warning-banner");
-  const bannerTitle = document.getElementById("banner-title");
-  const bannerMessage = document.getElementById("banner-message");
+  const BASE_URL = "https://psgc.gitlab.io/api";
 
-  if (!residencyYes || !residencyNo) {
-    // Skip residency logic if elements don't exist
-  } else {
-    let originalIsLipeno = residencyYes.checked;
-    let originalCity = cityInput ? cityInput.value : "";
-    let originalProvince = provinceInput ? provinceInput.value : "";
-    let originalBarangay = barangayInput ? barangayInput.value : "";
-    let isEditMode = false;
-    let isCanceling = false;
-    let dynamicBarangaySelect = null;
+  // Ensure isEditMode is tracked globally
+  if (typeof isEditMode === "undefined") var isEditMode = false;
 
-    function createBarangaySelect(selectedValue) {
-      if (!barangayInput) return;
-      if (dynamicBarangaySelect) return dynamicBarangaySelect;
+  // --- 1. API Helpers ---
 
-      const sel = document.createElement("select");
-      sel.id = "dynamic_barangay_select";
-      sel.className = "chip";
-      sel.innerHTML = '<option value="">Select Barangay</option>';
-      lipaBarangays.forEach((b) => {
-        const opt = document.createElement("option");
-        opt.value = b;
-        opt.textContent = b;
-        sel.appendChild(opt);
-      });
-
-      sel.addEventListener("change", () => {
-        barangayInput.value = sel.value;
-      });
-
-      barangayInput.style.display = "none";
-      barangayInput.parentNode.insertBefore(sel, barangayInput.nextSibling);
-      dynamicBarangaySelect = sel;
-
-      if (selectedValue) {
-        try {
-          sel.value = selectedValue;
-          barangayInput.value = selectedValue;
-        } catch (e) {}
-      }
-
-      return sel;
+  async function fetchJson(url) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Network response was not ok");
+      return await response.json();
+    } catch (error) {
+      console.error("API Error:", error);
+      return [];
     }
+  }
 
-    function removeBarangaySelect() {
-      if (!dynamicBarangaySelect) return;
-      try {
-        barangayInput.value =
-          dynamicBarangaySelect.value || barangayInput.value || "";
-      } catch (e) {}
-      dynamicBarangaySelect.remove();
-      dynamicBarangaySelect = null;
-      if (barangayInput) barangayInput.style.display = "block";
+  function populateSelect(element, items, defaultText, selectedValue = null) {
+    if (!element) return null;
+    element.innerHTML = `<option value="">${defaultText}</option>`;
+    let selectedCode = null;
+
+    // Sort alphabetically
+    items.sort((a, b) => a.name.localeCompare(b.name));
+
+    items.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.name;
+      option.textContent = item.name;
+      option.dataset.code = item.code;
+
+      // Select if matches saved value
+      if (selectedValue && item.name === selectedValue) {
+        option.selected = true;
+        selectedCode = item.code;
+      }
+
+      element.appendChild(option);
+    });
+
+    return selectedCode; // Return code to help chain the next dropdown
+  }
+
+  // --- 2. Data Loaders (Chainable) ---
+
+  async function initializeAddressData(provVal, cityVal, barVal) {
+    // 1. Load Provinces
+    const provData = await fetchJson(`${BASE_URL}/provinces/`);
+    const provCode = populateSelect(
+      provinceSelect,
+      provData,
+      "Select Province",
+      provVal
+    );
+
+    // 2. If we have a province (saved), load its Cities
+    if (provCode) {
+      await loadCities(provCode, cityVal);
+
+      // 3. If we have a city (saved), load its Barangays
+      // We need to find the code for the selected city from the DOM we just populated
+      if (cityVal && citySelect) {
+        const selectedCityOption = Array.from(citySelect.options).find(
+          (o) => o.value === cityVal
+        );
+        if (selectedCityOption) {
+          await loadBarangays(selectedCityOption.dataset.code, barVal);
+        }
+      }
     }
+  }
 
-    const lipaBarangays = [
-      "Adya",
-      "Anilao",
-      "Antipolo Del Norte",
-      "Antipolo Del Sur",
-      "Bagong Pook",
-      "Balintawak",
-      "Banaybanay",
-      "Bolbok",
-      "Bugtong Na Pulo",
-      "Bulacnin",
-      "Bulaklakan",
-      "Calamias",
-      "Cumba",
-      "Dagatan",
-      "Duhatan",
-      "Halang",
-      "Inosluban",
-      "Kayumanggi",
-      "Latag",
-      "Lodlod",
-      "Lumbang",
-      "Mabini",
-      "Malagonlong",
-      "Marawoy",
-      "Mataas Na Lupa",
-      "Munting Pulo",
-      "Pagolingin Bata",
-      "Pagolingin East",
-      "Pagolingin West",
-      "Pangao",
-      "Pinagkawitan",
-      "Pinagtongulan",
-      "Plaridel",
-      "Poblacion Barangay 1",
-      "Poblacion Barangay 2",
-      "Poblacion Barangay 3",
-      "Poblacion Barangay 4",
-      "Poblacion Barangay 5",
-      "Poblacion Barangay 6",
-      "Poblacion Barangay 7",
-      "Poblacion Barangay 8",
-      "Poblacion Barangay 9",
-      "Poblacion Barangay 9-A",
-      "Poblacion Barangay 10",
-      "Poblacion Barangay 11",
-      "Poblacion Barangay 12",
-      "Pusil",
-      "Quezon",
-      "Rizal",
-      "Sabang",
-      "Sampaguita",
-      "San Benito",
-      "San Carlos",
-      "San Celestino",
-      "San Francisco",
-      "San Guillermo",
-      "San Jose",
-      "San Lucas",
-      "San Salvador",
-      "San Sebastian",
-      "Santo Nino",
-      "Santo Toribio",
-      "Sapac",
-      "Sico",
-      "Talisay",
-      "Tambo",
-      "Tangob",
-      "Tanguay",
-      "Tibig",
-      "Tipacan",
-    ];
+  async function loadCities(provinceCode, selectedCity = null) {
+    if (!citySelect) return;
+    citySelect.innerHTML = "<option>Loading...</option>";
+    const data = await fetchJson(
+      `${BASE_URL}/provinces/${provinceCode}/cities-municipalities/`
+    );
+    populateSelect(citySelect, data, "Select Municipality/City", selectedCity);
 
-    function updateResidencyRequirements() {
-      const isLipeno = residencyYes.checked;
-      const residencyChanged = isEditMode && isLipeno !== originalIsLipeno;
+    // Manage disabled state
+    citySelect.disabled = !isEditMode;
+  }
 
-      // Get the container and input
-      const recContainer = document.getElementById(
-        "recommendation-upload-container"
-      );
-      const recInput = document.getElementById("recommendation_file");
+  async function loadBarangays(cityCode, selectedBarangay = null) {
+    if (!barangaySelect) return;
+    barangaySelect.innerHTML = "<option>Loading...</option>";
+    const data = await fetchJson(
+      `${BASE_URL}/cities-municipalities/${cityCode}/barangays/`
+    );
+    populateSelect(barangaySelect, data, "Select Barangay", selectedBarangay);
 
-      // Check if backend flagged this as expiring (read from HTML)
-      const isExpiring = recContainer
-        ? recContainer.getAttribute("data-expiring") === "true"
-        : false;
+    // Manage disabled state
+    barangaySelect.disabled = !isEditMode;
+  }
 
-      // 1. Handle "Reupload" status (User is already locked out, just needs to upload)
-      if (applicantStatus === "Reupload") {
-        if (!isLipeno) {
-          if (resumeContainer) resumeContainer.style.display = "none";
-          if (recContainer) recContainer.style.display = "block";
-          if (recInput) recInput.setAttribute("required", "true");
-        } else {
-          if (resumeContainer) resumeContainer.style.display = "block";
-          if (recContainer) recContainer.style.display = "none";
-          if (recInput) recInput.removeAttribute("required");
-        }
-        // Show banner for reupload
-        if (warningBanner) {
-          warningBanner.classList.add("show");
-          if (bannerTitle)
-            bannerTitle.textContent = "Document Reupload Required";
-          if (bannerMessage)
-            bannerMessage.textContent =
-              "Please reupload the requested document(s) below.";
-        }
-        return;
-      }
+  // --- 3. Event Listeners ---
 
-      // 2. Handle Normal "Approved" / "Pending" status (Edit Mode logic)
-      if (resumeContainer) resumeContainer.style.display = "block";
+  if (provinceSelect) {
+    provinceSelect.addEventListener("change", async function () {
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
 
-      // Toggle Banner based on residency change
-      if (warningBanner) {
-        if (residencyChanged) {
-          warningBanner.classList.add("show");
-          if (bannerTitle) bannerTitle.textContent = "Residency Type Changed";
-          // ... (Keep your existing banner message logic here) ...
-          if (isLipeno) {
-            if (bannerMessage)
-              bannerMessage.innerHTML =
-                "<strong>Changed to Lipeño:</strong> Recommendation letter no longer required.";
-          } else {
-            if (bannerMessage)
-              bannerMessage.innerHTML =
-                "<strong>Changed to Non-Lipeño:</strong> You must now upload a recommendation letter.";
-          }
-        } else {
-          warningBanner.classList.remove("show");
-        }
-      }
+      // Reset child dropdowns
+      if (citySelect)
+        citySelect.innerHTML =
+          '<option value="">Select Province First</option>';
+      if (barangaySelect)
+        barangaySelect.innerHTML =
+          '<option value="">Select City First</option>';
 
-      // Visibility & Locking Logic
-      if (isLipeno) {
-        // HIDE if Lipeno
-        if (recContainer) recContainer.style.display = "none";
-        if (recInput) {
-          recInput.removeAttribute("required");
-          recInput.value = "";
-        }
-        // ... (Keep your existing address auto-fill logic for Lipa) ...
-        if (isEditMode && !isCanceling) {
-          if (provinceInput) provinceInput.value = "Batangas";
-          if (cityInput) cityInput.value = "Lipa City";
-          createBarangaySelect(
-            originalBarangay || (barangayInput ? barangayInput.value : "")
-          );
-        } else {
-          removeBarangaySelect();
+      if (code) {
+        if (citySelect) citySelect.disabled = false;
+        await loadCities(code);
+
+        // Logic: If user manually changes province away from Batangas, uncheck "Lipa"
+        if (
+          this.value !== "Batangas" &&
+          residencyYes &&
+          residencyYes.checked &&
+          isEditMode
+        ) {
+          residencyNo.checked = true;
+          residencyNo.dispatchEvent(new Event("change"));
         }
       } else {
-        // SHOW if Non-Lipeno
-        if (recContainer) recContainer.style.display = "block";
+        if (citySelect) citySelect.disabled = true;
+        if (barangaySelect) barangaySelect.disabled = true;
+      }
+    });
+  }
 
-        // SECURITY CHECK: Should the input be unlocked?
-        // Unlock ONLY if: (Edit Mode is ON) AND (Residency Changed OR Document is Expiring)
-        if (recInput) {
-          if (isEditMode && (residencyChanged || isExpiring)) {
-            recInput.style.display = "block";
-            recInput.removeAttribute("disabled");
-            recInput.setAttribute("required", "true");
-          } else {
-            // Otherwise, keep it physically present but hidden/disabled
-            // This prevents users from "accidentally" uploading a file when they shouldn't
-            recInput.style.display = "none";
-            recInput.setAttribute("disabled", "true");
+  if (citySelect) {
+    citySelect.addEventListener("change", async function () {
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
+
+      if (code) {
+        if (barangaySelect) barangaySelect.disabled = false;
+        await loadBarangays(code);
+
+        // Logic: Auto-check "Lipa" if Batangas + Lipa City selected
+        if (
+          this.value === "Lipa City" &&
+          provinceSelect.value === "Batangas" &&
+          isEditMode
+        ) {
+          if (residencyYes && !residencyYes.checked) {
+            residencyYes.checked = true;
+            residencyYes.dispatchEvent(new Event("change"));
           }
+        } else if (isEditMode && residencyYes && residencyYes.checked) {
+          // If they change city to NOT Lipa, uncheck Yes
+          residencyNo.checked = true;
+          residencyNo.dispatchEvent(new Event("change"));
         }
+      } else {
+        if (barangaySelect) {
+          barangaySelect.innerHTML =
+            '<option value="">Select City First</option>';
+          barangaySelect.disabled = true;
+        }
+      }
+    });
+  }
 
-        // ... (Keep your existing address clear logic) ...
-        if (isEditMode && !isCanceling) {
-          if (provinceInput) provinceInput.value = "";
-          if (cityInput) cityInput.value = "";
-          if (barangayInput) barangayInput.value = "";
-        }
-        removeBarangaySelect();
+  // --- 4. "From Lipa" Checkbox Logic ---
+
+  function handleResidencyChange() {
+    const isLipeno = residencyYes.checked;
+
+    // Toggle Recommendation Letter
+    if (recContainer) {
+      recContainer.style.display = isLipeno ? "none" : "block";
+      if (recInput && isEditMode) {
+        recInput.required = !isLipeno;
       }
     }
 
-    if (editBtn) {
-      editBtn.addEventListener("click", () => {
-        isEditMode = true;
-        isCanceling = false;
-        originalIsLipeno = residencyYes.checked;
-        originalCity = cityInput ? cityInput.value : "";
-        originalProvince = provinceInput ? provinceInput.value : "";
-        originalBarangay = barangayInput ? barangayInput.value : "";
-        console.log("[v0] Edit mode started:", {
-          originalIsLipeno,
-          originalCity,
-          originalProvince,
-          originalBarangay,
-        });
-      });
+    // Show warning banner
+    if (warningBanner && isEditMode) {
+      warningBanner.classList.add("show");
     }
 
-    if (residencyYes) {
-      residencyYes.addEventListener("change", () => {
-        console.log(
-          "[v0] residencyYes changed, isEditMode:",
-          isEditMode,
-          "isCanceling:",
-          isCanceling
-        );
-        if (isEditMode && !isCanceling) {
-          if (provinceInput) provinceInput.value = "Batangas";
-          if (cityInput) cityInput.value = "Lipa City";
-          createBarangaySelect(
-            originalBarangay || (barangayInput ? barangayInput.value : "")
-          );
-        }
-        updateResidencyRequirements();
-      });
-    }
+    // Auto-Fill Address Logic
+    if (isEditMode && isLipeno) {
+      const batOption = Array.from(provinceSelect.options).find(
+        (o) => o.value === "Batangas"
+      );
 
-    if (residencyNo) {
-      residencyNo.addEventListener("change", () => {
-        console.log(
-          "[v0] residencyNo changed, isEditMode:",
-          isEditMode,
-          "isCanceling:",
-          isCanceling
-        );
-        if (isEditMode && !isCanceling) {
-          if (provinceInput) provinceInput.value = "";
-          if (cityInput) cityInput.value = "";
-          if (barangayInput) barangayInput.value = "";
-          removeBarangaySelect();
-        }
-        updateResidencyRequirements();
-      });
-    }
-
-    updateResidencyRequirements();
-
-    window.updateResidencyRequirements = updateResidencyRequirements;
-    window.copyDynamicBarangayToInput = () => {
-      try {
-        if (dynamicBarangaySelect && barangayInput) {
-          barangayInput.value = dynamicBarangaySelect.value;
-        }
-      } catch (e) {}
-    };
-    window.setResidencyCancelMode = (mode) => {
-      isCanceling = mode;
-      console.log("[v0] isCanceling set to:", mode);
-    };
-    window.setResidencyEditMode = (mode) => {
-      isEditMode = mode;
-      console.log("[v0] isEditMode set to:", mode);
-    };
-
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", (e) => {
-        setTimeout(() => {
-          originalIsLipeno = residencyYes.checked;
-          originalCity = cityInput ? cityInput.value : "";
-          originalProvince = provinceInput ? provinceInput.value : "";
-          originalBarangay = barangayInput ? barangayInput.value : "";
-          isEditMode = false;
-
-          console.log("[v0] Cancel clicked - restored original state:", {
-            originalIsLipeno,
-            originalCity,
-            originalProvince,
-            originalBarangay,
+      if (batOption) {
+        if (provinceSelect.value !== "Batangas") {
+          provinceSelect.value = "Batangas";
+          loadCities(batOption.dataset.code).then(() => {
+            selectLipaCity();
           });
+        } else {
+          selectLipaCity();
+        }
+      }
+    }
+  }
 
-          const event = new Event("change", { bubbles: true });
-          residencyYes.dispatchEvent(event);
-        }, 50);
+  function selectLipaCity() {
+    const lipaOption = Array.from(citySelect.options).find(
+      (o) => o.value === "Lipa City"
+    );
+    if (lipaOption && citySelect.value !== "Lipa City") {
+      citySelect.value = "Lipa City";
+      citySelect.disabled = false;
+      loadBarangays(lipaOption.dataset.code).then(() => {
+        if (barangaySelect) barangaySelect.disabled = false;
       });
     }
+  }
+
+  if (residencyYes && residencyNo) {
+    residencyYes.addEventListener("change", handleResidencyChange);
+    residencyNo.addEventListener("change", handleResidencyChange);
+  }
+
+  // --- 5. Initialization & Button Hooks ---
+
+  // Initialize on Load using data-default attributes from HTML
+  if (provinceSelect) {
+    const defProv = provinceSelect.dataset.default;
+    const defCity = citySelect.dataset.default;
+    const defBar = barangaySelect.dataset.default;
+
+    initializeAddressData(defProv, defCity, defBar);
+
+    // Ensure Correct Residency UI State (Recommendation Letter visibility)
+    handleResidencyChange();
+  }
+
+  // ADDED: Hook into existing EDIT button to ensure dropdowns unlock
+  // We reuse the existing 'editBtn' variable from top of file
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      // Trigger standard edit mode
+      isEditMode = true;
+
+      // Unlock Province
+      if (provinceSelect) provinceSelect.disabled = false;
+
+      // Unlock City/Barangay only if they have valid parents selected
+      if (citySelect && provinceSelect.value) citySelect.disabled = false;
+      if (barangaySelect && citySelect.value) barangaySelect.disabled = false;
+
+      // Ensure UI updates (banner, recommendation letter)
+      handleResidencyChange();
+    });
+  }
+
+  // ADDED: Hook into existing CANCEL button to reset dropdowns
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      isEditMode = false;
+
+      // Re-lock dropdowns
+      if (provinceSelect) provinceSelect.disabled = true;
+      if (citySelect) citySelect.disabled = true;
+      if (barangaySelect) barangaySelect.disabled = true;
+
+      // Reset to defaults from database
+      const defProv = provinceSelect.dataset.default;
+      const defCity = citySelect.dataset.default;
+      const defBar = barangaySelect.dataset.default;
+
+      // Reload data to original state
+      initializeAddressData(defProv, defCity, defBar);
+
+      // Hide banner
+      if (warningBanner) warningBanner.classList.remove("show");
+    });
   }
 
   // ================== PDF FILE VALIDATION ==================

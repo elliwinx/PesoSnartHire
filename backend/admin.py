@@ -29,13 +29,11 @@ def _to_int(value):
 
 
 def _parse_multi(args, key):
-    """Parse comma-separated or single-value query args into a list."""
-    raw = args.get(key)
-    if not raw:
+    val = args.get(key)
+    if not val:
         return []
-    if "," in raw:
-        return [v for v in raw.split(",") if v]
-    return [raw]
+    # CHANGE THIS: Split by pipe '|' instead of comma ','
+    return [x.strip() for x in val.split('|') if x.strip()]
 
 
 def _matches_age_bracket(age, age_brackets):

@@ -363,12 +363,12 @@ document.addEventListener("DOMContentLoaded", () => {
         // PREVENT DELETION OF SUSPENDED JOBS
         if (action === "delete" && isSuspended) {
           await Swal.fire({
-            icon: 'error',
-            title: 'Cannot Delete Suspended Job',
+            icon: "error",
+            title: "Cannot Delete Suspended Job",
             html: `This job post has been <strong>suspended</strong> and cannot be deleted.<br><br>
                   Please contact <strong>PESO SmartHire Admin</strong> for assistance.`,
-            confirmButtonText: 'OK',
-            confirmButtonColor: '#7b1113'
+            confirmButtonText: "OK",
+            confirmButtonColor: "#7b1113",
           });
           return;
         }
@@ -419,10 +419,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Show error message if deletion failed (e.g., backend also blocked it)
                 if (data.message) {
                   Swal.fire({
-                    icon: 'error',
-                    title: 'Action Failed',
+                    icon: "error",
+                    title: "Action Failed",
                     text: data.message,
-                    confirmButtonText: 'OK'
+                    confirmButtonText: "OK",
                   });
                 } else {
                   location.reload();
@@ -432,10 +432,10 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch((error) => {
               hideLoader();
               Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Failed to complete action. Please try again.',
-                confirmButtonText: 'OK'
+                icon: "error",
+                title: "Error",
+                text: "Failed to complete action. Please try again.",
+                confirmButtonText: "OK",
               });
             });
         }
@@ -521,6 +521,80 @@ document.addEventListener("DOMContentLoaded", () => {
   if (editForm) {
     editForm.addEventListener("submit", async (e) => {
       e.preventDefault();
+
+      // --- START VALIDATION ---
+      let isValid = true;
+
+      // Clear previous errors in the edit form
+      editForm.querySelectorAll(".error-message").forEach((el) => {
+        el.textContent = "";
+        el.classList.remove("show");
+      });
+      editForm
+        .querySelectorAll(".error")
+        .forEach((el) => el.classList.remove("error"));
+
+      // Get fields
+      const position = editForm.querySelector('[name="ej_job_position"]');
+      const schedule = editForm.querySelector('[name="ej_work_schedule"]');
+      const vacancy = editForm.querySelector('[name="ej_vacancy"]');
+      const minSalary = editForm.querySelector('[name="ej_min_salary"]');
+      const maxSalary = editForm.querySelector('[name="ej_max_salary"]');
+      const description = editForm.querySelector('[name="ej_job_description"]');
+      const qualifications = editForm.querySelector(
+        '[name="ej_qualifications"]'
+      );
+
+      // Validate Job Position
+      if (!position.value.trim()) {
+        showError(position, "Job position is required");
+        isValid = false;
+      }
+
+      // Validate Schedule
+      if (!schedule.value.trim()) {
+        showError(schedule, "Work schedule is required");
+        isValid = false;
+      }
+
+      // Validate Vacancy
+      if (!vacancy.value || parseInt(vacancy.value) < 1) {
+        showError(vacancy, "Vacancy must be at least 1");
+        isValid = false;
+      }
+
+      // Validate Salary
+      const min = parseFloat(minSalary.value);
+      const max = parseFloat(maxSalary.value);
+
+      if (isNaN(min) || min < 0) {
+        showError(minSalary, "Minimum salary must be ≥ 0");
+        isValid = false;
+      }
+      if (isNaN(max) || max < 0) {
+        showError(maxSalary, "Maximum salary must be ≥ 0");
+        isValid = false;
+      }
+      if (!isNaN(min) && !isNaN(max) && max < min) {
+        showError(maxSalary, "Max salary cannot be less than Min salary");
+        isValid = false;
+      }
+
+      // Validate Description
+      if (!description.value.trim()) {
+        showError(description, "Job description is required");
+        isValid = false;
+      }
+
+      // Validate Qualifications
+      if (!qualifications.value.trim()) {
+        showError(qualifications, "Qualifications are required");
+        isValid = false;
+      }
+
+      if (!isValid) return;
+      // --- END VALIDATION ---
+
       const fd = new FormData(editForm);
       const jobId = fd.get("ej_job_id");
       showLoader("Saving changes...");
@@ -534,15 +608,36 @@ document.addEventListener("DOMContentLoaded", () => {
         hideLoader();
 
         if (result.success) {
-          editModal.style.display = "none";
-          location.reload();
+          // Use SweetAlert if available, otherwise standard alert
+          if (typeof Swal !== "undefined") {
+            Swal.fire({
+              icon: "success",
+              title: "Success",
+              text: "Job post updated successfully!",
+              confirmButtonColor: "#7b1113",
+            }).then(() => {
+              editModal.style.display = "none";
+              location.reload();
+            });
+          } else {
+            alert("Job updated successfully!");
+            editModal.style.display = "none";
+            location.reload();
+          }
         } else {
           console.error(result.message || "Update failed.");
+          alert(result.message || "Failed to update job.");
         }
       } catch (err) {
         hideLoader();
         console.error(err);
+        alert("An error occurred while saving.");
       }
+    });
+
+    // Add real-time validation clearing for edit form inputs
+    editForm.querySelectorAll("input, textarea, select").forEach((field) => {
+      field.addEventListener("input", () => clearError(field));
     });
   }
 

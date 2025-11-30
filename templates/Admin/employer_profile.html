@@ -314,13 +314,13 @@
             class="edit-status-btn"
             data-employer-id="{{ employer.employer_id }}"
             data-recruitment-type="{{ employer.recruitment_type }}"
+            data-change-pending="{{ employer.recruitment_type_change_pending }}"
           >
             <i class="fa-solid fa-pencil"></i> EDIT STATUS
           </button>
         </div>
       </div>
-      {% elif employer.recruitment_type == 'International' %} {% elif
-      employer.recruitment_type == 'International' %}
+      {% elif employer.recruitment_type == 'International' %}
       <div
         class="section"
         data-employer-id="{{ employer.employer_id }}"

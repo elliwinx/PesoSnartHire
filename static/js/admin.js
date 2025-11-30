@@ -910,9 +910,8 @@ function searchEmployers() {
 }
 
 function applyEmployerFilters() {
-  const searchValue = document
-    .getElementById("searchInput")
-    .value.toLowerCase();
+  const searchInput = document.getElementById("searchInput");
+  const searchValue = searchInput ? searchInput.value.toLowerCase() : "";
   const rows = document.querySelectorAll("#employersTable tbody tr");
   const table = document.getElementById("employersTable");
   const noResultsMessage = document.getElementById("noResultsMessage");

@@ -224,6 +224,7 @@
                     placeholder="Job Position"
                     required
                   />
+                  <span class="error-message"></span>
                 </div>
                 <div class="ej-form-group">
                   <label for="ej_editJobSchedule">Work Schedule</label>
@@ -233,6 +234,7 @@
                     name="ej_work_schedule"
                     placeholder="Work Schedule"
                   />
+                  <span class="error-message"></span>
                 </div>
               </div>
 
@@ -246,6 +248,7 @@
                     min="1"
                     value="1"
                   />
+                  <span class="error-message"></span>
                 </div>
                 <div class="ej-form-group">
                   <label for="ej_editJobMinSalary">Minimum Salary (₱)</label>
@@ -256,6 +259,7 @@
                     step="0.01"
                     value="0.00"
                   />
+                  <span class="error-message"></span>
                 </div>
                 <div class="ej-form-group">
                   <label for="ej_editJobMaxSalary">Maximum Salary (₱)</label>
@@ -266,6 +270,7 @@
                     step="0.01"
                     value="0.00"
                   />
+                  <span class="error-message"></span>
                 </div>
               </div>
 
@@ -278,6 +283,7 @@
                   placeholder="Description"
                   required
                 ></textarea>
+                <span class="error-message"></span>
               </div>
 
               <div class="ej-form-group">
@@ -288,6 +294,7 @@
                   rows="2"
                   placeholder="Qualifications"
                 ></textarea>
+                <span class="error-message"></span>
               </div>
 
               <div class="ej-form-group">
@@ -300,13 +307,6 @@
               </div>
 
               <div class="ej-modal-actions">
-                <!--<button
-                  type="button"
-                  class="ej-btn-edit-status"
-                  id="ej_btnEditStatus"
-                >
-                  Edit Status
-                </button>-->
                 <button type="submit" class="ej-btn-save">Save Changes</button>
               </div>
             </form>

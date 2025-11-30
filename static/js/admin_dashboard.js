@@ -583,7 +583,8 @@
       if (value === null || value === undefined) return;
       if (Array.isArray(value) && value.length === 0) return;
       if (Array.isArray(value)) {
-        urlParams.set(key, value.join(","));
+        // CHANGED: Use pipe '|' instead of comma ',' to avoid splitting "Food, Travel"
+        urlParams.set(key, value.join("|"));
       } else {
         urlParams.set(key, value);
       }
@@ -1625,19 +1626,18 @@
   function buildExportQueryParams() {
     const params = new URLSearchParams();
 
-    // Add module
     params.append(
       "module",
       activeModule === "jobs" ? "jobs_applications" : activeModule
     );
 
-    // Add filters
     Object.entries(currentFilters).forEach(([key, value]) => {
       if (value === null || value === undefined) return;
       if (Array.isArray(value) && value.length === 0) return;
 
       if (Array.isArray(value)) {
-        params.append(key, value.join(","));
+        // CHANGED: Use pipe '|' here too
+        params.append(key, value.join("|"));
       } else {
         params.append(key, value);
       }
