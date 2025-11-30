@@ -1986,6 +1986,7 @@ input[type="password"]:focus {
   color: #2d3748;
   margin-right: 8px;
 }
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -2026,7 +2027,6 @@ input[type="password"]:focus {
   font-size: 18px;
   font-weight: 600;
   color: #2d3748;
-  letter-spacing: -0.3px;
   border-bottom: 2px solid #7b1113;
   padding-bottom: 8px;
   display: inline-block;
@@ -2042,30 +2042,40 @@ input[type="password"]:focus {
 }
 
 .documents li {
-  margin: 0;
-  border: 1.5px solid #a8a8a8;
-  border-radius: 10px;
+  /* We remove styling here so the clickable area (A tag) fills the space */
+  display: flex;
 }
 
 .documents a {
+  /* Essential Layout Fixes */
+  display: flex;
+  align-items: center;
+  width: 100%; /* Fills the grid cell */
+  box-sizing: border-box;
+
+  /* Styling */
   font-size: 14px;
   color: white;
   background: #7b1113;
   border-radius: 10px;
-  padding: 6px 12px;
+  padding: 12px 16px; /* Increased padding for better touch targets */
   text-decoration: none;
+
+  /* Add invisible border initially so hover doesn't jump */
+  border: 1px solid transparent;
+  transition: background 0.3s, color 0.3s;
 }
 
 .documents a::before {
-  content: "📄";
-  font-size: 18px;
-  flex-shrink: 0;
+  margin-right: 10px;
+  font-size: 16px;
 }
 
 .documents a:hover {
   background: #fff;
   color: #7b1113;
   border: 1px solid #7b1113;
+  cursor: pointer;
 }
 
 .row-class:hover {
@@ -2126,6 +2136,100 @@ input[type="password"]:focus {
   max-width: 600px;
   width: 90%;
   animation: slideIn 0.3s ease-out;
+}
+
+/* --- Modal Structure Fixes --- */
+.status-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+}
+
+.status-modal-header h3 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1.25rem;
+}
+
+.status-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: #a0aec0;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.status-modal-close:hover {
+  color: #7b1113; /* Red on hover */
+}
+
+/* --- The Status Button Grid --- */
+.status-options {
+  display: grid;
+  /* Creates a responsive grid - cards won't get smaller than 130px */
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+/* --- Button Styling --- */
+.status-option-btn {
+  display: flex;
+  flex-direction: column; /* Stacks icon on top of text */
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  padding: 20px 10px;
+  background-color: #fff;
+  border: 2px solid #edf2f7;
+  border-radius: 10px;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #4a5568;
+}
+
+/* Icon Styling */
+.status-option-btn i {
+  font-size: 24px;
+  color: #7b1113; /* Main Brand Color */
+  transition: transform 0.2s;
+}
+
+/* Text Styling */
+.status-option-btn span {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* --- Hover Effects --- */
+.status-option-btn:hover {
+  border-color: #7b1113;
+  background-color: #fff5f5; /* Very light red tint */
+  transform: translateY(-3px); /* Subtle lift */
+  box-shadow: 0 4px 12px rgba(123, 17, 19, 0.15);
+}
+
+.status-option-btn:hover i {
+  transform: scale(1.1); /* Icon pops slightly */
+}
+
+/* --- Active/Selected State (Optional JS Trigger) --- */
+.status-option-btn.active {
+  background-color: #7b1113;
+  border-color: #7b1113;
+  color: white;
+}
+
+.status-option-btn.active i {
+  color: white;
 }
 
 @keyframes slideIn {
@@ -2227,14 +2331,20 @@ input[type="password"]:focus {
   border: 1px solid #7b1113;
 }
 
-.notif-dot {
-  display: none;
-  width: 8px;
-  height: 8px;
-  background: #e74c3c;
+.notif-badge {
+  background: #ffc107;
+  color: #ffc107;
+  font-size: 18px;
   border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: inline-block;
   margin-left: 6px;
+  vertical-align: middle;
+  text-align: center;
+  line-height: 18px;
 }
+
 .card.unread {
   border-left: 4px solid #e74c3c;
 }

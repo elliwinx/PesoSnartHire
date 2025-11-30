@@ -767,7 +767,6 @@ input[type="email"] {
   font-size: 18px;
   font-weight: 600;
   color: #2d3748;
-  letter-spacing: -0.3px;
   border-bottom: 2px solid #7b1113;
   padding-bottom: 8px;
   display: inline-block;
@@ -783,37 +782,40 @@ input[type="email"] {
 }
 
 .documents li {
-  margin: 0;
-  border: 1.5px solid #a8a8a8;
-  border-radius: 10px;
+  /* We remove styling here so the clickable area (A tag) fills the space */
+  display: flex;
 }
 
 .documents a {
+  /* Essential Layout Fixes */
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  color: black;
-  text-decoration: none;
+  width: 100%; /* Fills the grid cell */
+  box-sizing: border-box;
+
+  /* Styling */
   font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  color: white;
+  background: #7b1113;
+  border-radius: 10px;
+  padding: 12px 16px; /* Increased padding for better touch targets */
+  text-decoration: none;
+
+  /* Add invisible border initially so hover doesn't jump */
+  border: 1px solid transparent;
+  transition: background 0.3s, color 0.3s;
 }
 
 .documents a::before {
-  content: "📄";
-  font-size: 18px;
-  flex-shrink: 0;
+  margin-right: 10px;
+  font-size: 16px;
 }
 
 .documents a:hover {
-  background: #7b1113;
-  color: #fff;
-  border-color: #7b1113;
-  box-shadow: 0 4px 12px rgba(123, 17, 19, 0.2);
+  background: #fff;
+  color: #7b1113;
+  border: 1px solid #7b1113;
+  cursor: pointer;
 }
 
 /* Added status badge styling */
@@ -844,8 +846,21 @@ input[type="email"] {
 
 .applicant-details,
 .employer-details {
-  padding: 40px;
-  border-bottom: 1px solid black;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin: 20px auto; /* Space between cards */
+  font-family: "Inter", system-ui, sans-serif;
+  max-width: 1000px;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .modal {
@@ -858,9 +873,7 @@ input[type="email"] {
   background: rgba(0, 0, 0, 0.5);
   justify-content: center;
   align-items: center;
-  /* put modals above all other UI layers */
   z-index: 99999;
-  /* ensure clicks reach the modal overlay */
   pointer-events: auto;
 }
 
@@ -1009,7 +1022,7 @@ input[type="email"] {
 }
 
 .edit-status-btn {
-  padding: 8px 16px;
+  padding: 15px 25px;
   background: #7b1113;
   color: white;
   border: none;
@@ -1021,6 +1034,7 @@ input[type="email"] {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(123, 17, 19, 0.15);
+  width: 100%;
 }
 
 .edit-status-btn:hover {

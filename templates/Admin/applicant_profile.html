@@ -263,11 +263,12 @@
         class="applicant-details"
         data-applicant-id="{{ applicant.applicant_id }}"
       >
-        <h3>Non-Lipeño Applicant Actions</h3>
-        <p>
-          <strong>Status:</strong>
+        <div class="card-header-row">
+          <h3>Non-Lipeño Applicant Actions</h3>
           <span id="applicant-status">{{ applicant.status }}</span>
-        </p>
+        </div>
+
+        <p>&nbsp;</p>
 
         <div class="action-buttons">
           <button class="edit-status-btn" id="editStatusBtn">

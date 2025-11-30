@@ -2360,3 +2360,17 @@ input[type="password"]:focus {
   transform: none !important;
   box-shadow: none !important;
 }
+
+.notif-badge {
+  background: #ffc107;
+  color: #ffc107;
+  font-size: 18px;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: middle;
+  text-align: center;
+  line-height: 18px;
+}

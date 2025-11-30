@@ -297,16 +297,16 @@
         data-employer-id="{{ employer.employer_id }}"
         data-recruitment-type="{{ employer.recruitment_type }}"
       >
-        <h3>Local Recruitment Employer Actions</h3>
+        <div class="card-header-row">
+          <h3>Local Recruitment Employer Actions</h3>
+          <span id="employer-status">{{ employer.status }}</span>
+        </div>
+
         <p>
           <strong>Contact Person:</strong>
           <span id="employer-contact-person"
             >{{ employer.contact_person }}</span
           >
-        </p>
-        <p>
-          <strong>Status:</strong>
-          <span id="employer-status">{{ employer.status }}</span>
         </p>
 
         <div class="action-buttons">
@@ -315,26 +315,27 @@
             data-employer-id="{{ employer.employer_id }}"
             data-recruitment-type="{{ employer.recruitment_type }}"
           >
-            EDIT STATUS
+            <i class="fa-solid fa-pencil"></i> EDIT STATUS
           </button>
         </div>
       </div>
-      {% elif employer.recruitment_type == 'International' %}
+      {% elif employer.recruitment_type == 'International' %} {% elif
+      employer.recruitment_type == 'International' %}
       <div
         class="section"
         data-employer-id="{{ employer.employer_id }}"
         data-recruitment-type="{{ employer.recruitment_type }}"
       >
-        <h3>International Recruitment Employer Actions</h3>
+        <div class="card-header-row">
+          <h3>International Recruitment Employer Actions</h3>
+          <span id="employer-status">{{ employer.status }}</span>
+        </div>
+
         <p>
           <strong>Contact Person:</strong>
           <span id="employer-contact-person"
             >{{ employer.contact_person }}</span
           >
-        </p>
-        <p>
-          <strong>Status:</strong>
-          <span id="employer-status">{{ employer.status }}</span>
         </p>
 
         <div class="action-buttons">
@@ -344,7 +345,7 @@
             data-recruitment-type="{{ employer.recruitment_type }}"
             data-change-pending="{{ employer.recruitment_type_change_pending }}"
           >
-            EDIT STATUS
+            <i class="fa-solid fa-pencil"></i> EDIT STATUS
           </button>
         </div>
       </div>
