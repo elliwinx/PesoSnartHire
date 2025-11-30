@@ -197,20 +197,35 @@
 
           <div class="four-columns">
             <div class="form-group">
-              <label for="street">Street</label>
-              <input class="chip" type="text" id="street" name="street" value="{{ employer.street }}" readonly />
-            </div>
-            <div class="form-group">
-              <label for="barangay">Barangay</label>
-              <input class="chip" type="text" id="barangay" name="barangay" value="{{ employer.barangay }}" readonly />
+              <label for="province">Province</label>
+              <select class="chip" id="province" name="province" data-default="{{ employer.province }}" disabled>
+                <option value="">Select Province</option>
+                {% if employer.province %}
+                <option value="{{ employer.province }}" selected>{{ employer.province }}</option>
+                {% endif %}
+              </select>
             </div>
             <div class="form-group">
               <label for="city">Municipality/City</label>
-              <input class="chip" type="text" id="city" name="city" value="{{ employer.city }}" readonly />
+              <select class="chip" id="city" name="city" data-default="{{ employer.city }}" disabled>
+                <option value="">Select Province First</option>
+                {% if employer.city %}
+                <option value="{{ employer.city }}" selected>{{ employer.city }}</option>
+                {% endif %}
+              </select>
             </div>
             <div class="form-group">
-              <label for="province">Province</label>
-              <input class="chip" type="text" id="province" name="province" value="{{ employer.province }}" readonly />
+              <label for="barangay">Barangay</label>
+              <select class="chip" id="barangay" name="barangay" data-default="{{ employer.barangay }}" disabled>
+                <option value="">Select City First</option>
+                {% if employer.barangay %}
+                <option value="{{ employer.barangay }}" selected>{{ employer.barangay }}</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="street">Street</label>
+              <input class="chip" type="text" id="street" name="street" value="{{ employer.street }}" readonly />
             </div>
           </div>
         </div>

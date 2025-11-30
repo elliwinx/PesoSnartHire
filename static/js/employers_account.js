@@ -299,6 +299,187 @@ if (phoneInput) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  const provinceSelect = document.getElementById("province");
+  const citySelect = document.getElementById("city");
+  const barangaySelect = document.getElementById("barangay");
+  const BASE_URL = "https://psgc.gitlab.io/api";
+  const METRO_MANILA_CODE = "130000000";
+
+  let isEditMode = false;
+
+  async function fetchJson(url) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Network response was not ok");
+      return await response.json();
+    } catch (error) {
+      console.error("API Error:", error);
+      return [];
+    }
+  }
+
+  function populateSelect(element, items, defaultText, selectedValue = null) {
+    if (!element) return null;
+    element.innerHTML = `<option value="">${defaultText}</option>`;
+
+    let selectedCode = null;
+    items.sort((a, b) => a.name.localeCompare(b.name));
+
+    items.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.name;
+      option.textContent = item.name;
+      option.dataset.code = item.code;
+
+      if (selectedValue && item.name === selectedValue) {
+        option.selected = true;
+        selectedCode = item.code;
+      }
+      element.appendChild(option);
+    });
+    return selectedCode;
+  }
+
+  // Updated loadCities to handle Metro Manila
+  async function loadCities(code, selectedCity = null) {
+    if (!citySelect) return null;
+    citySelect.innerHTML = "<option>Loading...</option>";
+
+    let url;
+    if (code === METRO_MANILA_CODE) {
+      url = `${BASE_URL}/regions/${METRO_MANILA_CODE}/cities-municipalities/`;
+    } else {
+      url = `${BASE_URL}/provinces/${code}/cities-municipalities/`;
+    }
+
+    const data = await fetchJson(url);
+    const selectedCode = populateSelect(
+      citySelect,
+      data,
+      "Select Municipality/City",
+      selectedCity
+    );
+
+    citySelect.disabled = !isEditMode;
+    return selectedCode;
+  }
+
+  async function loadBarangays(cityCode, selectedBarangay = null) {
+    if (!barangaySelect) return;
+    barangaySelect.innerHTML = "<option>Loading...</option>";
+
+    const data = await fetchJson(
+      `${BASE_URL}/cities-municipalities/${cityCode}/barangays/`
+    );
+    populateSelect(barangaySelect, data, "Select Barangay", selectedBarangay);
+
+    barangaySelect.disabled = !isEditMode;
+  }
+
+  async function initializeAddressData(provVal, cityVal, barVal) {
+    if (!provinceSelect) return;
+
+    // 1. Load Provinces
+    const provData = await fetchJson(`${BASE_URL}/provinces/`);
+
+    // MANUAL FIX: Add Metro Manila
+    provData.push({
+      code: METRO_MANILA_CODE,
+      name: "Metro Manila",
+    });
+
+    const provCode = populateSelect(
+      provinceSelect,
+      provData,
+      "Select Province",
+      provVal
+    );
+
+    // 2. If we found a matching province code (saved value), load cities
+    if (provCode) {
+      const cityCode = await loadCities(provCode, cityVal);
+      // 3. If we found a matching city code, load barangays
+      if (cityCode) {
+        await loadBarangays(cityCode, barVal);
+      }
+    }
+  }
+
+  // --- EVENT LISTENERS ---
+
+  if (provinceSelect) {
+    // Initialize on load with saved values
+    const defProv = provinceSelect.dataset.default;
+    const defCity = citySelect.dataset.default;
+    const defBar = barangaySelect.dataset.default;
+    initializeAddressData(defProv, defCity, defBar);
+
+    provinceSelect.addEventListener("change", async function () {
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
+
+      // Reset children
+      citySelect.innerHTML = '<option value="">Select Province First</option>';
+      barangaySelect.innerHTML = '<option value="">Select City First</option>';
+      citySelect.disabled = true;
+      barangaySelect.disabled = true;
+
+      if (code) {
+        citySelect.disabled = false;
+        await loadCities(code);
+      }
+    });
+  }
+
+  if (citySelect) {
+    citySelect.addEventListener("change", async function () {
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
+
+      barangaySelect.innerHTML = '<option value="">Select City First</option>';
+      barangaySelect.disabled = true;
+
+      if (code) {
+        barangaySelect.disabled = false;
+        await loadBarangays(code);
+      }
+    });
+  }
+
+  // Hook into Edit/Cancel
+  const editBtn = document.getElementById("editBtn");
+  const cancelBtn = document.getElementById("cancelBtn");
+
+  if (editBtn) {
+    editBtn.addEventListener("click", () => {
+      isEditMode = true;
+      if (provinceSelect) provinceSelect.disabled = false;
+      if (citySelect && provinceSelect.value) citySelect.disabled = false;
+      if (barangaySelect && citySelect.value) barangaySelect.disabled = false;
+    });
+  }
+
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      isEditMode = false;
+
+      if (provinceSelect) {
+        const defProv = provinceSelect.dataset.default;
+        const defCity = citySelect.dataset.default;
+        const defBar = barangaySelect.dataset.default;
+
+        provinceSelect.disabled = true;
+        citySelect.disabled = true;
+        barangaySelect.disabled = true;
+
+        // Reset to original data
+        initializeAddressData(defProv, defCity, defBar);
+      }
+    });
+  }
+});
+
+document.addEventListener("DOMContentLoaded", () => {
   const recruitmentSelect = document.getElementById("recruitment_type");
   const doleFields = document.querySelectorAll(".dole-docs");
   const dmwFields = document.querySelectorAll(".dmw-docs");
@@ -415,21 +596,25 @@ const deactivateBtn = document.getElementById("deactivateAccountBtn");
 if (deactivateBtn) {
   deactivateBtn.addEventListener("click", async (e) => {
     e.preventDefault(); // ✅ Prevent default action
-    
+
     try {
       // ✅ SAFETY CHECK - Wait for SweetAlert to be available
       let retries = 0;
       const maxRetries = 10;
-      
-      while (typeof window.Swal === 'undefined' && retries < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+
+      while (typeof window.Swal === "undefined" && retries < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
         retries++;
       }
-      
+
       // ✅ FINAL CHECK - If still not available, use fallback
-      if (typeof window.Swal === 'undefined') {
-        console.warn('SweetAlert2 not loaded after retries, using fallback');
-        if (confirm('Are you sure? Your account will be permanently deleted after 30 days.')) {
+      if (typeof window.Swal === "undefined") {
+        console.warn("SweetAlert2 not loaded after retries, using fallback");
+        if (
+          confirm(
+            "Are you sure? Your account will be permanently deleted after 30 days."
+          )
+        ) {
           await deactivateAccount();
         }
         return;
@@ -450,9 +635,8 @@ if (deactivateBtn) {
       if (!confirmDelete.isConfirmed) return;
 
       await deactivateAccount();
-      
     } catch (error) {
-      console.error('Deactivation process error:', error);
+      console.error("Deactivation process error:", error);
     }
   });
 }
@@ -473,7 +657,7 @@ async function deactivateAccount() {
     } else {
       hideLoader();
       // Use fallback if SweetAlert fails
-      if (typeof window.Swal !== 'undefined') {
+      if (typeof window.Swal !== "undefined") {
         window.Swal.fire("Error", data.message, "error");
       } else {
         alert("Error: " + data.message);
@@ -482,7 +666,7 @@ async function deactivateAccount() {
   } catch (err) {
     hideLoader();
     // Use fallback if SweetAlert fails
-    if (typeof window.Swal !== 'undefined') {
+    if (typeof window.Swal !== "undefined") {
       window.Swal.fire(
         "Error",
         "Something went wrong. Please try again later.",

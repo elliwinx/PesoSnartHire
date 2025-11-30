@@ -144,41 +144,35 @@
           <!-- Address -->
           <div class="four-columns">
             <div class="form-group">
+              <label for="employerProvince">Province</label>
+              <select id="employerProvince" name="employerProvince" required>
+                <option value="">Select Province</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="employerCity">Municipality/City</label>
+              <select id="employerCity" name="employerCity" required disabled>
+                <option value="">Select Province First</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="employerBarangay">Barangay</label>
+              <select
+                id="employerBarangay"
+                name="employerBarangay"
+                required
+                disabled
+              >
+                <option value="">Select City First</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label for="employerStreet">Street</label>
               <input
                 type="text"
                 id="employerStreet"
                 name="employerStreet"
                 placeholder="Street"
-              />
-            </div>
-            <div class="form-group">
-              <label for="employerBarangay">Barangay</label>
-              <input
-                type="text"
-                id="employerBarangay"
-                name="employerBarangay"
-                placeholder="Barangay"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="employerCity">Municipality/City</label>
-              <input
-                type="text"
-                id="employerCity"
-                name="employerCity"
-                placeholder="Municipality/City"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="employerProvince">Province</label>
-              <input
-                type="text"
-                id="employerProvince"
-                name="employerProvince"
-                placeholder="Province"
               />
             </div>
           </div>

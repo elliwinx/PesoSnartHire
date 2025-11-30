@@ -552,6 +552,131 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+document.addEventListener("DOMContentLoaded", () => {
+  const empProvince = document.getElementById("employerProvince");
+  const empCity = document.getElementById("employerCity");
+  const empBarangay = document.getElementById("employerBarangay");
+  const BASE_URL = "https://psgc.gitlab.io/api";
+
+  // Special code for NCR/Metro Manila (Region XIII)
+  const METRO_MANILA_CODE = "130000000";
+
+  // Helper to populate dropdowns
+  function populateSelect(element, items, defaultText) {
+    element.innerHTML = `<option value="">${defaultText}</option>`;
+    items.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.name;
+      option.dataset.code = item.code;
+      option.textContent = item.name;
+      element.appendChild(option);
+    });
+  }
+
+  async function loadEmpProvinces() {
+    try {
+      const response = await fetch(`${BASE_URL}/provinces/`);
+      if (!response.ok) throw new Error("Failed to fetch provinces");
+      const data = await response.json();
+
+      // MANUAL FIX: Add Metro Manila (NCR) as a "Province" option
+      data.push({
+        code: METRO_MANILA_CODE,
+        name: "Metro Manila",
+      });
+
+      // Sort alphabetically so Metro Manila appears in correct order
+      data.sort((a, b) => a.name.localeCompare(b.name));
+
+      populateSelect(empProvince, data, "Select Province");
+    } catch (error) {
+      console.error("Error loading provinces:", error);
+    }
+  }
+
+  async function loadEmpCities(code) {
+    empCity.innerHTML = '<option value="">Loading...</option>';
+    empCity.disabled = true;
+
+    if (empBarangay) {
+      empBarangay.innerHTML = '<option value="">Select City First</option>';
+      empBarangay.disabled = true;
+    }
+
+    try {
+      // LOGIC BRANCH: Use Region endpoint for Metro Manila, Province endpoint for others
+      let url;
+      if (code === METRO_MANILA_CODE) {
+        url = `${BASE_URL}/regions/${METRO_MANILA_CODE}/cities-municipalities/`;
+      } else {
+        url = `${BASE_URL}/provinces/${code}/cities-municipalities/`;
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      populateSelect(empCity, data, "Select Municipality/City");
+      empCity.disabled = false;
+    } catch (error) {
+      console.error("Error loading cities:", error);
+      empCity.innerHTML = '<option value="">Error loading data</option>';
+    }
+  }
+
+  async function loadEmpBarangays(cityCode) {
+    empBarangay.innerHTML = '<option value="">Loading...</option>';
+    empBarangay.disabled = true;
+
+    try {
+      const response = await fetch(
+        `${BASE_URL}/cities-municipalities/${cityCode}/barangays/`
+      );
+      const data = await response.json();
+      data.sort((a, b) => a.name.localeCompare(b.name));
+      populateSelect(empBarangay, data, "Select Barangay");
+      empBarangay.disabled = false;
+    } catch (error) {
+      console.error("Error loading barangays:", error);
+      empBarangay.innerHTML = '<option value="">Error loading data</option>';
+    }
+  }
+
+  // Event Listeners
+  if (empProvince) {
+    loadEmpProvinces();
+
+    empProvince.addEventListener("change", function () {
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
+
+      if (code) {
+        loadEmpCities(code);
+      } else {
+        empCity.innerHTML = '<option value="">Select Province First</option>';
+        empCity.disabled = true;
+        if (empBarangay) {
+          empBarangay.innerHTML = '<option value="">Select City First</option>';
+          empBarangay.disabled = true;
+        }
+      }
+    });
+  }
+
+  if (empCity) {
+    empCity.addEventListener("change", function () {
+      const selectedOption = this.options[this.selectedIndex];
+      const code = selectedOption.dataset.code;
+      if (code) {
+        loadEmpBarangays(code);
+      } else {
+        empBarangay.innerHTML = '<option value="">Select City First</option>';
+        empBarangay.disabled = true;
+      }
+    });
+  }
+});
+
 // ====== SHOW / HIDE PASSWORD TOGGLE ======
 document.querySelectorAll(".toggle-password").forEach((toggle) => {
   toggle.addEventListener("click", () => {
