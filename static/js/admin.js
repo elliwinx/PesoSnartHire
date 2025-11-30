@@ -1451,7 +1451,7 @@ async function handleApplicantReportAction(button) {
           button.disabled = false;
           return;
         }
-        payload.suspension_days = Number(formValues.days) || 0;
+        payload.blacklist_days = Number(formValues.days) || 0;
         payload.moderator_note = formValues.note || "";
       }
 
