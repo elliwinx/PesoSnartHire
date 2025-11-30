@@ -223,8 +223,14 @@ def build_employers_filters(args, alias="e"):
         clauses.append(f"UPPER({alias}.recruitment_type) IN ({placeholders})")
         params.extend([rec_type.upper() for rec_type in rec_types])
 
-    # Location - Handle Manila specially
+    # Location
     provinces = _parse_multi(args, "employer_province")
+    if provinces:
+        placeholders = ",".join(["%s"] * len(provinces))
+        # Simply check if the province column matches ANY of the selected provinces
+        clauses.append(f"UPPER({alias}.province) IN ({placeholders})")
+        params.extend([province.upper() for province in provinces])
+
     cities = _parse_multi(args, "employer_city")
     barangays = _parse_multi(args, "employer_barangay")
 
