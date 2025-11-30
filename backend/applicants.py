@@ -250,7 +250,7 @@ def register_applicant(form, files):
         city = form.get("applicantCity", "").strip()
         barangay = form.get("applicantBarangay", "").strip()
 
-        is_from_lipa = (province == "Batangas" and city == "Lipa City")
+        is_from_lipa = (province == "Batangas" and city == "City of Lipa")
 
         is_pwd = int(form.get("pwd") == "on")
         has_work_exp = int(form.get("workExperience") == "on")
@@ -281,12 +281,8 @@ def register_applicant(form, files):
             recommendation_uploaded_at = None
             recommendation_expiry = None
 
-        if is_from_lipa:
-            city = form.get("applicantCity")
-            barangay = form.get("applicantBarangay")
-        else:
-            city = form.get("applicantCityText")
-            barangay = form.get("applicantBarangayText")
+        city = form.get("applicantCity")
+        barangay = form.get("applicantBarangay")
 
         pwd_type = form.get("applicantIsPWD") if is_pwd else None
         years_exp = form.get("applicantHasWorkExp") if has_work_exp else None

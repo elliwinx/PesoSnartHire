@@ -310,12 +310,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       updateConditionals();
 
-      if (typeof window.setResidencyEditMode === "function") {
-        window.setResidencyEditMode(false);
-      }
-
       if (typeof window.updateResidencyRequirements === "function") {
         window.updateResidencyRequirements();
+      }
+
+      // FIX: Force the residency UI (Recommendation Letter) to update/hide based on the restored value
+      if (typeof handleResidencyChange === "function") {
+        handleResidencyChange();
       }
 
       if (typeof window.setResidencyCancelMode === "function") {
@@ -549,31 +550,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. If we have a province (saved), load its Cities
     if (provCode) {
-      await loadCities(provCode, cityVal);
+      const cityCode = await loadCities(provCode, cityVal); // Get code directly
 
-      // 3. If we have a city (saved), load its Barangays
-      // We need to find the code for the selected city from the DOM we just populated
-      if (cityVal && citySelect) {
-        const selectedCityOption = Array.from(citySelect.options).find(
-          (o) => o.value === cityVal
-        );
-        if (selectedCityOption) {
-          await loadBarangays(selectedCityOption.dataset.code, barVal);
-        }
+      // 3. If we have a city code, load its Barangays immediately
+      if (cityCode) {
+        await loadBarangays(cityCode, barVal);
       }
     }
   }
 
   async function loadCities(provinceCode, selectedCity = null) {
-    if (!citySelect) return;
+    if (!citySelect) return null;
     citySelect.innerHTML = "<option>Loading...</option>";
     const data = await fetchJson(
       `${BASE_URL}/provinces/${provinceCode}/cities-municipalities/`
     );
-    populateSelect(citySelect, data, "Select Municipality/City", selectedCity);
+    // Capture the code of the selected item
+    const selectedCode = populateSelect(
+      citySelect,
+      data,
+      "Select Municipality/City",
+      selectedCity
+    );
 
     // Manage disabled state
     citySelect.disabled = !isEditMode;
+
+    return selectedCode; // Return this so we can chain it
   }
 
   async function loadBarangays(cityCode, selectedBarangay = null) {
@@ -633,9 +636,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (barangaySelect) barangaySelect.disabled = false;
         await loadBarangays(code);
 
-        // Logic: Auto-check "Lipa" if Batangas + Lipa City selected
+        // FIX: Update "Lipa City" to "City of Lipa"
         if (
-          this.value === "Lipa City" &&
+          this.value === "City of Lipa" &&
           provinceSelect.value === "Batangas" &&
           isEditMode
         ) {
@@ -663,20 +666,35 @@ document.addEventListener("DOMContentLoaded", () => {
   function handleResidencyChange() {
     const isLipeno = residencyYes.checked;
 
-    // Toggle Recommendation Letter
+    // Toggle Recommendation Letter Section
     if (recContainer) {
+      // 1. Container visibility (Label + Link + Input)
+      // Show if Non-Lipeño, Hide if Lipeño
       recContainer.style.display = isLipeno ? "none" : "block";
-      if (recInput && isEditMode) {
-        recInput.required = !isLipeno;
+
+      // 2. File Input visibility
+      if (recInput) {
+        if (!isLipeno && isEditMode) {
+          // CASE: Non-Lipeño AND Editing -> Show the file picker
+          recInput.style.display = "block";
+          recInput.removeAttribute("disabled");
+          recInput.required = true;
+        } else {
+          // CASE: Lipeño OR Not Editing -> Hide the file picker
+          recInput.style.display = "none";
+          recInput.setAttribute("disabled", "true");
+          recInput.required = false;
+          if (isLipeno) recInput.value = ""; // Clear file if switching to Lipeño
+        }
       }
     }
 
-    // Show warning banner
+    // Show warning banner if editing
     if (warningBanner && isEditMode) {
       warningBanner.classList.add("show");
     }
 
-    // Auto-Fill Address Logic
+    // Auto-Fill Address Logic for Lipeños
     if (isEditMode && isLipeno) {
       const batOption = Array.from(provinceSelect.options).find(
         (o) => o.value === "Batangas"
@@ -696,11 +714,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function selectLipaCity() {
+    // FIX: Update string here too
     const lipaOption = Array.from(citySelect.options).find(
-      (o) => o.value === "Lipa City"
+      (o) => o.value === "City of Lipa"
     );
-    if (lipaOption && citySelect.value !== "Lipa City") {
-      citySelect.value = "Lipa City";
+    if (lipaOption && citySelect.value !== "City of Lipa") {
+      citySelect.value = "City of Lipa";
       citySelect.disabled = false;
       loadBarangays(lipaOption.dataset.code).then(() => {
         if (barangaySelect) barangaySelect.disabled = false;
