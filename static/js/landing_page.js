@@ -111,6 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const reminderNonLipenos = document.getElementById("reminderNonLipenos");
 
   const BASE_URL = "https://psgc.gitlab.io/api";
+  const METRO_MANILA_CODE = "130000000";
 
   if (phoneInput) {
     phoneInput.addEventListener("focus", () => {
@@ -163,6 +164,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const response = await fetch(`${BASE_URL}/provinces/`);
       if (!response.ok) throw new Error("Failed to fetch provinces");
       const data = await response.json();
+
+      // FIXED: Add Metro Manila manually
+      data.push({
+        code: METRO_MANILA_CODE,
+        name: "Metro Manila",
+      });
+
       data.sort((a, b) => a.name.localeCompare(b.name));
       populateSelect(provinceSelect, data, "Select Province");
     } catch (error) {
@@ -177,9 +185,15 @@ document.addEventListener("DOMContentLoaded", () => {
     barangaySelect.disabled = true;
 
     try {
-      const response = await fetch(
-        `${BASE_URL}/provinces/${provinceCode}/cities-municipalities/`
-      );
+      // FIXED: Check if Metro Manila (Region) or standard Province
+      let url;
+      if (provinceCode === METRO_MANILA_CODE) {
+        url = `${BASE_URL}/regions/${METRO_MANILA_CODE}/cities-municipalities/`;
+      } else {
+        url = `${BASE_URL}/provinces/${provinceCode}/cities-municipalities/`;
+      }
+
+      const response = await fetch(url);
       const data = await response.json();
       data.sort((a, b) => a.name.localeCompare(b.name));
       populateSelect(citySelect, data, "Select Municipality/City");
@@ -243,8 +257,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Auto-check logic
       if (fromLipaCheckbox) {
+        // FIXED: Match "City of Lipa"
         const isLipa =
-          this.value === "Lipa City" && provinceSelect.value === "Batangas";
+          this.value === "City of Lipa" && provinceSelect.value === "Batangas";
         if (fromLipaCheckbox.checked !== isLipa) {
           fromLipaCheckbox.checked = isLipa;
           updateRecommendationRequirementFromLipa();
@@ -258,7 +273,7 @@ document.addEventListener("DOMContentLoaded", () => {
       updateRecommendationRequirementFromLipa();
 
       if (this.checked) {
-        // Auto-select Batangas -> Lipa City
+        // Auto-select Batangas -> City of Lipa
         const batOption = Array.from(provinceSelect.options).find(
           (o) => o.value === "Batangas"
         );
@@ -266,11 +281,12 @@ document.addEventListener("DOMContentLoaded", () => {
           provinceSelect.value = "Batangas";
           await loadCities(batOption.dataset.code);
 
+          // FIXED: Look for "City of Lipa" instead of "Lipa City"
           const lipaOption = Array.from(citySelect.options).find(
-            (o) => o.value === "Lipa City"
+            (o) => o.value === "City of Lipa"
           );
           if (lipaOption) {
-            citySelect.value = "Lipa City";
+            citySelect.value = "City of Lipa";
             await loadBarangays(lipaOption.dataset.code);
           }
         }

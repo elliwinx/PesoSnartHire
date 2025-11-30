@@ -493,6 +493,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const recInput = document.getElementById("recommendation_file");
   const warningBanner = document.getElementById("residency-warning-banner");
   const BASE_URL = "https://psgc.gitlab.io/api";
+  const METRO_MANILA_CODE = "130000000";
 
   // Ensure isEditMode is tracked globally
   if (typeof isEditMode === "undefined") var isEditMode = false;
@@ -541,6 +542,13 @@ document.addEventListener("DOMContentLoaded", () => {
   async function initializeAddressData(provVal, cityVal, barVal) {
     // 1. Load Provinces
     const provData = await fetchJson(`${BASE_URL}/provinces/`);
+
+    // FIXED: Add Metro Manila
+    provData.push({
+      code: METRO_MANILA_CODE,
+      name: "Metro Manila",
+    });
+
     const provCode = populateSelect(
       provinceSelect,
       provData,
@@ -550,8 +558,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. If we have a province (saved), load its Cities
     if (provCode) {
-      const cityCode = await loadCities(provCode, cityVal); // Get code directly
-
+      const cityCode = await loadCities(provCode, cityVal);
       // 3. If we have a city code, load its Barangays immediately
       if (cityCode) {
         await loadBarangays(cityCode, barVal);
@@ -562,9 +569,17 @@ document.addEventListener("DOMContentLoaded", () => {
   async function loadCities(provinceCode, selectedCity = null) {
     if (!citySelect) return null;
     citySelect.innerHTML = "<option>Loading...</option>";
-    const data = await fetchJson(
-      `${BASE_URL}/provinces/${provinceCode}/cities-municipalities/`
-    );
+
+    // FIXED: Logic for Metro Manila
+    let url;
+    if (provinceCode === METRO_MANILA_CODE) {
+      url = `${BASE_URL}/regions/${METRO_MANILA_CODE}/cities-municipalities/`;
+    } else {
+      url = `${BASE_URL}/provinces/${provinceCode}/cities-municipalities/`;
+    }
+
+    const data = await fetchJson(url);
+
     // Capture the code of the selected item
     const selectedCode = populateSelect(
       citySelect,
@@ -573,10 +588,8 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedCity
     );
 
-    // Manage disabled state
     citySelect.disabled = !isEditMode;
-
-    return selectedCode; // Return this so we can chain it
+    return selectedCode;
   }
 
   async function loadBarangays(cityCode, selectedBarangay = null) {
