@@ -292,6 +292,12 @@
           <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
             >Employers</a
           >
+          <a href="{{ url_for('chat.admin_chat_page') }}" class="nav-link">
+            Messages
+            <span id="msgBadge" class="notif-badge" style="display: none"
+              >●</span
+            >
+          </a>
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications<span
               id="notifBadge"
@@ -338,39 +344,48 @@
       </div>
 
       <!-- Added missing notificationList container for notifications.js -->
-      <div id="notificationList" class="notification-list" style="display: none;"></div>
+      <div
+        id="notificationList"
+        class="notification-list"
+        style="display: none"
+      ></div>
 
-    <div class="table-wrapper">
+      <div class="table-wrapper">
         {% if job_reports %}
-      <table class="table">
-        <thead>
-          <tr>
-            <th style="width: 10%;">Job Title</th>
-            <th style="width: 15%;">Employer Name</th>
-            <th style="width: 15%;">Reported By</th>
-            <th style="width: 15%;">Date Reported</th>
-            <th style="width: 10%;">Reason</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 10%">Job Title</th>
+              <th style="width: 15%">Employer Name</th>
+              <th style="width: 15%">Reported By</th>
+              <th style="width: 15%">Date Reported</th>
+              <th style="width: 10%">Reason</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
 
-        <tbody>
+          <tbody>
             {% for report in job_reports %}
             <tr data-report-id="{{ report.report_id }}">
-            <td>{{ report.job_title }}</td>
-            <td>{{ report.employer_name }}</td>
+              <td>{{ report.job_title }}</td>
+              <td>{{ report.employer_name }}</td>
               <td>{{ report.reported_by_name }}</td>
-            <td>{{ report.reported_at.strftime("%Y-%m-%d %H:%M") if report.reported_at else '' }}</td>
               <td>
-                <span class="reason-chip" title="{{ report.reason }}">{{ report.reason }}</span>
+                {{ report.reported_at.strftime("%Y-%m-%d %H:%M") if
+                report.reported_at else '' }}
+              </td>
+              <td>
+                <span class="reason-chip" title="{{ report.reason }}"
+                  >{{ report.reason }}</span
+                >
                 {% if report.details %}
                 <p class="reason-detail-text">{{ report.details }}</p>
                 {% endif %}
               </td>
               <td>
-                {% set status = report.status or 'Pending' %}
-                {% if status == 'Approved' %}
+                {% set status = report.status or 'Pending' %} {% if status ==
+                'Approved' %}
                 <span class="badge bg-success">{{ status }}</span>
                 {% elif status == 'Rejected' %}
                 <span class="badge bg-danger">{{ status }}</span>
@@ -383,48 +398,53 @@
                 {% else %}
                 <span class="badge bg-warning text-dark">{{ status }}</span>
                 {% endif %}
-            </td>
+              </td>
 
               <td class="table-actions">
                 {% if report.job_id %}
-                    <button class="btn btn-sm btn-primary view-job-btn" 
-                          data-job-id="{{ report.job_id }}"
-                          data-report-id="{{ report.report_id }}">
-                    <i class="fa-solid fa-eye"></i> View Job
-                    </button>
+                <button
+                  class="btn btn-sm btn-primary view-job-btn"
+                  data-job-id="{{ report.job_id }}"
+                  data-report-id="{{ report.report_id }}"
+                >
+                  <i class="fa-solid fa-eye"></i> View Job
+                </button>
                 {% else %}
-                  <button class="btn btn-sm btn-secondary" disabled>
-                    <i class="fa-solid fa-eye-slash"></i> Job Removed
-                  </button>
+                <button class="btn btn-sm btn-secondary" disabled>
+                  <i class="fa-solid fa-eye-slash"></i> Job Removed
+                </button>
+                {% endif %} {% if report.employer_id %}
+                <a
+                  href="{{ url_for('admin.view_employer', employer_id=report.employer_id) }}"
+                  class="btn btn-sm btn-info"
+                >
+                  <i class="fa-solid fa-user-tie"></i> Employer
+                </a>
+                {% else %}
+                <button
+                  class="btn btn-sm btn-secondary"
+                  disabled
+                  style="width: 108px"
+                >
+                  <i class="fa-solid fa-user-slash"></i>
+                </button>
                 {% endif %}
 
-                {% if report.employer_id %}
-                    <a href="{{ url_for('admin.view_employer', employer_id=report.employer_id) }}" 
-                      class="btn btn-sm btn-info">
-                    <i class="fa-solid fa-user-tie"></i> Employer
-                    </a>
-                {% else %}
-                  <button class="btn btn-sm btn-secondary" disabled style="width: 108px;">
-                    <i class="fa-solid fa-user-slash"></i>
-                  </button>
-                {% endif %}
-
-                <button 
+                <button
                   class="btn btn-sm btn-outline-warning edit-status-btn"
-                  data-report-id="{{ report.report_id }}">
+                  data-report-id="{{ report.report_id }}"
+                >
                   <i class="fa-solid fa-pen-to-square"></i> Edit Status
                 </button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-
-      </table>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
         {% else %}
         <p class="empty-state">No reported job posts at the moment.</p>
         {% endif %}
-    </div>
-
+      </div>
     </div>
 
     <footer class="footer">
@@ -508,5 +528,6 @@
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin_chat.js') }}"></script>
   </body>
 </html>

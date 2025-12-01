@@ -63,6 +63,12 @@
           <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
             >Employers</a
           >
+          <a href="{{ url_for('chat.admin_chat_page') }}" class="nav-link">
+            Messages
+            <span id="msgBadge" class="notif-badge" style="display: none"
+              >●</span
+            >
+          </a>
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications<span
               id="notifBadge"
@@ -261,5 +267,6 @@
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin_chat.js') }}"></script>
   </body>
 </html>

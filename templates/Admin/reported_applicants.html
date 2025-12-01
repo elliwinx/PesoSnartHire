@@ -58,13 +58,19 @@
           <a
             href="{{ url_for('admin.applicants_management') }}"
             class="nav-link"
-            >Applicants Management</a
+            >Applicants</a
           >
           <a
             href="{{ url_for('admin.employers_management') }}"
             class="nav-link-active"
-            >Employers Management</a
+            >Employers</a
           >
+          <a href="{{ url_for('chat.admin_chat_page') }}" class="nav-link">
+            Messages
+            <span id="msgBadge" class="notif-badge" style="display: none"
+              >●</span
+            >
+          </a>
           <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
             >Notifications<span
               id="notifBadge"
@@ -117,11 +123,11 @@
         <table class="table">
           <thead>
             <tr>
-              <th style="width: 16%;">Applicant</th>
+              <th style="width: 16%">Applicant</th>
               <th>Reported By</th>
               <th>Reason</th>
-              <th style="width: 16%;">Date Reported</th>
-              <th style="width: 5%;">Status</th>
+              <th style="width: 16%">Date Reported</th>
+              <th style="width: 5%">Status</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -142,7 +148,10 @@
                 {% endif %}
               </td>
               <td>
-                <span class="reason-chip" title="{{ report.details or report.reason }}">
+                <span
+                  class="reason-chip"
+                  title="{{ report.details or report.reason }}"
+                >
                   {{ report.reason }}
                 </span>
                 {% if report.details %}
@@ -150,11 +159,12 @@
                 {% endif %}
               </td>
               <td>
-                {{ report.reported_at.strftime("%Y-%m-%d %H:%M") if report.reported_at else '—' }}
+                {{ report.reported_at.strftime("%Y-%m-%d %H:%M") if
+                report.reported_at else '—' }}
               </td>
               <td>
-                {% set status = report.status or 'Pending' %}
-                {% if status == 'Confirmed' %}
+                {% set status = report.status or 'Pending' %} {% if status ==
+                'Confirmed' %}
                 <span class="badge bg-success">Confirmed</span>
                 {% elif status == 'Rejected' %}
                 <span class="badge bg-danger">Rejected</span>
@@ -172,8 +182,7 @@
                 >
                   <i class="fa-solid fa-user"></i> Applicant
                 </a>
-                {% endif %}
-                {% if report.employer_id %}
+                {% endif %} {% if report.employer_id %}
                 <a
                   class="btn btn-sm btn-outline-secondary"
                   href="{{ url_for('admin.view_employer', employer_id=report.employer_id) }}"
@@ -280,6 +289,6 @@
     <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/admin_chat.js') }}"></script>
   </body>
 </html>
-

@@ -1552,3 +1552,37 @@ function formatDateTime(value) {
     minute: "2-digit",
   });
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Check for unread chat messages
+  checkUnreadChats();
+  // Poll every 15 seconds
+  setInterval(checkUnreadChats, 15000);
+});
+
+async function checkUnreadChats() {
+  const msgBadge = document.getElementById("msgBadge");
+  if (!msgBadge) return; // Element doesn't exist on this page
+
+  try {
+    const res = await fetch("/api/admin/conversations");
+    if (!res.ok) return;
+    const convos = await res.json();
+
+    // Count total unread conversations
+    let unreadCount = 0;
+    convos.forEach((c) => {
+      if (c.unread_count > 0) unreadCount++;
+    });
+
+    if (unreadCount > 0) {
+      msgBadge.style.display = "inline-block";
+      // Optional: msgBadge.textContent = unreadCount; // Show number
+    } else {
+      msgBadge.style.display = "none";
+    }
+  } catch (e) {
+    // Silent fail for background polling
+    console.warn("Failed to check unread messages", e);
+  }
+}

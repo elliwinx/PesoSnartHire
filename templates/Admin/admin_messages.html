@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Messages - Admin Dashboard</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/admin.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/loader.css') }}"
+    />
+
+    <style>
+      /* specialized layout for 2-pane chat */
+      .chat-layout {
+        display: flex;
+        height: calc(
+          100vh - 300px
+        ); /* Adjusted height to fit between hero and footer */
+        min-height: 500px;
+        border: 1px solid #ddd;
+        margin: 20px auto;
+        max-width: 1200px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+      .chat-sidebar {
+        width: 300px;
+        border-right: 1px solid #ddd;
+        overflow-y: auto;
+        background: #f8f9fa;
+      }
+      .convo-item {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .convo-item:hover,
+      .convo-item.active {
+        background: #e9ecef;
+      }
+      .convo-item strong {
+        display: block;
+        color: #333;
+      }
+      .convo-item small {
+        color: #666;
+      }
+      .unread-badge {
+        background: #7b1113;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 11px;
+        float: right;
+      }
+
+      .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+      .chat-main-header {
+        padding: 15px;
+        border-bottom: 1px solid #ddd;
+        font-weight: bold;
+        background: #fff;
+        color: #7b1113;
+      }
+      .chat-main-body {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .chat-main-footer {
+        padding: 15px;
+        border-top: 1px solid #ddd;
+        background: #f8f9fa;
+        display: flex;
+        gap: 10px;
+      }
+      .chat-main-footer input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+
+      /* Reusing msg styles */
+      .msg {
+        padding: 10px 15px;
+        border-radius: 15px;
+        max-width: 70%;
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+      .msg.admin {
+        align-self: flex-end;
+        background: #7b1113;
+        color: white;
+        border-bottom-right-radius: 2px;
+      }
+      .msg.user {
+        align-self: flex-start;
+        background: #f1f1f1;
+        color: #333;
+        border-bottom-left-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, msg in messages %}
+    <div class="flash {{ 'success' if category=='success' else 'danger' }}">
+      {{ msg }}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+    <script>
+      setTimeout(() => {
+        const flashes = document.querySelectorAll(".flash");
+        flashes.forEach((f) => f.classList.add("fade-out"));
+        setTimeout(() => {
+          flashes.forEach((f) => f.remove());
+        }, 500);
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
+
+    <header class="header">
+      <div class="container">
+        <div class="logo">
+          <img
+            src="{{ url_for('static', filename='Assets/PESO_logo.png') }}"
+            alt="PESO SmartHire Logo"
+          />
+        </div>
+        <nav class="nav">
+          <a href="{{url_for('admin.admin_home')}}" class="nav-link">Home</a>
+          <a
+            href="{{ url_for('admin.applicants_management') }}"
+            class="nav-link"
+            >Applicants</a
+          >
+          <a href="{{ url_for('admin.employers_management') }}" class="nav-link"
+            >Employers</a
+          >
+
+          <a
+            href="{{ url_for('chat.admin_chat_page') }}"
+            class="nav-link-active"
+          >
+            Messages
+            <span id="msgBadge" class="notif-badge" style="display: none"
+              >●</span
+            >
+          </a>
+
+          <a href="{{url_for('admin.notifications_page')}}" class="nav-link"
+            >Notifications<span
+              id="notifBadge"
+              class="notif-badge"
+              style="display: none"
+              >●</span
+            ></a
+          >
+          <a href="{{url_for('admin.account_settings')}}" class="nav-link"
+            >Account & Security</a
+          >
+          <a href="{{url_for('logout')}}" id="logoutLink" class="nav-link"
+            >Log Out</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-background">
+        <img
+          src="{{ url_for('static', filename='Assets/background.png') }}"
+          alt="New City Hall of Lipa City"
+        />
+      </div>
+      <div class="hero-content">
+        <div class="container">
+          <h1 class="hero-title">Messages</h1>
+          <p class="hero-description">
+            Manage user inquiries and support requests
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="chat-layout">
+        <div class="chat-sidebar" id="convoList"></div>
+        <div class="chat-main">
+          <div class="chat-main-header" id="activeUser">
+            Select a conversation
+          </div>
+          <div class="chat-main-body" id="adminChatBody"></div>
+          <div class="chat-main-footer">
+            <input
+              type="text"
+              id="adminMsgInput"
+              placeholder="Type a reply..."
+              disabled
+            />
+            <button
+              class="btn"
+              onclick="sendAdminReply()"
+              id="sendBtn"
+              disabled
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-content">
+          <div class="footer-left">
+            <h3>PESO SmartHire</h3>
+            <p>
+              Connecting talent with opportunity through innovative recruitment
+              solutions.
+            </p>
+            <a href="{{url_for('terms_and_conditions')}}" class="footer-note"
+              >Terms and Conditions</a
+            >
+            <p class="copyright">© 2025 PESO SmartHire. All rights reserved.</p>
+          </div>
+          <div class="footer-right">
+            <h3>Development Team</h3>
+            <div class="team-member">
+              <span>Anoya, Ruffa F.</span>
+              <div class="social-links">
+                <a href="https://github.com/anoyaruffa" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a href="#"><i class="devicon-facebook-plain"></i></a>
+                <a href="mailto: ruffaanoya2005@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Levita, Reymark A.</span>
+              <div class="social-links">
+                <a href="https://github.com/elliwinx" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/reymark.levita.3"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto: levitareymark11@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+            <div class="team-member">
+              <span>Samonte, Ralph Matthew A.</span>
+              <div class="social-links">
+                <a href="https://github.com/RalphWreckeri2" target="_blank"
+                  ><i class="devicon-github-plain"></i
+                ></a>
+                <a
+                  href="https://www.facebook.com/ralphmatthew.13"
+                  target="_blank"
+                  ><i class="devicon-facebook-plain"></i
+                ></a>
+                <a href="mailto:ralphmatthew.samonte@gmail.com" target="_blank"
+                  ><i class="fa-solid fa-envelope"></i
+                ></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    {% include 'partials/loader.html' %}
+
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+
+    <script>
+      let activeConvoId = null;
+
+      // Poll for conversation list updates
+      setInterval(loadConversations, 5000);
+      loadConversations();
+
+      async function loadConversations() {
+        try {
+          const res = await fetch("/api/admin/conversations");
+          const convos = await res.json();
+          const list = document.getElementById("convoList");
+
+          list.innerHTML = convos
+            .map(
+              (c) => `
+                    <div class="convo-item ${
+                      c.conversation_id === activeConvoId ? "active" : ""
+                    }" onclick="openConvo(${c.conversation_id}, '${
+                c.user_name
+              }')">
+                        ${
+                          c.unread_count > 0
+                            ? `<span class="unread-badge">${c.unread_count}</span>`
+                            : ""
+                        }
+                        <strong>${c.user_name || "Unknown User"}</strong>
+                        <small>${(c.user_type || "").toUpperCase()}</small>
+                    </div>
+                `
+            )
+            .join("");
+        } catch (e) {
+          console.error("Error loading conversations:", e);
+        }
+      }
+
+      async function openConvo(id, name) {
+        activeConvoId = id;
+        document.getElementById("activeUser").textContent = name;
+        const input = document.getElementById("adminMsgInput");
+        const btn = document.getElementById("sendBtn");
+
+        input.disabled = false;
+        btn.disabled = false;
+        input.focus();
+
+        loadAdminMessages();
+      }
+
+      async function loadAdminMessages() {
+        if (!activeConvoId) return;
+        try {
+          const res = await fetch(`/api/admin/conversation/${activeConvoId}`);
+          const msgs = await res.json();
+
+          const body = document.getElementById("adminChatBody");
+          body.innerHTML = msgs
+            .map(
+              (m) => `
+                    <div class="msg ${m.sender_type}">
+                        ${m.message}
+                    </div>
+                `
+            )
+            .join("");
+          body.scrollTop = body.scrollHeight;
+        } catch (e) {
+          console.error("Error loading messages:", e);
+        }
+      }
+
+      // Poll active conversation if open
+      setInterval(() => {
+        if (activeConvoId) loadAdminMessages();
+      }, 3000);
+
+      async function sendAdminReply() {
+        const input = document.getElementById("adminMsgInput");
+        const text = input.value.trim();
+        if (!text || !activeConvoId) return;
+
+        input.value = ""; // clear input immediately
+
+        // Optimistic UI update
+        const body = document.getElementById("adminChatBody");
+        body.innerHTML += `<div class="msg admin">${text}</div>`;
+        body.scrollTop = body.scrollHeight;
+
+        try {
+          await fetch("/api/admin/reply", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversation_id: activeConvoId,
+              message: text,
+            }),
+          });
+          loadAdminMessages(); // sync with server
+        } catch (e) {
+          console.error("Error sending reply:", e);
+        }
+      }
+
+      // Handle Enter key
+      document
+        .getElementById("adminMsgInput")
+        .addEventListener("keypress", function (e) {
+          if (e.key === "Enter") sendAdminReply();
+        });
+    </script>
+  </body>
+</html>

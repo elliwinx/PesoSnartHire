@@ -1,6 +1,7 @@
 from backend.forgot_password import forgot_password_bp
 from backend.admin import admin_bp
 from backend.employers import employers_bp, check_expired_employer_documents
+from backend.chat import chat_bp
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from backend.applicants import applicants_bp, check_expired_recommendations
@@ -88,6 +89,7 @@ app.register_blueprint(applicants_bp, url_prefix="/applicants")
 app.register_blueprint(employers_bp, url_prefix="/employers")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(forgot_password_bp, url_prefix="/forgot-password")
+app.register_blueprint(chat_bp)
 
 
 # =========================================================
