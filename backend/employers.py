@@ -2417,32 +2417,56 @@ def update_application_status(application_id):
         if not app_row or app_row.get('employer_id') != employer_id:
             return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
-        # 1. Insert Interview if status is 'For Interview'
+        # 1. Handle Interview Schedule (Upsert Logic)
         if new_status == "For Interview" and interview_data:
             if not all(k in interview_data for k in ('date', 'time', 'type', 'location')):
                 return jsonify({'success': False, 'message': 'Missing interview details'}), 400
 
-            run_query(conn, """
-                INSERT INTO interview_schedules 
-                (application_id, employer_id, applicant_id, interview_date, interview_time, interview_type, location_link, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                application_id,
-                employer_id,
-                app_row['applicant_id'],
-                interview_data['date'],
-                interview_data['time'],
-                interview_data['type'],
-                interview_data['location'],
-                interview_data.get('notes', '')
-            ))
+            # Check if an interview schedule already exists for this application
+            existing_interview = run_query(
+                conn, "SELECT id FROM interview_schedules WHERE application_id = %s", (application_id,), fetch="one")
+
+            if existing_interview:
+                # UPDATE existing schedule
+                run_query(conn, """
+                    UPDATE interview_schedules 
+                    SET interview_date=%s, interview_time=%s, interview_type=%s, location_link=%s, notes=%s, status='Pending', updated_at=NOW()
+                    WHERE application_id=%s
+                """, (
+                    interview_data['date'],
+                    interview_data['time'],
+                    interview_data['type'],
+                    interview_data['location'],
+                    interview_data.get('notes', ''),
+                    application_id
+                ))
+                notif_title = "Interview Updated"
+                notif_msg = f"The employer has updated the interview details for {app_row.get('job_position')}."
+            else:
+                # INSERT new schedule
+                run_query(conn, """
+                    INSERT INTO interview_schedules 
+                    (application_id, employer_id, applicant_id, interview_date, interview_time, interview_type, location_link, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    application_id,
+                    employer_id,
+                    app_row['applicant_id'],
+                    interview_data['date'],
+                    interview_data['time'],
+                    interview_data['type'],
+                    interview_data['location'],
+                    interview_data.get('notes', '')
+                ))
+                notif_title = "Interview Invitation"
+                notif_msg = f"You have been invited for an interview for {app_row.get('job_position')}."
 
             # Create Notification
             from .notifications import create_notification
             create_notification(
                 notification_type='job_application',
-                title='Interview Invitation',
-                message=f"You have been invited for an interview for {app_row.get('job_position')}.",
+                title=notif_title,
+                message=notif_msg,
                 related_ids=[app_row.get('job_id')],
                 applicant_id=app_row.get('applicant_id')
             )
@@ -2456,7 +2480,7 @@ def update_application_status(application_id):
                   (application_id, new_status, employer_id))
 
         conn.commit()
-        return jsonify({'success': True, 'message': 'Status updated', 'new_status': new_status})
+        return jsonify({'success': True, 'message': 'Status updated successfully', 'new_status': new_status})
 
     except Exception as e:
         conn.rollback()
