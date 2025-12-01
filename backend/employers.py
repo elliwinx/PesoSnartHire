@@ -299,8 +299,12 @@ def save_file(file, subfolder):
     file.seek(0)  # Reset cursor
     mime = magic.from_buffer(header, mime=True)
 
-    if mime != 'application/pdf':
-        raise ValueError("Invalid file type. Only real PDFs allowed.")
+    # UPDATE: Added image types to the allowed list
+    allowed_mimes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+
+    if mime not in allowed_mimes:
+        raise ValueError(
+            "Invalid file type. Only PDFs, PNGs, and JPGs are allowed.")
 
     if not file or file.filename.strip() == "":
         return None
