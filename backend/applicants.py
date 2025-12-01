@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, date, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+import magic
 
 
 def ensure_job_report_details_column(cursor):
@@ -212,6 +213,14 @@ UPLOAD_FOLDER = "static/uploads"
 
 # ==== APPLICANT REGISTRATION ====
 def save_file(file, subfolder):
+    # Read first 2048 bytes to check file type
+    header = file.read(2048)
+    file.seek(0)  # Reset cursor
+    mime = magic.from_buffer(header, mime=True)
+
+    if mime != 'application/pdf':
+        raise ValueError("Invalid file type. Only real PDFs allowed.")
+
     if not file:
         return None
     folder_path = os.path.join(UPLOAD_FOLDER, subfolder)
@@ -235,12 +244,12 @@ def register_applicant(form, files):
         phone = form.get("applicantPhoneNumber")
 
         # ==== Check if applicant already exists ====
-        existing = run_query(
-            conn,
-            "SELECT applicant_id FROM applicants WHERE email=%s OR phone=%s",
-            (email, phone),
-            fetch="all"
-        )
+        existing = run_query(conn,
+                             "SELECT applicant_id FROM applicants WHERE (first_name=%s AND last_name=%s AND age=%s) OR email=%s",
+                             (form.get("applicantFirstName"), form.get(
+                                 "applicantLastName"), form.get("applicantAge"), email),
+                             fetch="all"
+                             )
         if existing:
             print(f"[v0] Applicant already exists: {email}")
             return False, "You are already registered. Please log in or contact admin."

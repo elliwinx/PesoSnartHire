@@ -13,6 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import json
 import traceback
+import magic
 
 employers_bp = Blueprint("employers", __name__)
 
@@ -294,6 +295,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def save_file(file, subfolder):
     """Save uploaded employer files into a dedicated subfolder with unique names."""
+    header = file.read(2048)
+    file.seek(0)  # Reset cursor
+    mime = magic.from_buffer(header, mime=True)
+
+    if mime != 'application/pdf':
+        raise ValueError("Invalid file type. Only real PDFs allowed.")
+
     if not file or file.filename.strip() == "":
         return None
 
@@ -2275,9 +2283,10 @@ def view_applicant(applicant_id):
             FROM applications a
             JOIN jobs j ON a.job_id = j.job_id
             WHERE a.applicant_id = %s
+            AND j.employer_id = %s
             ORDER BY a.applied_at DESC
             """,
-            (applicant_id,),
+            (applicant_id, session['employer_id']),
             fetch='all'
         )
 
