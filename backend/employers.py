@@ -2491,6 +2491,29 @@ def update_application_status(application_id):
         run_query(conn, "INSERT INTO applications_history (application_id, old_status, new_status, changed_by) VALUES (%s, 'Unknown', %s, %s)",
                   (application_id, new_status, employer_id))
 
+        if new_status != "For Interview":
+            notif_title = f"Application Update: {new_status}"
+            notif_msg = f"Your application status for {app_row.get('job_position')} has been updated to {new_status}."
+
+            if new_status == "Hired":
+                notif_title = "Congratulations! You're Hired"
+                notif_msg = f"Good news! You have been hired for the position of {app_row.get('job_position')}."
+            elif new_status == "Rejected":
+                notif_title = "Application Status Update"
+                notif_msg = f"Your application for {app_row.get('job_position')} was not successful at this time."
+            elif new_status == "Shortlisted":
+                notif_title = "You've Been Shortlisted"
+                notif_msg = f"Great news! You have been shortlisted for {app_row.get('job_position')}."
+
+            from .notifications import create_notification
+            create_notification(
+                notification_type='job_application',
+                title=notif_title,
+                message=notif_msg,
+                related_ids=[app_row.get('job_id')],
+                applicant_id=app_row.get('applicant_id')
+            )
+
         conn.commit()
         return jsonify({'success': True, 'message': 'Status updated successfully', 'new_status': new_status})
 
