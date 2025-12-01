@@ -1742,3 +1742,59 @@ def report_job(job_id):
         conn.close()
         print(f"[v1] Error reporting job: {e}")
         return jsonify({'success': False, 'message': 'Failed to submit report'}), 500
+
+
+@applicants_bp.route('/api/applications/<int:application_id>/interview', methods=['GET'])
+def get_interview_details(application_id):
+    if 'applicant_id' not in session:
+        return jsonify({'success': False}), 401
+
+    conn = create_connection()
+    try:
+        interview = run_query(conn, """
+            SELECT * FROM interview_schedules 
+            WHERE application_id = %s 
+            ORDER BY created_at DESC LIMIT 1
+        """, (application_id,), fetch='one')
+
+        if interview:
+            # Convert date/time objects to string for JSON
+            interview['interview_date'] = str(interview['interview_date'])
+            interview['interview_time'] = str(interview['interview_time'])
+            return jsonify({'success': True, 'interview': interview})
+        return jsonify({'success': False, 'message': 'No interview found'})
+    finally:
+        conn.close()
+
+
+@applicants_bp.route('/api/interview/<int:interview_id>/respond', methods=['POST'])
+def respond_to_interview(interview_id):
+    if 'applicant_id' not in session:
+        return jsonify({'success': False}), 401
+
+    data = request.get_json()
+    action = data.get('action')  # Confirmed, Declined, Reschedule Requested
+    notes = data.get('notes', '')
+
+    conn = create_connection()
+    try:
+        run_query(conn, "UPDATE interview_schedules SET status = %s, applicant_notes = %s WHERE id = %s AND applicant_id = %s",
+                  (action, notes, interview_id, session['applicant_id']))
+        conn.commit()
+
+        # Notify Employer
+        interview = run_query(
+            conn, "SELECT employer_id, application_id FROM interview_schedules WHERE id=%s", (interview_id,), fetch='one')
+        if interview:
+            from .notifications import create_notification
+            create_notification(
+                notification_type='job_application',
+                title=f'Interview {action}',
+                message=f"Applicant has {action.lower()} the interview.",
+                related_ids=[interview['application_id']],
+                employer_id=interview['employer_id']
+            )
+
+        return jsonify({'success': True})
+    finally:
+        conn.close()

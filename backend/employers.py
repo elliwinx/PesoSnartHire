@@ -2391,94 +2391,76 @@ def report_applicant(applicant_id):
 
 @employers_bp.route('/api/applications/<int:application_id>/status', methods=['POST'])
 def update_application_status(application_id):
-    """Allow employer to update an application's status (with permission check).
-    Records change in applications_history table.
-    Expected JSON: { "status": "Hired" }
-    """
     if 'employer_id' not in session:
         return jsonify({'success': False, 'message': 'Not logged in'}), 401
 
     employer_id = session['employer_id']
     data = request.get_json() or {}
     new_status = data.get('status')
+    interview_data = data.get('interview_details')  # Expect this from frontend
+
     allowed_statuses = ['Pending', 'Hired',
                         'Shortlisted', 'Rejected', 'For Interview']
-
     if not new_status or new_status not in allowed_statuses:
         return jsonify({'success': False, 'message': 'Invalid status'}), 400
 
     conn = create_connection()
-    if not conn:
-        return jsonify({'success': False, 'message': 'DB connection failed'}), 500
-
     try:
-        # Fetch application and verify ownership via job -> employer
-        # include applicant_id and job_position so we can notify the applicant
+        # Verify ownership and get details
         app_row = run_query(
-            conn, "SELECT a.id, a.job_id, a.applicant_id, a.status, j.employer_id, j.job_position FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s", (application_id,), fetch='one')
-        if not app_row:
-            return jsonify({'success': False, 'message': 'Application not found'}), 404
+            conn,
+            "SELECT a.id, a.job_id, a.applicant_id, j.employer_id, j.job_position FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s",
+            (application_id,),
+            fetch='one'
+        )
 
-        if app_row.get('employer_id') != employer_id:
+        if not app_row or app_row.get('employer_id') != employer_id:
             return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
-        old_status = app_row.get('status') or 'Pending'
+        # 1. Insert Interview if status is 'For Interview'
+        if new_status == "For Interview" and interview_data:
+            if not all(k in interview_data for k in ('date', 'time', 'type', 'location')):
+                return jsonify({'success': False, 'message': 'Missing interview details'}), 400
 
-        if old_status == 'Cancelled':
-            return jsonify({'success': False, 'message': 'Cannot update a cancelled application.'}), 400
+            run_query(conn, """
+                INSERT INTO interview_schedules 
+                (application_id, employer_id, applicant_id, interview_date, interview_time, interview_type, location_link, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                application_id,
+                employer_id,
+                app_row['applicant_id'],
+                interview_data['date'],
+                interview_data['time'],
+                interview_data['type'],
+                interview_data['location'],
+                interview_data.get('notes', '')
+            ))
 
-        # Update applications table
+            # Create Notification
+            from .notifications import create_notification
+            create_notification(
+                notification_type='job_application',
+                title='Interview Invitation',
+                message=f"You have been invited for an interview for {app_row.get('job_position')}.",
+                related_ids=[app_row.get('job_id')],
+                applicant_id=app_row.get('applicant_id')
+            )
+
+        # 2. Update Application Status
         run_query(conn, "UPDATE applications SET status = %s WHERE id = %s",
                   (new_status, application_id))
 
-        # Ensure applications_history table exists (best-effort)
-        try:
-            run_query(conn, """
-                CREATE TABLE IF NOT EXISTS applications_history (
-                    history_id INT AUTO_INCREMENT PRIMARY KEY,
-                    application_id INT NOT NULL,
-                    old_status VARCHAR(50),
-                    new_status VARCHAR(50),
-                    changed_by INT,
-                    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    note TEXT,
-                    INDEX(application_id)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-            """)
-        except Exception as e:
-            # non-fatal: continue
-            print('[v0] applications_history create check failed:', e)
-
-        # Insert history record
-        run_query(conn, "INSERT INTO applications_history (application_id, old_status, new_status, changed_by) VALUES (%s, %s, %s, %s)",
-                  (application_id, old_status, new_status, employer_id))
+        # 3. Log History
+        run_query(conn, "INSERT INTO applications_history (application_id, old_status, new_status, changed_by) VALUES (%s, 'Unknown', %s, %s)",
+                  (application_id, new_status, employer_id))
 
         conn.commit()
-
-        # Notify the applicant about the status change
-        try:
-            applicant_to_notify = app_row.get('applicant_id')
-            job_id = app_row.get('job_id')
-            job_position = app_row.get('job_position') or 'your application'
-            if applicant_to_notify:
-                create_notification(
-                    notification_type='job_application',
-                    title='Application Status Updated',
-                    message=f"Your application for {job_position} is now: {new_status}",
-                    count=1,
-                    related_ids=[job_id] if job_id else None,
-                    applicant_id=applicant_to_notify
-                )
-        except Exception as notifErr:
-            print('[v0] Failed to create applicant notification:', notifErr)
-
         return jsonify({'success': True, 'message': 'Status updated', 'new_status': new_status})
 
     except Exception as e:
-        print('[v0] Error updating application status:', e)
         conn.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
-
     finally:
         conn.close()
 

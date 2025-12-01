@@ -1468,60 +1468,90 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // <CHANGE> FIXED: Properly handle the existing modal buttons and make them work
   window.viewApplicationDetails = async (applicationId) => {
+    // ... [Keep existing code to find modal elements and check nulls] ...
     const modal = document.getElementById("applicationDetailsModal");
     const content = document.getElementById("applicationDetailsContent");
     const cancelBtn = document.getElementById("applicationCancelBtn");
     const closeBtn = document.getElementById("applicationCloseBtn");
 
-    if (!modal || !content) {
-      console.log("[v0] Modal elements not found");
-      return;
-    }
+    if (!modal || !content) return;
 
-    content.innerHTML = '<div class="loader">Loading details...</div>';
+    content.innerHTML = '<div class="loader">Loading...</div>';
     modal.style.display = "block";
 
     try {
-      console.log("[v0] Fetching application details for ID:", applicationId);
       const response = await fetch(
         `/applicants/api/applications/${applicationId}`
       );
-
-      console.log("[v0] Response status:", response.status);
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log("[v0] Error response:", errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
       const data = await response.json();
-      console.log("[v0] Application data received:", data);
-
-      if (!data.success || !data.application) {
-        throw new Error(data.message || "Invalid response format");
-      }
-
       const app = data.application;
 
-      content.innerHTML = `
-      <div class="header-row" id="header-row-${app.id}">
-        <h2>Current Application Status</h2>
-        <p class="status">
-          <span class="status-badge ${app.status
-            .toLowerCase()
-            .replace(/\s+/g, "-")}">${app.status}</span>
-        </p>
-      </div>
-      <p><strong>Application Information:</strong></p>
-      <div class="detail-group" style="margin: 2px 0;">
-        <p>${app.job_position}</p>
-        <p>${app.employer_name}</p>
-        <p>${app.location}</p>
-        <p>Applied On ${new Date(app.applied_at).toLocaleDateString()}</p>
-      </div>
-    `;
+      let interviewHtml = "";
 
-      // <CHANGE> Show/hide cancel button based on status and attach click handler
+      if (app.status === "For Interview") {
+        const intRes = await fetch(
+          `/applicants/api/applications/${app.id}/interview`
+        );
+        const intData = await intRes.json();
+
+        if (intData.success && intData.interview) {
+          const i = intData.interview;
+          // Render standard HTML interface
+          interviewHtml = `
+                <div style="margin-top:20px; background:#f0f9ff; padding:15px; border-radius:8px; border:1px solid #bae6fd;">
+                    <h4 style="color:#0284c7; margin-top:0; border-bottom:1px solid #bae6fd; padding-bottom:10px;">📅 Interview Invitation</h4>
+                    <p><strong>Date:</strong> ${i.interview_date} @ ${
+            i.interview_time
+          }</p>
+                    <p><strong>Type:</strong> ${i.interview_type}</p>
+                    <p><strong>Location/Link:</strong> <a href="${
+                      i.location_link
+                    }" target="_blank">${i.location_link}</a></p>
+                    <p><strong>Notes:</strong> ${i.notes || "None"}</p>
+                    <p><strong>Current Status:</strong> <span style="background:#fff3cd; padding:2px 6px; border-radius:4px;">${
+                      i.status
+                    }</span></p>
+                    
+                    ${
+                      i.status === "Pending"
+                        ? `
+                        <div id="intActionButtons-${i.id}" style="margin-top:15px; display:flex; gap:10px;">
+                            <button onclick="respondToInterview(${i.id}, 'Confirmed')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Confirm</button>
+                            <button onclick="respondToInterview(${i.id}, 'Declined')" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Decline</button>
+                            <button onclick="showReschedForm(${i.id})" style="background:#ffc107; color:black; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Reschedule</button>
+                        </div>
+
+                        <div id="reschedForm-${i.id}" style="display:none; margin-top:10px;">
+                            <textarea id="reschedReason-${i.id}" placeholder="Reason & Preferred Time..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:5px;"></textarea>
+                            <button onclick="submitReschedule(${i.id})" style="background:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Submit Request</button>
+                            <button onclick="hideReschedForm(${i.id})" style="background:#6c757d; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cancel</button>
+                        </div>
+                    `
+                        : ""
+                    }
+                </div>`;
+        }
+      }
+
+      // Combine everything
+      content.innerHTML = `
+          <div class="header-row">
+            <h2>Current Application Status</h2>
+            <span class="status-badge ${app.status
+              .toLowerCase()
+              .replace(/\s+/g, "-")}">${app.status}</span>
+          </div>
+          <div class="detail-group" style="margin: 10px 0;">
+            <p><strong>Position:</strong> ${app.job_position}</p>
+            <p><strong>Employer:</strong> ${app.employer_name}</p>
+            <p><strong>Applied On:</strong> ${new Date(
+              app.applied_at
+            ).toLocaleDateString()}</p>
+          </div>
+          ${interviewHtml}
+        `;
+
+      // ... [Keep cancel/close button logic] ...
       if (cancelBtn) {
         if (app.status === "Pending") {
           cancelBtn.style.display = "inline-block";
@@ -1530,18 +1560,58 @@ document.addEventListener("DOMContentLoaded", () => {
           cancelBtn.style.display = "none";
         }
       }
-
-      // <CHANGE> Make sure close button is clickable
-      if (closeBtn) {
-        closeBtn.style.display = "inline-block";
+      if (closeBtn)
         closeBtn.onclick = () => {
           modal.style.display = "none";
         };
-      }
-    } catch (error) {
-      console.error("[v0] Error in viewApplicationDetails:", error);
-      content.innerHTML = `<p class="error" style="color: #dc3545;">Failed to load details: ${error.message}</p>`;
+    } catch (e) {
+      console.error(e);
+      content.innerHTML = "<p style='color:red'>Error loading details.</p>";
     }
+  };
+
+  // --- Helper Functions ---
+
+  window.showReschedForm = (id) => {
+    document.getElementById(`intActionButtons-${id}`).style.display = "none";
+    document.getElementById(`reschedForm-${id}`).style.display = "block";
+  };
+
+  window.hideReschedForm = (id) => {
+    document.getElementById(`reschedForm-${id}`).style.display = "none";
+    document.getElementById(`intActionButtons-${id}`).style.display = "flex";
+  };
+
+  window.respondToInterview = async (id, action, notes = "") => {
+    if (!confirm(`Are you sure you want to mark this as ${action}?`)) return;
+
+    try {
+      const res = await fetch(`/applicants/api/interview/${id}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, notes }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert("Response sent successfully!");
+        document.getElementById("applicationDetailsModal").style.display =
+          "none";
+        if (typeof renderApplications === "function") renderApplications();
+      } else {
+        alert("Failed to send response");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  window.submitReschedule = async (id) => {
+    const notes = document.getElementById(`reschedReason-${id}`).value;
+    if (!notes.trim()) {
+      alert("Please enter a reason.");
+      return;
+    }
+    await respondToInterview(id, "Reschedule Requested", notes);
   };
 
   const proceedCancel = async (applicationId) => {

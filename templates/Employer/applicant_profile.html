@@ -305,28 +305,168 @@
           </button>
         </div>
         <div class="status-modal-body">
-          <p>Select the new status for this application:</p>
-          <div class="status-options">
-            <button class="status-option-btn" data-status="Pending">
-              <i class="fa-solid fa-hourglass-end"></i>
-              <span>Pending</span>
-            </button>
-            <button class="status-option-btn" data-status="Shortlisted">
-              <i class="fa-solid fa-star"></i>
-              <span>Shortlisted</span>
-            </button>
-            <button class="status-option-btn" data-status="For Interview">
-              <i class="fa-solid fa-calendar"></i>
-              <span>For Interview</span>
-            </button>
-            <button class="status-option-btn" data-status="Hired">
-              <i class="fa-solid fa-check-circle"></i>
-              <span>Hired</span>
-            </button>
-            <button class="status-option-btn" data-status="Rejected">
-              <i class="fa-solid fa-times-circle"></i>
-              <span>Rejected</span>
-            </button>
+          <div id="statusOptionsView">
+            <p>Select the new status for this application:</p>
+            <div class="status-options">
+              <button class="status-option-btn" data-status="Pending">
+                <i class="fa-solid fa-hourglass-end"></i><span>Pending</span>
+              </button>
+              <button class="status-option-btn" data-status="Shortlisted">
+                <i class="fa-solid fa-star"></i><span>Shortlisted</span>
+              </button>
+              <button class="status-option-btn" data-status="For Interview">
+                <i class="fa-solid fa-calendar"></i><span>For Interview</span>
+              </button>
+              <button class="status-option-btn" data-status="Hired">
+                <i class="fa-solid fa-check-circle"></i><span>Hired</span>
+              </button>
+              <button class="status-option-btn" data-status="Rejected">
+                <i class="fa-solid fa-times-circle"></i><span>Rejected</span>
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="interviewFormView"
+            style="display: none; text-align: left; margin-top: 10px"
+          >
+            <h4
+              style="
+                color: #7b1113;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 10px;
+              "
+            >
+              Set Interview Schedule
+            </h4>
+
+            <div
+              style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px"
+            >
+              <div>
+                <label style="font-weight: 600; font-size: 13px">Date</label>
+                <input
+                  type="date"
+                  id="intDate"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                  "
+                />
+              </div>
+              <div>
+                <label style="font-weight: 600; font-size: 13px">Time</label>
+                <input
+                  type="time"
+                  id="intTime"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                  "
+                />
+              </div>
+            </div>
+
+            <label
+              style="
+                font-weight: 600;
+                font-size: 13px;
+                margin-top: 10px;
+                display: block;
+              "
+              >Type</label
+            >
+            <select
+              id="intType"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+              "
+            >
+              <option value="In-Person">In-Person</option>
+              <option value="Virtual">Virtual</option>
+            </select>
+
+            <label
+              style="
+                font-weight: 600;
+                font-size: 13px;
+                margin-top: 10px;
+                display: block;
+              "
+              >Location / Meeting Link</label
+            >
+            <input
+              type="text"
+              id="intLocation"
+              placeholder="e.g., Office Address or Zoom Link"
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+              "
+            />
+
+            <label
+              style="
+                font-weight: 600;
+                font-size: 13px;
+                margin-top: 10px;
+                display: block;
+              "
+              >Notes</label
+            >
+            <textarea
+              id="intNotes"
+              rows="2"
+              placeholder="Instructions for the applicant..."
+              style="
+                width: 100%;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                resize: vertical;
+              "
+            ></textarea>
+
+            <div style="margin-top: 20px; display: flex; gap: 10px">
+              <button
+                id="btnBackToStatus"
+                style="
+                  flex: 1;
+                  padding: 10px;
+                  background: #ccc;
+                  border: none;
+                  border-radius: 5px;
+                  cursor: pointer;
+                "
+              >
+                Back
+              </button>
+              <button
+                id="btnSubmitSchedule"
+                style="
+                  flex: 2;
+                  padding: 10px;
+                  background: #7b1113;
+                  color: white;
+                  border: none;
+                  border-radius: 5px;
+                  font-weight: 600;
+                  cursor: pointer;
+                "
+              >
+                Confirm & Schedule
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -334,119 +474,137 @@
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        // 1. Filter Logic
         const params = new URLSearchParams(window.location.search);
         const filterJobId = params.get("job_id");
-
         if (filterJobId) {
-          const rows = document.querySelectorAll(".application-row");
-          let visibleCount = 0;
-
-          rows.forEach((row) => {
+          document.querySelectorAll(".application-row").forEach((row) => {
             if (row.dataset.jobId !== filterJobId) {
               row.style.display = "none";
             } else {
               row.style.display = "block";
+              // Optional: Add visual highlight
               row.style.border = "1px solid #d0d7de";
-              row.style.backgroundColor = "white";
-              row.style.borderRadius = "10px";
               row.style.padding = "20px";
-              row.style.transition = "0.2s ease";
-              row.style.boxShadow = "0 2px 6px rgba(0,0,0,0.08)";
-              visibleCount++;
+              row.style.borderRadius = "10px";
+              row.style.marginBottom = "15px";
             }
           });
         }
-      });
 
-      document.addEventListener("change", async (e) => {
-        const sel = e.target.closest(".status-select");
-        if (!sel) return;
-        const appId = sel.dataset.appId;
-        const newStatus = sel.value;
-        try {
-          const res = await fetch(
-            `/employers/api/applications/${appId}/status`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: newStatus }),
-            }
-          );
-          const data = await res.json();
-          if (data.success) {
-            document.getElementById(`status-${appId}`).textContent =
-              data.new_status;
-          } else {
-            alert(data.message || "Failed to update status");
+        // --- Modal Logic ---
+        let currentApplicationId = null;
+        const modal = document.getElementById("statusModal");
+        const statusView = document.getElementById("statusOptionsView");
+        const interviewView = document.getElementById("interviewFormView");
+
+        // Open Modal
+        document.addEventListener("click", function (e) {
+          const editBtn = e.target.closest(".edit-status-btn");
+          if (editBtn) {
+            currentApplicationId = editBtn.dataset.appId;
+            // Reset to status view
+            statusView.style.display = "block";
+            interviewView.style.display = "none";
+            modal.style.display = "flex";
           }
-        } catch (err) {
-          console.error(err);
-          alert("Error updating status");
-        }
-      });
+        });
 
-      let currentApplicationId = null;
-
-      // Open modal when Edit Status button is clicked
-      document.addEventListener("click", function (e) {
-        const editBtn = e.target.closest(".edit-status-btn");
-        if (editBtn) {
-          currentApplicationId = editBtn.dataset.appId;
-          document.getElementById("statusModal").style.display = "flex";
-        }
-      });
-
-      // Close modal
-      document
-        .getElementById("closeStatusModal")
-        .addEventListener("click", function () {
-          document.getElementById("statusModal").style.display = "none";
+        // Close Modal
+        function closeModal() {
+          modal.style.display = "none";
           currentApplicationId = null;
+        }
+        document
+          .getElementById("closeStatusModal")
+          .addEventListener("click", closeModal);
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) closeModal();
         });
 
-      // Close modal when clicking outside
-      document
-        .getElementById("statusModal")
-        .addEventListener("click", function (e) {
-          if (e.target === this) {
-            this.style.display = "none";
-            currentApplicationId = null;
-          }
-        });
+        // Handle Status Selection
+        document.addEventListener("click", async function (e) {
+          const statusBtn = e.target.closest(".status-option-btn");
+          if (!statusBtn || !currentApplicationId) return;
 
-      // Handle status option selection
-      document.addEventListener("click", async function (e) {
-        const statusBtn = e.target.closest(".status-option-btn");
-        if (!statusBtn || !currentApplicationId) return;
+          const newStatus = statusBtn.dataset.status;
 
-        const newStatus = statusBtn.dataset.status;
-
-        try {
-          const res = await fetch(
-            `/employers/api/applications/${currentApplicationId}/status`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ status: newStatus }),
-            }
-          );
-          const data = await res.json();
-          if (data.success) {
-            document.getElementById(
-              `status-${currentApplicationId}`
-            ).textContent = data.new_status;
-            document.getElementById("statusModal").style.display = "none";
-            currentApplicationId = null;
-            // Optional: Show success message
-            alert(
-              "Status updated successfully and applicant has been notified!"
-            );
+          if (newStatus === "For Interview") {
+            // Toggle to Interview Form
+            statusView.style.display = "none";
+            interviewView.style.display = "block";
           } else {
-            alert(data.message || "Failed to update status");
+            // Direct Update for other statuses
+            await submitStatusUpdate(newStatus, null);
           }
-        } catch (err) {
-          console.error(err);
-          alert("Error updating status");
+        });
+
+        // Handle Back Button in Interview Form
+        document
+          .getElementById("btnBackToStatus")
+          .addEventListener("click", function () {
+            interviewView.style.display = "none";
+            statusView.style.display = "block";
+          });
+
+        // Handle Submit Schedule
+        document
+          .getElementById("btnSubmitSchedule")
+          .addEventListener("click", async function () {
+            const date = document.getElementById("intDate").value;
+            const time = document.getElementById("intTime").value;
+            const type = document.getElementById("intType").value;
+            const location = document.getElementById("intLocation").value;
+            const notes = document.getElementById("intNotes").value;
+
+            if (!date || !time || !location) {
+              alert("Please fill in Date, Time, and Location.");
+              return;
+            }
+
+            const interviewDetails = { date, time, type, location, notes };
+            await submitStatusUpdate("For Interview", interviewDetails);
+          });
+
+        // Unified API Call
+        async function submitStatusUpdate(status, interviewDetails) {
+          try {
+            const payload = { status: status };
+            if (interviewDetails) payload.interview_details = interviewDetails;
+
+            const res = await fetch(
+              `/employers/api/applications/${currentApplicationId}/status`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              }
+            );
+            const data = await res.json();
+
+            if (data.success) {
+              // Update UI Text
+              const statusBadge = document.getElementById(
+                `status-${currentApplicationId}`
+              );
+              if (statusBadge) statusBadge.textContent = data.new_status;
+
+              closeModal();
+              alert(
+                status === "For Interview"
+                  ? "Interview scheduled successfully!"
+                  : "Status updated successfully!"
+              );
+
+              // Optional: Reload to see changes clearly
+              // location.reload();
+            } else {
+              alert(data.message || "Failed to update status");
+            }
+          } catch (err) {
+            console.error(err);
+            alert("Error updating status");
+          }
         }
       });
     </script>
