@@ -929,23 +929,36 @@ def mark_applicant_notification_read(notif_id):
         return jsonify({'success': False, 'message': 'DB connection failed'}), 500
 
     try:
+        # 1. Verify ownership
         row = run_query(
-            conn, 'SELECT applicant_id FROM notifications WHERE notification_id = %s', (notif_id,), fetch='one')
-        conn.close()
-        if not row or row.get('applicant_id') != applicant_id:
+            conn,
+            'SELECT applicant_id FROM notifications WHERE notification_id = %s',
+            (notif_id,),
+            fetch='one'
+        )
+
+        if not row:
+            conn.close()
             return jsonify({'success': False, 'message': 'Notification not found'}), 404
 
-        ok = mark_notification_read(notif_id)
-        if ok:
-            return jsonify({'success': True})
-        else:
-            return jsonify({'success': False, 'message': 'Failed to mark read'}), 500
-    except Exception as e:
-        try:
+        # Check if notification belongs to this applicant
+        if row.get('applicant_id') and row.get('applicant_id') != applicant_id:
             conn.close()
-        except Exception:
-            pass
-        print('[v0] Error marking notification read:', e)
+            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+        # 2. Update status directly (Reuse connection)
+        run_query(
+            conn, "UPDATE notifications SET is_read = 1 WHERE notification_id = %s", (notif_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        # Ensure connection is closed on error
+        if conn and conn.is_connected():
+            conn.close()
+        print(f'[v0] Error marking notification read: {e}')
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -1783,15 +1796,27 @@ def respond_to_interview(interview_id):
         conn.commit()
 
         # Notify Employer
+        # FIXED: Join with applications table to get the job_id
         interview = run_query(
-            conn, "SELECT employer_id, application_id FROM interview_schedules WHERE id=%s", (interview_id,), fetch='one')
+            conn,
+            """
+            SELECT s.employer_id, s.application_id, a.job_id 
+            FROM interview_schedules s
+            JOIN applications a ON s.application_id = a.id
+            WHERE s.id=%s
+            """,
+            (interview_id,),
+            fetch='one'
+        )
+
         if interview:
             from .notifications import create_notification
             create_notification(
                 notification_type='job_application',
                 title=f'Interview {action}',
                 message=f"Applicant has {action.lower()} the interview.",
-                related_ids=[interview['application_id']],
+                # CHANGED: Use job_id for correct redirection
+                related_ids=[interview['job_id']],
                 employer_id=interview['employer_id']
             )
 

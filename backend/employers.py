@@ -1857,11 +1857,8 @@ def get_job_applicants_api(job_id):
         if not job:
             return {'error': 'Job not found'}, 404
 
-        print("DEBUG SESSION employer_id:", session.get("employer_id"))
-        print("DEBUG Expected employer_id:", employer_id)
-        print("DEBUG job_id:", job_id)
-
         # Get fresh applicants data from database
+        # UPDATED QUERY: Added interview_status subquery
         applicants = run_query(
             conn,
             """
@@ -1874,7 +1871,8 @@ def get_job_applicants_api(job_id):
               ap.profile_pic_path,
               ap.email,
               ap.phone,
-              ap.city
+              ap.city,
+              (SELECT status FROM interview_schedules WHERE application_id = a.id ORDER BY created_at DESC LIMIT 1) as interview_status
             FROM applications a
             JOIN applicants ap ON a.applicant_id = ap.applicant_id
             WHERE a.job_id = %s
@@ -1896,7 +1894,8 @@ def get_job_applicants_api(job_id):
                 'profile_pic_path': app['profile_pic_path'],
                 'email': app['email'],
                 'phone': app['phone'],
-                'city': app['city']
+                'city': app['city'],
+                'interview_status': app['interview_status']
             })
 
         return {'applicants': applicants_list}, 200
@@ -2197,7 +2196,9 @@ def mark_notification_read_by_id(notification_id):
 def job_applicants(job_id):
     """Show list of applicants who applied to a given job (employer only)."""
     if 'employer_id' not in session:
-        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+        flash('Please log in to access this page.', 'warning')
+        # Fixed redirect to home instead of login loop
+        return redirect(url_for('home'))
 
     employer_id = session['employer_id']
     conn = create_connection()
@@ -2213,6 +2214,7 @@ def job_applicants(job_id):
             flash('Job not found or you do not have permission to view it.', 'danger')
             return redirect(url_for('employers.application_management'))
 
+        # UPDATED QUERY: Include interview_status subquery
         applicants = run_query(
             conn,
             """
@@ -2226,7 +2228,8 @@ def job_applicants(job_id):
               ap.profile_pic_path,
               ap.email,
               ap.phone,
-              ap.city
+              ap.city,
+              (SELECT status FROM interview_schedules WHERE application_id = a.id ORDER BY created_at DESC LIMIT 1) as interview_status
             FROM applications a
             JOIN applicants ap ON a.applicant_id = ap.applicant_id
             WHERE a.job_id = %s
@@ -2527,3 +2530,67 @@ def get_job_counts():
         except Exception:
             pass
         return jsonify({'success': False, 'message': 'Failed to fetch counts'}), 500
+
+
+@employers_bp.route('/api/applications/<int:application_id>/cancel_interview', methods=['POST'])
+def cancel_interview_schedule(application_id):
+    if 'employer_id' not in session:
+        return jsonify({'success': False, 'message': 'Not logged in'}), 401
+
+    employer_id = session['employer_id']
+    conn = create_connection()
+    try:
+        # 1. Verify ownership and get details
+        app_row = run_query(
+            conn,
+            """
+            SELECT a.id, a.job_id, a.applicant_id, a.status, j.employer_id, j.job_position 
+            FROM applications a 
+            JOIN jobs j ON a.job_id = j.job_id 
+            WHERE a.id = %s
+            """,
+            (application_id,),
+            fetch='one'
+        )
+
+        if not app_row or app_row.get('employer_id') != employer_id:
+            return jsonify({'success': False, 'message': 'Permission denied'}), 403
+
+        # 2. Cancel the Interview Schedule
+        # We update the latest active schedule to 'Cancelled'
+        run_query(conn, """
+            UPDATE interview_schedules 
+            SET status = 'Cancelled', notes = CONCAT(notes, ' [Cancelled by Employer]') 
+            WHERE application_id = %s AND status != 'Cancelled'
+        """, (application_id,))
+
+        # 3. Reset Application Status to 'Pending'
+        run_query(
+            conn, "UPDATE applications SET status = 'Pending' WHERE id = %s", (application_id,))
+
+        # 4. Log History
+        run_query(conn, """
+            INSERT INTO applications_history 
+            (application_id, old_status, new_status, changed_by, note) 
+            VALUES (%s, 'For Interview', 'Pending', %s, 'Interview Cancelled by Employer')
+        """, (application_id, employer_id))
+
+        conn.commit()
+
+        # 5. Notify Applicant
+        from .notifications import create_notification
+        create_notification(
+            notification_type='job_application',
+            title='Interview Cancelled',
+            message=f"The employer has cancelled the interview for {app_row.get('job_position')}. The application status has been reverted to Pending.",
+            related_ids=[app_row.get('job_id')],
+            applicant_id=app_row.get('applicant_id')
+        )
+
+        return jsonify({'success': True, 'message': 'Interview cancelled successfully', 'new_status': 'Pending'})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        conn.close()

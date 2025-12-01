@@ -254,6 +254,69 @@
       </div>
     </footer>
 
+    <div id="applicationDetailsModal" class="modal" style="display: none">
+      <div
+        class="modal-content"
+        style="
+          background: #fff;
+          border-radius: 12px;
+          padding: 30px;
+          width: 50%;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+          position: relative;
+        "
+      >
+        <div id="applicationDetailsContent">
+          <div style="text-align: center; padding: 20px">
+            Loading details...
+          </div>
+        </div>
+
+        <div
+          class="modal-actions"
+          id="applicationModalActions"
+          style="
+            margin-top: 20px;
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+          "
+        >
+          <button
+            id="applicationCancelBtn"
+            class="btn btn-danger"
+            style="
+              display: none;
+              margin-right: 10px;
+              background-color: #dc3545;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
+          >
+            Cancel Application
+          </button>
+          <button
+            id="applicationCloseBtn"
+            class="btn btn-secondary"
+            style="
+              background-color: #6c757d;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
+            onclick="document.getElementById('applicationDetailsModal').style.display='none'"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
     <!-- Scripts -->

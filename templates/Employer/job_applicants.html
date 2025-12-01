@@ -163,9 +163,24 @@
               <h3 style="margin: 0; font-size: 1.1rem">
                 {{ applicant.first_name }} {{ applicant.last_name }}
               </h3>
+
               <span class="status-badge"
                 >{{ applicant.application_status or 'Pending' }}</span
               >
+
+              {% if applicant.interview_status %}
+              <span
+                class="status-badge"
+                style="
+                  background-color: #e3f2fd;
+                  color: #0277bd;
+                  border: 1px solid #b3e5fc;
+                  margin-left: 5px;
+                "
+              >
+                Interview: {{ applicant.interview_status }}
+              </span>
+              {% endif %}
             </div>
           </div>
 

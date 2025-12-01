@@ -1468,7 +1468,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // <CHANGE> FIXED: Properly handle the existing modal buttons and make them work
   window.viewApplicationDetails = async (applicationId) => {
-    // ... [Keep existing code to find modal elements and check nulls] ...
     const modal = document.getElementById("applicationDetailsModal");
     const content = document.getElementById("applicationDetailsContent");
     const cancelBtn = document.getElementById("applicationCancelBtn");
@@ -1488,6 +1487,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       let interviewHtml = "";
 
+      // Only fetch interview details if status is 'For Interview'
       if (app.status === "For Interview") {
         const intRes = await fetch(
           `/applicants/api/applications/${app.id}/interview`
@@ -1496,62 +1496,80 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (intData.success && intData.interview) {
           const i = intData.interview;
-          // Render standard HTML interface
+          // Format date for display
+          const dateObj = new Date(i.interview_date);
+          const dateStr = isNaN(dateObj)
+            ? i.interview_date
+            : dateObj.toLocaleDateString();
+
           interviewHtml = `
-                <div style="margin-top:20px; background:#f0f9ff; padding:15px; border-radius:8px; border:1px solid #bae6fd;">
-                    <h4 style="color:#0284c7; margin-top:0; border-bottom:1px solid #bae6fd; padding-bottom:10px;">📅 Interview Invitation</h4>
-                    <p><strong>Date:</strong> ${i.interview_date} @ ${
+                <div style="margin-top:20px; background:#fff; padding:20px; border-radius:8px; border:1px solid #e0e0e0; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <h4 style="color:#7b1113; margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px; font-size: 1.1rem;">
+                        <i class="fa-solid fa-calendar-check"></i> Interview Details
+                    </h4>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 10px; font-size: 0.95rem;">
+                        <p style="margin:0;"><strong>Date & Time:</strong> ${dateStr} @ ${
             i.interview_time
           }</p>
-                    <p><strong>Type:</strong> ${i.interview_type}</p>
-                    <p><strong>Location/Link:</strong> <a href="${
-                      i.location_link
-                    }" target="_blank">${i.location_link}</a></p>
-                    <p><strong>Notes:</strong> ${i.notes || "None"}</p>
-                    <p><strong>Current Status:</strong> <span style="background:#fff3cd; padding:2px 6px; border-radius:4px;">${
-                      i.status
-                    }</span></p>
+                        <p style="margin:0;"><strong>Type:</strong> ${
+                          i.interview_type
+                        }</p>
+                        <p style="margin:0;"><strong>Location/Link:</strong> <span style="color: #006341;">${
+                          i.location_link
+                        }</span></p>
+                        <p style="margin:0;"><strong>Notes:</strong> ${
+                          i.notes || "No additional notes."
+                        }</p>
+                        <p style="margin:0;"><strong>Status:</strong> <span class="status-badge pending">${
+                          i.status
+                        }</span></p>
+                    </div>
                     
                     ${
                       i.status === "Pending"
                         ? `
-                        <div id="intActionButtons-${i.id}" style="margin-top:15px; display:flex; gap:10px;">
-                            <button onclick="respondToInterview(${i.id}, 'Confirmed')" style="background:#28a745; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Confirm</button>
-                            <button onclick="respondToInterview(${i.id}, 'Declined')" style="background:#dc3545; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Decline</button>
-                            <button onclick="showReschedForm(${i.id})" style="background:#ffc107; color:black; border:none; padding:8px 12px; border-radius:4px; cursor:pointer;">Reschedule</button>
+                        <div id="intActionButtons-${i.id}" style="margin-top:20px; display:flex; gap:10px; flex-wrap: wrap;">
+                            <button onclick="respondToInterview(${i.id}, 'Confirmed')" class="btn" style="background:#006341; color:white; flex:1;">Confirm</button>
+                            <button onclick="respondToInterview(${i.id}, 'Declined')" class="btn" style="background:#dc3545; color:white; flex:1;">Decline</button>
+                            <button onclick="showReschedForm(${i.id})" class="btn" style="background:#ffc107; color:black; flex:1;">Reschedule</button>
                         </div>
 
-                        <div id="reschedForm-${i.id}" style="display:none; margin-top:10px;">
-                            <textarea id="reschedReason-${i.id}" placeholder="Reason & Preferred Time..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; margin-bottom:5px;"></textarea>
-                            <button onclick="submitReschedule(${i.id})" style="background:#007bff; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Submit Request</button>
-                            <button onclick="hideReschedForm(${i.id})" style="background:#6c757d; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cancel</button>
+                        <div id="reschedForm-${i.id}" style="display:none; margin-top:15px;">
+                            <label style="font-size: 0.9rem; font-weight: 600;">Reason & Preferred Time:</label>
+                            <textarea id="reschedReason-${i.id}" rows="3" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px; resize: vertical;"></textarea>
+                            <div style="display:flex; gap:10px;">
+                                <button onclick="submitReschedule(${i.id})" class="btn" style="background:#006341; color:white; flex:1;">Submit</button>
+                                <button onclick="hideReschedForm(${i.id})" class="btn" style="background:#6c757d; color:white; flex:1;">Cancel</button>
+                            </div>
                         </div>
                     `
-                        : ""
+                        : `<p style="margin-top:15px; font-style:italic; color:#666;">You have ${i.status.toLowerCase()} this interview.</p>`
                     }
                 </div>`;
         }
       }
 
-      // Combine everything
+      // Combine header, details, and interview HTML
       content.innerHTML = `
           <div class="header-row">
-            <h2>Current Application Status</h2>
+            <h2 style="color: #333;">${app.job_position}</h2>
             <span class="status-badge ${app.status
               .toLowerCase()
               .replace(/\s+/g, "-")}">${app.status}</span>
           </div>
-          <div class="detail-group" style="margin: 10px 0;">
-            <p><strong>Position:</strong> ${app.job_position}</p>
-            <p><strong>Employer:</strong> ${app.employer_name}</p>
-            <p><strong>Applied On:</strong> ${new Date(
+          <div class="detail-group" style="margin: 10px 0; color: #555;">
+            <p style="margin: 5px 0;"><i class="fa-solid fa-building"></i> ${
+              app.employer_name
+            }</p>
+            <p style="margin: 5px 0;"><i class="fa-solid fa-clock"></i> Applied: ${new Date(
               app.applied_at
             ).toLocaleDateString()}</p>
           </div>
           ${interviewHtml}
         `;
 
-      // ... [Keep cancel/close button logic] ...
+      // Button visibility logic
       if (cancelBtn) {
         if (app.status === "Pending") {
           cancelBtn.style.display = "inline-block";
@@ -1566,7 +1584,8 @@ document.addEventListener("DOMContentLoaded", () => {
         };
     } catch (e) {
       console.error(e);
-      content.innerHTML = "<p style='color:red'>Error loading details.</p>";
+      content.innerHTML =
+        "<p style='color:red; text-align:center; padding:20px;'>Error loading details.</p>";
     }
   };
 
@@ -1585,6 +1604,8 @@ document.addEventListener("DOMContentLoaded", () => {
   window.respondToInterview = async (id, action, notes = "") => {
     if (!confirm(`Are you sure you want to mark this as ${action}?`)) return;
 
+    showLoader("Sending response...");
+
     try {
       const res = await fetch(`/applicants/api/interview/${id}/respond`, {
         method: "POST",
@@ -1592,23 +1613,27 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ action, notes }),
       });
       const data = await res.json();
+      hideLoader();
+
       if (data.success) {
-        alert("Response sent successfully!");
+        showFlash("Response sent successfully!", "success"); // FIXED
         document.getElementById("applicationDetailsModal").style.display =
           "none";
         if (typeof renderApplications === "function") renderApplications();
       } else {
-        alert("Failed to send response");
+        showFlash("Failed to send response", "danger"); // FIXED
       }
     } catch (e) {
+      hideLoader();
       console.error(e);
+      showFlash("An error occurred", "danger"); // FIXED
     }
   };
 
   window.submitReschedule = async (id) => {
     const notes = document.getElementById(`reschedReason-${id}`).value;
     if (!notes.trim()) {
-      alert("Please enter a reason.");
+      showFlash("Please enter a reason for rescheduling.", "warning"); // FIXED
       return;
     }
     await respondToInterview(id, "Reschedule Requested", notes);

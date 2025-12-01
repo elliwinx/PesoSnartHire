@@ -5,16 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const cancelConfirmModal = document.getElementById("cancelConfirmModal");
 
   console.log("[v0] applicant_notifications.js loaded");
-  console.log(
-    "[v0] Modal elements found - notif:",
-    !!modal,
-    "job:",
-    !!jobDetailsModal,
-    "confirm:",
-    !!cancelConfirmModal
-  );
 
-  // Consolidated function to mark notification as read
+  // 1. Consolidated function to mark notification as read
   async function markNotificationAsRead(notifId) {
     try {
       await fetch(`/applicants/api/notifications/${notifId}/read`, {
@@ -22,11 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
       });
 
-      // Update dot after marking as read
+      // Update dot immediately
       if (window.checkAndUpdateNotificationDot) {
         window.checkAndUpdateNotificationDot();
       }
 
+      // Visual update
       const card = document.querySelector(`[data-notif-id="${notifId}"]`);
       if (card) {
         const badge = card.querySelector(".badge-new");
@@ -38,71 +31,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // 2. Cancel Logic Variables
   let currentApplicationId = null;
 
   window.cancelApplication = (applicationId) => {
-    console.log("[v0] cancelApplication called with ID:", applicationId);
-
     currentApplicationId = applicationId;
     if (cancelConfirmModal) {
-      console.log("[v0] Showing cancel confirmation modal");
       cancelConfirmModal.style.display = "flex";
-    } else {
-      console.error("[v0] cancelConfirmModal not found!");
     }
   };
 
   window.proceedCancel = async (applicationId) => {
     try {
-      console.log("[v0] proceedCancel called for application:", applicationId);
       window.showLoader("Cancelling application...");
-
       const response = await fetch(
         `/applicants/api/cancel-application/${applicationId}`,
         {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
         }
       );
 
-      console.log("[v0] Cancel API response status:", response.status);
       window.hideLoader();
 
       if (response.ok) {
         const data = await response.json();
-        console.log("[v0] Cancel response data:", data);
-
         if (data.success) {
-          console.log("[v0] Application cancelled successfully");
           window.showFlash("Application cancelled successfully", "success");
           setTimeout(() => window.location.reload(), 1500);
         } else {
-          console.error("[v0] Cancel failed:", data.message);
           window.showFlash(
             data.message || "Failed to cancel application",
             "error"
           );
         }
       } else {
-        const errorText = await response.text();
-        console.error("[v0] HTTP error:", response.status, errorText);
-        window.showFlash(
-          "Failed to cancel application with status: " + response.status,
-          "error"
-        );
+        window.showFlash("Failed to cancel application", "error");
       }
     } catch (error) {
       window.hideLoader();
-      console.error("[v0] Error in proceedCancel:", error);
-      window.showFlash(
-        "An error occurred while cancelling the application",
-        "error"
-      );
+      console.error("Error cancelling application:", error);
+      window.showFlash("An error occurred", "error");
     }
   };
 
-  // Delegate view button clicks
+  // 3. Main View Button Handler (The Fix)
   document.body.addEventListener("click", async (e) => {
     const btn = e.target.closest(".btn-view-notif, .view-btn");
     if (!btn) return;
@@ -118,23 +92,63 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const jobId = related && related.length ? related[0] : null;
 
-    console.log(
-      "[v0] View button clicked - notifId:",
-      notifId,
-      "jobId:",
-      jobId
-    );
-
-    // Mark as read using consolidated function
+    // Mark read first
     await markNotificationAsRead(notifId);
+
+    // --- DETECTION LOGIC START ---
+    // Find the card to read its title/content
+    const card = btn.closest(".notification-card, .card");
+    let notifText = "";
+    if (card) {
+      const titleEl =
+        card.querySelector(".details h3") || card.querySelector("h3");
+      if (titleEl) notifText = titleEl.textContent.toLowerCase();
+    }
+
+    // Determine if this is an Interview or Status update
+    const isInterviewOrStatus =
+      notifText.includes("interview") ||
+      notifText.includes("status") ||
+      notifText.includes("application");
+    // --- DETECTION LOGIC END ---
 
     if (jobId) {
       try {
+        // We must fetch the job HTML to find the Application ID (hidden in metadata)
         const response = await fetch(`/applicants/job/${jobId}`, {
           credentials: "same-origin",
         });
+
         if (response.ok) {
           const html = await response.text();
+
+          // Extract Application ID from the response HTML
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, "text/html");
+          const metaDiv = doc.getElementById("applicationMeta");
+          const applicationId = metaDiv ? metaDiv.dataset.applicationId : null;
+
+          const isValidAppId =
+            applicationId && applicationId !== "None" && applicationId !== "";
+
+          // >>> ROUTING FIX <<<
+          // If it's an Interview/Status Notification AND we have an Application ID,
+          // Open the APPLICATION Modal (via applicant.js function) instead of Job Modal.
+          if (
+            isInterviewOrStatus &&
+            isValidAppId &&
+            typeof window.viewApplicationDetails === "function"
+          ) {
+            console.log(
+              "[v0] Routing to Application Details for ID:",
+              applicationId
+            );
+            if (modal) modal.style.display = "none"; // Close generic notif modal if open
+            window.viewApplicationDetails(applicationId);
+            return; // STOP here, do not show Job Details
+          }
+
+          // Else: Fallback to showing Job Details (Description, Salary, etc.)
           if (jobDetailsModal) {
             const modalBody =
               jobDetailsModal.querySelector(".modal-body") || jobDetailsModal;
@@ -146,189 +160,78 @@ document.addEventListener("DOMContentLoaded", () => {
                   (jobDetailsModal.style.display = "none");
               }
             }
+
             if (modal) modal.style.display = "none";
-            jobDetailsModal.style.display = "flex";
-            jobDetailsModal.style.display = "block";
+            jobDetailsModal.style.display = "flex"; // or "block" depending on your CSS
 
-            const applicationMeta =
-              jobDetailsModal.querySelector("#applicationMeta");
-
-            if (!applicationMeta) {
-              console.error(
-                "ERROR: Missing applicationMeta element in job modal HTML"
-              );
-              return;
-            }
-
-            const applicationId = applicationMeta.dataset.applicationId;
-
-            // Check if applicationId is valid (not null, undefined, empty, or the string "None")
-            const isValidApplicationId =
-              applicationId &&
-              applicationId !== "None" &&
-              applicationId !== "null" &&
-              applicationId !== "";
-
-            console.log("[v0] Extracted applicationId:", applicationId);
-            console.log("[v0] Is valid applicationId:", isValidApplicationId);
-
+            // Setup Cancel Button inside Job Modal (if needed)
             const cancelBtn = jobDetailsModal.querySelector(
               "#jobDetailsModalCancelBtn"
             );
-
             if (cancelBtn) {
-              if (isValidApplicationId) {
-                // Only show cancel button if there's a valid application
+              if (isValidAppId) {
                 cancelBtn.style.display = "inline-block";
                 cancelBtn.dataset.applicationId = applicationId;
                 currentApplicationId = applicationId;
-                cancelBtn.onclick = () => {
-                  console.log("[v0] Job details cancel button clicked");
+                cancelBtn.onclick = () =>
                   window.cancelApplication(applicationId);
-                };
               } else {
-                // Hide cancel button if no application exists
                 cancelBtn.style.display = "none";
-                currentApplicationId = null;
-                console.log("[v0] No application found, hiding cancel button");
               }
-            } else {
-              console.warn(
-                "[v0] jobDetailsModalCancelBtn not found in modal body"
-              );
             }
           }
           return;
         }
       } catch (err) {
-        console.error("[v0] Failed to fetch job details:", err);
+        console.error("Failed to fetch job details:", err);
       }
     }
 
+    // 4. Fallback: Generic Notification Modal (Text Only)
     if (!modal) return;
     const titleEl = modal.querySelector(".modal-title");
     const bodyEl = modal.querySelector(".modal-body");
     const jobLink = modal.querySelector(".modal-job-link");
-    const cancelBtn = modal.querySelector("#notifModalCancelBtn");
+    const notifCancelBtn = modal.querySelector("#notifModalCancelBtn");
 
-    const details = document.querySelector(
-      `[data-notif-id="${notifId}"] .details`
-    );
-    titleEl.textContent = details
-      ? details.querySelector("h3").childNodes[0].textContent.trim()
-      : "Notification";
-    bodyEl.textContent = details
-      ? details.querySelector("p").textContent.trim()
-      : "";
+    const details = card ? card.querySelector(".details") : null;
 
-    if (jobId) {
-      jobLink.href = `/job/${jobId}`;
-      jobLink.style.display = "inline-block";
-    } else {
-      jobLink.style.display = "none";
+    if (titleEl) {
+      titleEl.textContent = details
+        ? details.querySelector("h3").textContent.trim()
+        : "Notification";
+    }
+    if (bodyEl) {
+      bodyEl.textContent = details
+        ? details.querySelector("p").textContent.trim()
+        : "";
     }
 
-    if (jobId) {
-      cancelBtn.style.display = "inline-block";
-      cancelBtn.dataset.applicationId = jobId;
-    } else {
-      cancelBtn.style.display = "none";
-    }
+    if (jobLink) jobLink.style.display = "none";
+    if (notifCancelBtn) notifCancelBtn.style.display = "none";
 
     modal.style.display = "block";
   });
 
-  const jobDetailsCancelBtn = document.getElementById(
-    "jobDetailsModalCancelBtn"
-  );
-  if (jobDetailsCancelBtn) {
-    jobDetailsCancelBtn.addEventListener("click", () => {
-      const applicationId = jobDetailsCancelBtn.dataset.applicationId;
-      console.log(
-        "[v0] jobDetailsModalCancelBtn clicked with applicationId:",
-        applicationId
-      );
-      // Validate applicationId before proceeding
-      const isValidApplicationId =
-        applicationId &&
-        applicationId !== "None" &&
-        applicationId !== "null" &&
-        applicationId !== "";
-      if (isValidApplicationId && window.cancelApplication) {
-        jobDetailsModal.style.display = "none";
-        window.cancelApplication(applicationId);
-      } else {
-        console.error("[v0] Invalid applicationId, cannot cancel");
-        window.showFlash("No application found to cancel", "error");
-      }
-    });
-  }
-
-  const cancelBtn = document.getElementById("notifModalCancelBtn");
-  if (cancelBtn) {
-    cancelBtn.addEventListener("click", () => {
-      const applicationId = cancelBtn.dataset.applicationId;
-      console.log(
-        "[v0] notifModalCancelBtn clicked with applicationId:",
-        applicationId
-      );
-      // Validate applicationId before proceeding
-      const isValidApplicationId =
-        applicationId &&
-        applicationId !== "None" &&
-        applicationId !== "null" &&
-        applicationId !== "";
-      if (isValidApplicationId && window.cancelApplication) {
-        modal.style.display = "none";
-        window.cancelApplication(applicationId);
-      } else {
-        console.error("[v0] Invalid applicationId, cannot cancel");
-        window.showFlash("No application found to cancel", "error");
-      }
-    });
-  }
-
+  // --- Confirm Cancel Modal Buttons ---
   const confirmYesBtn = document.getElementById("confirmCancelYes");
   const confirmNoBtn = document.getElementById("confirmCancelNo");
 
   if (confirmYesBtn) {
     confirmYesBtn.addEventListener("click", () => {
-      console.log(
-        "[v0] Confirm YES clicked for applicationId:",
-        currentApplicationId
-      );
-      if (cancelConfirmModal) {
-        cancelConfirmModal.style.display = "none";
-      }
-      // Validate applicationId before proceeding
-      const isValidApplicationId =
-        currentApplicationId &&
-        currentApplicationId !== "None" &&
-        currentApplicationId !== "null" &&
-        currentApplicationId !== "";
-      if (window.proceedCancel && isValidApplicationId) {
-        window.proceedCancel(currentApplicationId);
-      } else {
-        console.error(
-          "[v0] proceedCancel function not found or invalid applicationId!",
-          currentApplicationId
-        );
-        window.showFlash("No valid application found to cancel", "error");
-      }
+      if (cancelConfirmModal) cancelConfirmModal.style.display = "none";
+      if (currentApplicationId) window.proceedCancel(currentApplicationId);
     });
   }
 
   if (confirmNoBtn) {
     confirmNoBtn.addEventListener("click", () => {
-      console.log("[v0] Confirm NO clicked");
-      if (cancelConfirmModal) {
-        cancelConfirmModal.style.display = "none";
-      }
+      if (cancelConfirmModal) cancelConfirmModal.style.display = "none";
       currentApplicationId = null;
     });
   }
 
-  // Modal close handlers
+  // --- Close Handlers ---
   const closeBtn = document.getElementById("notifModalClose");
   if (closeBtn)
     closeBtn.addEventListener("click", () => {
@@ -350,22 +253,11 @@ document.addEventListener("DOMContentLoaded", () => {
       cancelConfirmModal.style.display = "none";
   });
 
-  // Declare utility functions if not already defined (fallback for notif page)
-  if (typeof window.showLoader !== "function") {
-    window.showLoader = (message) => {
-      console.log("[v0] Loader shown:", message);
-    };
-  }
-
-  if (typeof window.hideLoader !== "function") {
-    window.hideLoader = () => {
-      console.log("[v0] Loader hidden");
-    };
-  }
-
-  if (typeof window.showFlash !== "function") {
-    window.showFlash = (message, type) => {
-      console.log(`[v0] Flash message: ${message} (type: ${type})`);
-    };
-  }
+  // Polyfills
+  if (typeof window.showLoader !== "function")
+    window.showLoader = () => console.log("Loading...");
+  if (typeof window.hideLoader !== "function")
+    window.hideLoader = () => console.log("Loaded.");
+  if (typeof window.showFlash !== "function")
+    window.showFlash = (m, t) => alert(m);
 });

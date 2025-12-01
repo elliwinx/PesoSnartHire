@@ -82,7 +82,6 @@
             Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
             endif %}!
           </h1>
-          <!-- You can add the employer's name here using python-->
           <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
@@ -97,12 +96,6 @@
             ></a>
           </div>
         </div>
-        <!--<div class="right">
-          <i class="fa-solid fa-bars" id="menuToggle"></i>
-          <div class="dropdown-menu" id="dropdownMenu">
-            <a href="#" id="reportAccountBtn" data-report-applicant-trigger>Report Applicant</a>
-          </div>
-        </div>-->
       </div>
     </section>
 
@@ -228,7 +221,6 @@
           <p><strong>Updated At:</strong> {{ applicant.updated_at }}</p>
         </div>
 
-        <!-- Employer: Applications list with per-application status control -->
         <div class="section">
           <h3>Applications</h3>
           {% if not applications or applications|length == 0 %}
@@ -236,7 +228,6 @@
           {% else %}
           <div class="applications-list">
             {% for app in applications %}
-            <!-- Added data-app-id for modal functionality -->
             <div
               class="application-row"
               data-job-id="{{ app.job_id }}"
@@ -322,6 +313,25 @@
               </button>
               <button class="status-option-btn" data-status="Rejected">
                 <i class="fa-solid fa-times-circle"></i><span>Rejected</span>
+              </button>
+            </div>
+
+            <div
+              id="cancelInterviewContainer"
+              style="
+                display: none;
+                margin-top: 20px;
+                border-top: 1px solid #eee;
+                padding-top: 15px;
+              "
+            >
+              <button
+                id="btnCancelInterview"
+                class="status-btn"
+                style="background-color: #dc3545; color: white; width: 100%"
+              >
+                <i class="fa-solid fa-calendar-xmark"></i> Cancel Scheduled
+                Interview
               </button>
             </div>
           </div>
@@ -474,6 +484,19 @@
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
+        function showEmployerFlash(message, type = "success") {
+          const flashDiv = document.createElement("div");
+          flashDiv.className = `flash ${type}`;
+          flashDiv.innerHTML = `${message} <button class="close" onclick="this.parentElement.remove()">×</button>`;
+          document.body.insertBefore(flashDiv, document.body.firstChild);
+
+          // Auto remove after 3 seconds
+          setTimeout(() => {
+            flashDiv.classList.add("fade-out");
+            setTimeout(() => flashDiv.remove(), 500);
+          }, 3000);
+        }
+
         // 1. Filter Logic
         const params = new URLSearchParams(window.location.search);
         const filterJobId = params.get("job_id");
@@ -497,18 +520,84 @@
         const modal = document.getElementById("statusModal");
         const statusView = document.getElementById("statusOptionsView");
         const interviewView = document.getElementById("interviewFormView");
+        const cancelInterviewContainer = document.getElementById(
+          "cancelInterviewContainer"
+        );
+        const btnCancelInterview =
+          document.getElementById("btnCancelInterview");
 
         // Open Modal
         document.addEventListener("click", function (e) {
           const editBtn = e.target.closest(".edit-status-btn");
           if (editBtn) {
             currentApplicationId = editBtn.dataset.appId;
-            // Reset to status view
+
+            // Get current status from the UI to decide if we show the Cancel button
+            const statusBadge = document.getElementById(
+              `status-${currentApplicationId}`
+            );
+            const currentStatus = statusBadge
+              ? statusBadge.textContent.trim()
+              : "";
+
+            // Show/Hide Cancel Interview Button
+            if (currentStatus === "For Interview") {
+              cancelInterviewContainer.style.display = "block";
+            } else {
+              cancelInterviewContainer.style.display = "none";
+            }
+
+            // Reset views
             statusView.style.display = "block";
             interviewView.style.display = "none";
             modal.style.display = "flex";
           }
         });
+
+        if (btnCancelInterview) {
+          btnCancelInterview.addEventListener("click", async function () {
+            if (
+              !confirm(
+                "Are you sure you want to cancel this interview? The application status will revert to Pending."
+              )
+            ) {
+              return;
+            }
+
+            try {
+              const res = await fetch(
+                `/employers/api/applications/${currentApplicationId}/cancel_interview`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
+              const data = await res.json();
+
+              if (data.success) {
+                // Update UI
+                const statusBadge = document.getElementById(
+                  `status-${currentApplicationId}`
+                );
+                if (statusBadge) statusBadge.textContent = data.new_status;
+
+                closeModal();
+                showEmployerFlash(
+                  "Interview cancelled successfully.",
+                  "success"
+                );
+              } else {
+                showEmployerFlash(
+                  data.message || "Failed to cancel interview",
+                  "danger"
+                );
+              }
+            } catch (err) {
+              console.error(err);
+              showEmployerFlash("An error occurred", "danger");
+            }
+          });
+        }
 
         // Close Modal
         function closeModal() {
@@ -558,7 +647,10 @@
             const notes = document.getElementById("intNotes").value;
 
             if (!date || !time || !location) {
-              alert("Please fill in Date, Time, and Location.");
+              showEmployerFlash(
+                "Please fill in Date, Time, and Location.",
+                "danger"
+              ); // FIXED
               return;
             }
 
@@ -590,20 +682,22 @@
               if (statusBadge) statusBadge.textContent = data.new_status;
 
               closeModal();
-              alert(
-                status === "For Interview"
-                  ? "Interview scheduled successfully!"
-                  : "Status updated successfully!"
-              );
 
-              // Optional: Reload to see changes clearly
-              // location.reload();
+              showEmployerFlash(
+                status === "For Interview"
+                  ? "Interview scheduled/updated successfully!"
+                  : "Status updated successfully!",
+                "success"
+              );
             } else {
-              alert(data.message || "Failed to update status");
+              showEmployerFlash(
+                data.message || "Failed to update status",
+                "danger"
+              ); // FIXED
             }
           } catch (err) {
             console.error(err);
-            alert("Error updating status");
+            showEmployerFlash("Error updating status", "danger");
           }
         }
       });
@@ -674,9 +768,7 @@
         </div>
       </div>
     </footer>
-    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
-    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/report-modal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/notification_dot.js') }}"></script>
