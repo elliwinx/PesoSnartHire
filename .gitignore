@@ -28,6 +28,7 @@ wheels/
 venv/
 env/
 ENV/
+flask_session/
 
 # Environment Variables
 .env

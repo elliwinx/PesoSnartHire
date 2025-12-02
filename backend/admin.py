@@ -20,6 +20,50 @@ logger = logging.getLogger(__name__)
 admin_bp = Blueprint("admin", __name__)
 
 
+@admin_bp.before_request
+def restrict_admin_access():
+    """
+    Checks session before every request.
+    - API routes return 401 JSON.
+    - Page routes redirect to Login.
+    """
+    # 1. Allow Login & Static files
+    allowed_endpoints = ['admin.login', 'admin.static']
+    if request.endpoint in allowed_endpoints:
+        return
+
+    # 2. Check Auth
+    if 'admin_id' not in session:
+
+        # 3. IDENTIFY API REQUESTS
+        # These paths should return JSON error, NOT redirect.
+        # (We check prefixes because you have many variations like /approve-reupload/1, /approve-reupload/2...)
+        api_prefixes = [
+            '/admin/api',
+            '/admin/get_job_details',
+            '/admin/test-job-report',
+            '/admin/job_reports',
+            '/admin/applicant_reports',
+            '/admin/update_',
+            '/admin/approve-',
+            '/admin/reject-',
+            '/admin/delete-',
+            '/admin/reupload-',
+        ]
+
+        is_api_call = (
+            request.is_json or
+            any(request.path.startswith(prefix) for prefix in api_prefixes)
+        )
+
+        if is_api_call:
+            return jsonify({"success": False, "message": "Unauthorized: Session expired."}), 401
+
+        # 4. Standard Pages -> Redirect to Login
+        flash("Please log in to access the admin area.", "danger")
+        return redirect(url_for('admin.login'))
+
+
 def _to_int(value):
     """Convert DB numeric values (Decimal, None) to plain int safely."""
     try:
@@ -393,8 +437,6 @@ def build_applications_filters(args, alias="a"):
 @admin_bp.route("/api/analytics/export", methods=["POST", "GET"])
 def analytics_export():
     """Export filtered data for a module as CSV, XLSX, or PDF."""
-    if "admin_id" not in session:
-        return jsonify({"success": False, "message": "Unauthorized"}), 401
 
     # Handle both POST (JSON) and GET (query params) for PDF
     if request.method == "GET":
@@ -715,15 +757,11 @@ def analytics_export():
 # ===== Admin Home (Dashboard with notifications) =====
 @admin_bp.route("/home")
 def admin_home():
-    if "admin_id" not in session:  # Protect route
-        return redirect(url_for("admin.login"))
     return render_template("Admin/admin_home.html")
 
 
 @admin_bp.route("/api/analytics/summary", methods=["GET"])
 def admin_analytics_summary():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -755,8 +793,6 @@ def admin_analytics_summary():
 
 @admin_bp.route("/api/analytics/applicants-per-month", methods=["GET"])
 def admin_analytics_applicants_per_month():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     year_filter = request.args.get("year", type=int)
 
@@ -818,8 +854,6 @@ def admin_analytics_applicants_per_month():
 
 @admin_bp.route("/api/analytics/applications-by-category", methods=["GET"])
 def admin_analytics_applications_by_category():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     month_filter = request.args.get("month", type=int)
     year_filter = request.args.get("year", type=int)
@@ -870,8 +904,6 @@ def admin_analytics_applications_by_category():
 
 @admin_bp.route("/api/analytics/hiring-ratio", methods=["GET"])
 def admin_analytics_hiring_ratio():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     month_filter = request.args.get("month", type=int)
     year_filter = request.args.get("year", type=int)
@@ -923,8 +955,6 @@ def admin_analytics_hiring_ratio():
 
 @admin_bp.route("/api/filters/applicants/locations", methods=["GET"])
 def applicants_location_filters():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     level = request.args.get("level", "province").lower()
     parent = request.args.get("parent")
@@ -988,8 +1018,6 @@ def applicants_location_filters():
 
 @admin_bp.route("/api/filters/employers/locations", methods=["GET"])
 def employers_location_filters():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     level = request.args.get("level", "province").lower()
     parent = request.args.get("parent")
@@ -1053,8 +1081,6 @@ def employers_location_filters():
 
 @admin_bp.route("/api/analytics/applicants-by-province", methods=["GET"])
 def admin_analytics_applicants_by_province():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     month_filter = request.args.get("month", type=int)
     year_filter = request.args.get("year", type=int)
@@ -1116,8 +1142,6 @@ def admin_analytics_applicants_by_province():
 
 @admin_bp.route("/api/analytics/employers-by-industry", methods=["GET"])
 def admin_analytics_employers_by_industry():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1153,8 +1177,6 @@ def admin_analytics_employers_by_industry():
 @admin_bp.route("/api/analytics/applicants/summary", methods=["GET"])
 def applicants_summary():
     """Applicants volume & active count, respecting filters."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1231,8 +1253,6 @@ def applicants_summary():
 @admin_bp.route("/api/analytics/applicants/demographics", methods=["GET"])
 def applicants_demographics():
     """Applicants by sex, education, and age groups."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1326,8 +1346,6 @@ def applicants_demographics():
 @admin_bp.route("/api/analytics/applicants/location", methods=["GET"])
 def applicants_location():
     """Applicants by top cities and is_from_lipa status."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1399,8 +1417,6 @@ def applicants_location():
 @admin_bp.route("/api/analytics/applicants/experience", methods=["GET"])
 def applicants_experience():
     """Applicants by years of experience."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1562,8 +1578,6 @@ def applicants_experience():
 @admin_bp.route("/api/analytics/applicants/pwd", methods=["GET"])
 def applicants_pwd():
     """Applicants by PWD type."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1621,8 +1635,6 @@ def applicants_pwd():
 @admin_bp.route("/api/widgets/notes", methods=["GET"])
 def get_notes():
     """Get all notes for the current admin."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1664,8 +1676,6 @@ def get_notes():
 @admin_bp.route("/api/widgets/notes", methods=["POST"])
 def create_note():
     """Create a new note."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
     title = data.get("title", "").strip()
@@ -1702,8 +1712,6 @@ def create_note():
 @admin_bp.route("/api/widgets/notes/<int:note_id>", methods=["PUT"])
 def update_note(note_id):
     """Update an existing note."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
     title = data.get("title", "").strip()
@@ -1750,8 +1758,6 @@ def update_note(note_id):
 @admin_bp.route("/api/widgets/notes/<int:note_id>", methods=["DELETE"])
 def delete_note(note_id):
     """Delete a note."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1786,8 +1792,6 @@ def delete_note(note_id):
 @admin_bp.route("/api/widgets/preferences", methods=["GET"])
 def get_widget_preferences():
     """Get widget visibility preferences for the current admin."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1829,8 +1833,6 @@ def get_widget_preferences():
 @admin_bp.route("/api/widgets/preferences/reset", methods=["POST"])
 def reset_widget_preferences():
     """Reset widget preferences to default for the current admin."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -1877,8 +1879,6 @@ def reset_widget_preferences():
 @admin_bp.route("/api/widgets/preferences", methods=["POST"])
 def save_widget_preferences():
     """Save widget visibility preferences."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
     preferences = data.get("preferences", {})
@@ -2023,8 +2023,6 @@ def get_weather_info(weather_code):
 @admin_bp.route("/api/widgets/productivity", methods=["GET"])
 def get_productivity_stats():
     """Get productivity statistics for today."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2087,8 +2085,6 @@ def get_productivity_stats():
 @admin_bp.route("/api/analytics/employers/summary", methods=["GET"])
 def employers_summary():
     """Employers volume & active vs inactive, respecting filters."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2143,8 +2139,6 @@ def employers_summary():
 @admin_bp.route("/api/analytics/employers/business", methods=["GET"])
 def employers_business():
     """Employers by industry and recruitment type, respecting filters."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2207,8 +2201,6 @@ def employers_business():
 @admin_bp.route("/api/analytics/employers/location", methods=["GET"])
 def employers_location():
     """Employers by top cities and provinces."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2273,8 +2265,6 @@ def employers_location():
 @admin_bp.route("/api/analytics/employers/status", methods=["GET"])
 def employers_status():
     """Employers by status."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2315,8 +2305,6 @@ def employers_status():
 @admin_bp.route("/api/analytics/jobs/summary", methods=["GET"])
 def jobs_summary():
     """Job demand KPIs: total open jobs."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2361,8 +2349,6 @@ def jobs_summary():
 @admin_bp.route("/api/analytics/jobs/demand", methods=["GET"])
 def jobs_demand():
     """Top job positions and jobs by work schedule."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2424,8 +2410,6 @@ def jobs_demand():
 @admin_bp.route("/api/analytics/applications/summary", methods=["GET"])
 def applications_summary():
     """Applications flow KPIs: total applications, status breakdown, success rate."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2482,8 +2466,6 @@ def applications_summary():
 @admin_bp.route("/api/analytics/applications/trend", methods=["GET"])
 def applications_trend():
     """Applications by month/year trend."""
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     conn = create_connection()
     if not conn:
@@ -2538,8 +2520,6 @@ def applications_trend():
 # ===== API: Get Notifications =====
 @admin_bp.route("/api/notifications", methods=["GET"])
 def api_get_notifications():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     filter_param = request.args.get("filter", "all")
     notification_type = request.args.get("type")
@@ -2573,8 +2553,6 @@ def api_get_notifications():
 # ===== API: Mark Notification as Read =====
 @admin_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
 def api_mark_notification_read(notification_id):
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     result = mark_notification_read(notification_id)
 
@@ -2587,8 +2565,6 @@ def api_mark_notification_read(notification_id):
 # ===== API: Get Unread Count =====
 @admin_bp.route("/api/notifications/unread-count", methods=["GET"])
 def api_unread_count():
-    if "admin_id" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
 
     count = get_unread_count(exclude_types=['job_application'])
     return jsonify({"success": True, "unread_count": count})
@@ -3001,8 +2977,6 @@ def applicants_management():
 @admin_bp.route("/applicants/for-approval")
 def applicants_for_approval():
     """Show non-Lipeño applicants needing approval"""
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
 
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
@@ -3026,8 +3000,6 @@ def applicants_for_approval():
 @admin_bp.route("/applicants/view-all")
 def applicants_view_all():
     """Show all applicants with Lipeño/Non-Lipeño filter"""
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
 
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
@@ -3050,8 +3022,6 @@ def applicants_view_all():
 @admin_bp.route('/applicants_for_reported_acc')
 def applicants_for_reported_acc():
     """Show job posts reported by applicants for moderation."""
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
 
     conn = create_connection()
     if not conn:
@@ -3111,8 +3081,6 @@ def applicants_for_reported_acc():
 
 @admin_bp.route("/reported_applicants")
 def reported_applicants():
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
 
     conn = create_connection()
     if not conn:
@@ -3268,8 +3236,6 @@ def get_job_details(job_id):
 @admin_bp.route("/job/<int:job_id>")
 def admin_view_job(job_id):
     """Admin view for job details"""
-    if "admin_id" not in session:
-        return "Unauthorized", 401
 
     conn = create_connection()
     if not conn:
@@ -3433,8 +3399,6 @@ def ensure_job_report_details_column(cursor):
 
 @admin_bp.route("/job_reports/<int:report_id>/action", methods=['POST'])
 def handle_job_report_action(report_id):
-    if "admin_id" not in session:
-        return jsonify({"success": False, "message": "Unauthorized"}), 401
 
     data = request.get_json(silent=True) or {}
     action = data.get("action")
@@ -3644,8 +3608,6 @@ def ensure_applicant_suspension_column(cursor):
 @admin_bp.route("/applicant_reports/<int:report_id>/action", methods=['POST'])
 def handle_applicant_report_action(report_id):
     """Moderate reported applicants (confirm/reject) - COMPANY SPECIFIC BLACKLIST"""
-    if "admin_id" not in session:
-        return jsonify({"success": False, "message": "Unauthorized"}), 401
 
     data = request.get_json(silent=True) or {}
     action = data.get("action")
@@ -3854,8 +3816,6 @@ def is_applicant_blacklisted(applicant_id, employer_id):
 
 @admin_bp.route('/update_report_status', methods=['POST'])
 def update_report_status():
-    if "admin_id" not in session:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
     report_id = request.form.get("report_id")
     new_status = request.form.get("status")
@@ -4055,8 +4015,6 @@ def employers_management():
 @admin_bp.route("/employers/for-approval")
 def employers_for_approval():
     """Show employers (local and international) needing approval"""
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
 
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
@@ -4080,8 +4038,6 @@ def employers_for_approval():
 @admin_bp.route("/employers/view-all")
 def employers_view_all():
     """Show all employers with Local/International filter"""
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
 
     conn = create_connection()
     cursor = conn.cursor(dictionary=True)
@@ -4886,8 +4842,6 @@ def reupload_recruitment_type_change(employer_id):
 
 @admin_bp.route("/account-settings", methods=["GET", "POST"])
 def account_settings():
-    if "admin_id" not in session:
-        return redirect(url_for("admin.login"))
 
     try:
         conn = create_connection()

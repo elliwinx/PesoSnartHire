@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 from extensions import mail
 from datetime import datetime
+from flask_session import Session
 import os
 
 # =========================================================
@@ -25,6 +26,11 @@ load_dotenv(dotenv_path=env_path)
 # =========================================================
 app = Flask(__name__)
 app.secret_key = "seven-days-a-week"
+
+# Store data in a folder, not the cookie
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_PERMANENT"] = False
+Session(app)
 
 # RECAPTCHA CONFIG
 app.config["RECAPTCHA_SITE_KEY"] = os.environ.get("RECAPTCHA_SITE_KEY")
