@@ -934,7 +934,7 @@ def get_unread_notif_count():
         FROM notifications 
         WHERE applicant_id = %s 
           AND is_read = 0 
-          AND notification_type NOT IN ('employer_approval', 'applicant_approval', 'employer_reported', 'employer_outdated_docu', 'applicant_batch', 'job_application', 'applicant_reported')
+          AND notification_type NOT IN ('employer_approval', 'applicant_approval', 'employer_reported', 'employer_outdated_docu', 'applicant_batch')
         """
         result = run_query(conn, query, (applicant_id,), fetch="one")
         count = result['count'] if result else 0
