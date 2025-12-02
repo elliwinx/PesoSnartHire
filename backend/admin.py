@@ -2963,7 +2963,8 @@ def login():
 @admin_bp.route("/notifications")
 def notifications_page():
     admin_id = session.get("admin_id")
-    notifications = get_notifications()
+    notifications = get_notifications(
+        exclude_types=['job_application', 'report_verdict'])
 
     return render_template("Admin/admin_notif.html", notifications=notifications)
 
@@ -3447,6 +3448,7 @@ def handle_job_report_action(report_id):
         job_position = report.get("job_position", "Job")
         employer_id = report.get("employer_id")
         reporter_id = report.get("reporter_id")  # The applicant who reported
+        report_reason = report.get("reason", "Policy Violation")
 
         print(
             f"📊 Report found - job_id: {job_id}, job_position: {job_position}")
@@ -3455,23 +3457,23 @@ def handle_job_report_action(report_id):
             print("🔄 Processing CONFIRM action...")
 
             # NOTIFY EMPLOYER (The Reported Party)
-        if employer_id:
-            create_notification(
-                notification_type="report_verdict",  # CHANGED
-                title="Job Suspended",
-                message=f"Your job post '{job_position}' has been suspended due to a confirmed report.",
-                employer_id=employer_id,
-                related_ids=[job_id]
-            )
+            if employer_id:
+                create_notification(
+                    notification_type="report_verdict",
+                    title="Job Suspended",
+                    message=f"Your job '{job_position}' has been suspended. Reason: {report_reason}. Consequences: Applications cancelled, {days} days to respond.",
+                    employer_id=employer_id,
+                    related_ids=[job_id]
+                )
 
-        if reporter_id:
-            create_notification(
-                notification_type="report_verdict",  # CHANGED
-                title="Report Confirmed",
-                message=f"Your report against '{job_position}' has been confirmed. Action has been taken.",
-                applicant_id=reporter_id,
-                related_ids=[job_id]
-            )
+            if reporter_id:
+                create_notification(
+                    notification_type="report_verdict",
+                    title="Report Confirmed",
+                    message=f"Your report against '{job_position}' was confirmed. The job has been suspended.",
+                    applicant_id=reporter_id,
+                    related_ids=[job_id]
+                )
 
             # Update job status to suspended
             cursor.execute(
@@ -3567,7 +3569,7 @@ def handle_job_report_action(report_id):
 
             return jsonify({
                 "success": True,
-                "message": f"{job_position} was suspended and all applications were cancelled. Employer has {days} days to respond.",
+                "message": f"Job suspended. Notifications sent to employer and reporter.",
                 "job_status": "suspended",
                 "report_status": "Confirmed"
             })
@@ -3582,10 +3584,11 @@ def handle_job_report_action(report_id):
 
             # NOTIFY REPORTER (The Applicant)
             if reporter_id:
+                verdict_note = moderator_note if moderator_note else "No violation found."
                 create_notification(
-                    notification_type="report_verdict",  # CHANGED
+                    notification_type="report_verdict",
                     title="Report Rejected",
-                    message=f"Your report against '{job_position}' was reviewed and rejected. No violation found.",
+                    message=f"Your report against '{job_position}' was rejected. Verdict: {verdict_note}",
                     applicant_id=reporter_id,
                     related_ids=[job_id]
                 )
@@ -3612,7 +3615,7 @@ def handle_job_report_action(report_id):
 
             return jsonify({
                 "success": True,
-                "message": "Report rejected and reporter notified.",
+                "message": "Report rejected. Reporter notified.",
                 "job_status": None,
                 "report_status": "Rejected"
             })
@@ -3719,12 +3722,22 @@ def handle_applicant_report_action(report_id):
 
             conn.commit()
 
+            report_reason = report.get('reason', 'Violation')
+
             # NOTIFY APPLICANT (The Reported Party)
             create_notification(
-                notification_type="report_verdict",  # CHANGED
+                notification_type="report_verdict",
                 title="Account Restricted",
-                message=f"You have been restricted from applying to {employer_name} due to a confirmed report.",
+                message=f"You have been restricted from {employer_name}. Reason: {report.get('reason')}. Duration: {blacklist_days} days.",
                 applicant_id=applicant_id
+            )
+
+            # [Notify EMPLOYER (Reporter)
+            create_notification(
+                notification_type="report_verdict",
+                title="Report Confirmed",
+                message=f"Your report against {report.get('applicant_name')} was confirmed. They are now restricted.",
+                employer_id=employer_id
             )
 
             safe_send_email(
@@ -3751,9 +3764,9 @@ def handle_applicant_report_action(report_id):
 
             # Notify Employer (The Reporter)
             create_notification(
-                notification_type="report_verdict",  # CHANGED
-                title="Report Confirmed",
-                message=f"Your report against {report.get('applicant_name')} was confirmed. They are now restricted.",
+                notification_type="report_verdict",
+                title="Report Rejected",
+                message=f"Your report against {report.get('applicant_name')} was rejected. Verdict: {verdict_note}",
                 employer_id=employer_id
             )
 
@@ -3785,11 +3798,13 @@ def handle_applicant_report_action(report_id):
             )
             conn.commit()
 
+            verdict_note = moderator_note if moderator_note else "Insufficient evidence."
+
             # NOTIFY EMPLOYER (The Reporter)
             create_notification(
-                notification_type="report_verdict",  # CHANGED
+                notification_type="report_verdict",
                 title="Report Rejected",
-                message="We reviewed your report against an applicant and found no violation.",
+                message=f"Your report against {report.get('applicant_name')} was rejected. Verdict: {verdict_note}",
                 employer_id=employer_id
             )
 
@@ -3893,6 +3908,7 @@ def update_report_status():
             job_position = report.get('job_position') or "Job Post"
             employer_id = report.get('employer_id')
             reporter_id = report.get('reporter_id')
+            report_reason = report.get('reason', 'Policy Violation')
 
             # === CASE A: CONFIRMED ===
             if new_status == "Confirmed":
@@ -3916,7 +3932,7 @@ def update_report_status():
                     create_notification(
                         notification_type="report_verdict",
                         title="Job Suspended",
-                        message=f"Your job post '{job_position}' has been suspended due to a confirmed report.",
+                        message=f"Your job '{job_position}' has been suspended. Reason: {report_reason}.",
                         employer_id=employer_id,
                         related_ids=[job_id]
                     )
@@ -3926,7 +3942,7 @@ def update_report_status():
                     create_notification(
                         notification_type="report_verdict",
                         title="Report Confirmed",
-                        message=f"Your report against '{job_position}' has been confirmed. Action has been taken.",
+                        message=f"Your report on '{job_position}' was confirmed. Action taken.",
                         applicant_id=reporter_id,
                         related_ids=[job_id]
                     )
@@ -3951,7 +3967,7 @@ def update_report_status():
                     create_notification(
                         notification_type="report_verdict",
                         title="Report Rejected",
-                        message=f"Your report against '{job_position}' was reviewed and rejected. No violation found.",
+                        message=f"Your report on '{job_position}' was rejected. No violation found.",
                         applicant_id=reporter_id,
                         related_ids=[job_id]
                     )
