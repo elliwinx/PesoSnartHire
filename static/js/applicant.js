@@ -687,8 +687,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // 2. File Input visibility
       if (recInput) {
-        if (!isLipeno && isEditMode) {
-          // CASE: Non-Lipeño AND Editing -> Show the file picker
+        // FIX: Added check for applicantStatus === "Reupload"
+        if (!isLipeno && (isEditMode || applicantStatus === "Reupload")) {
+          // CASE: Non-Lipeño AND (Editing OR Reuploading) -> Show the file picker
           recInput.style.display = "block";
           recInput.removeAttribute("disabled");
           recInput.required = true;

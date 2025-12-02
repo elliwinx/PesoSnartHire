@@ -4214,6 +4214,7 @@ def update_local_employer_status(employer_id):
 
         action = data["action"]
         reason = None
+        documents_to_reupload = None
 
         conn = create_connection()
         if not conn:
@@ -4475,6 +4476,7 @@ def update_international_employer_status(employer_id):
 
         action = data["action"]
         reason = None
+        documents_to_reupload = None
 
         conn = create_connection()
         if not conn:
