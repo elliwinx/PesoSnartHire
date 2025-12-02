@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EMPLOYER - NOTIFICATIONS</title>
-    <!-- Icons -->
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/devicon.min.css"
@@ -23,7 +22,6 @@
     />
   </head>
   <body>
-    <!-- Added flash messages section for success/error notifications -->
     {% with messages = get_flashed_messages(with_categories=true) %} {% if
     messages %} {% for category, msg in messages %}
     <div class="flash {{ 'success' if category=='success' else 'danger' }}">
@@ -41,7 +39,6 @@
       }, 3000);
     </script>
     {% endif %} {% endwith %}
-    <!-- Header -->
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -92,33 +89,72 @@
             Welcome{% if session.employer_name %}, {{ session.employer_name }}{%
             endif %}!
           </h1>
-          <!-- You can add the employer's name here using python-->
           <p class="hero-description">Here's what we have today</p>
         </div>
       </div>
     </section>
 
-    <!-- Main Content -->
     <main class="notifications-container">
       <div class="notifications-header">
         <h1>Job Application Notifications</h1>
         <p>Stay updated with new applicants and job application status</p>
       </div>
 
-      <!-- Filter Tabs -->
       <div class="tab-group">
         <button class="active" data-filter="all">All</button>
         <button data-filter="unread">Unread</button>
         <button data-filter="job_application">Job Applications</button>
       </div>
 
-      <!-- Updated to use card-list instead of notification-list for consistency -->
-      <div id="notificationList" class="card-list">
-        <!-- Notifications will be dynamically loaded here -->
-      </div>
+      <div id="notificationList" class="card-list"></div>
     </main>
 
-    <!-- Footer -->
+    <div id="notifModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 500px; margin-top: 100px">
+        <span
+          class="close"
+          id="notifModalClose"
+          onclick="document.getElementById('notifModal').style.display='none'"
+          >&times;</span
+        >
+        <div
+          class="modal-header"
+          style="
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          "
+        >
+          <h3
+            class="modal-title"
+            id="notifModalTitle"
+            style="margin: 0; color: #7b1113"
+          >
+            Notification
+          </h3>
+        </div>
+        <div
+          class="modal-body"
+          id="notifModalBody"
+          style="
+            font-size: 1rem;
+            color: #333;
+            line-height: 1.6;
+            text-align: left;
+          "
+        ></div>
+        <div style="margin-top: 20px; text-align: right">
+          <button
+            class="btn btn-secondary"
+            onclick="document.getElementById('notifModal').style.display='none'"
+            style="background: #666; color: white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -190,3 +226,4 @@
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
   </body>
 </html>
+}

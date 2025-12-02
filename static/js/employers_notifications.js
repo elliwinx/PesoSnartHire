@@ -5,6 +5,14 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFilterButtons();
   loadNotifications();
   setInterval(loadNotifications, 30000);
+
+  // Modal Close Handlers
+  const modal = document.getElementById("notifModal");
+  if (modal) {
+    window.addEventListener("click", (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    });
+  }
 });
 
 function setupFilterButtons() {
@@ -59,13 +67,17 @@ function displayNotifications(notifications) {
       const timeAgo = formatTimeAgo(notif.created_at);
       const isUnread = !notif.is_read;
       const badge = isUnread ? '<span class="badge">NEW</span>' : "";
+      // Fix safe strings for attributes
+      const safeTitle = (notif.title || "").replace(/"/g, "&quot;");
+      const safeMsg = (notif.message || "").replace(/"/g, "&quot;");
 
       return `
-            <div class="card ${
-              isUnread ? "unread" : ""
-            }" data-notification-id="${notif.notification_id}" data-redirect="${
-        notif.redirect_url
-      }">
+            <div class="card ${isUnread ? "unread" : ""}" 
+                 data-notification-id="${notif.notification_id}" 
+                 data-redirect="${notif.redirect_url}"
+                 data-type="${notif.notification_type}"
+                 data-title="${safeTitle}"
+                 data-message="${safeMsg}">
               <div class="card-details">
                 <h3>${notif.title}</h3>
                 <p>${notif.message}</p>
@@ -73,9 +85,13 @@ function displayNotifications(notifications) {
               </div>
               <div class="card-actions">
                 ${badge}
-                <button class="view-btn" data-id="${
-                  notif.notification_id
-                }">View</button>
+                <button class="view-btn" 
+                        data-id="${notif.notification_id}"
+                        data-type="${notif.notification_type}"
+                        data-title="${safeTitle}"
+                        data-message="${safeMsg}">
+                    View
+                </button>
               </div>
             </div>
           `;
@@ -87,10 +103,21 @@ function displayNotifications(notifications) {
     card.addEventListener("click", async (e) => {
       const id = card.dataset.notificationId;
       const url = card.dataset.redirect;
-      if (!url) return;
+      const type = card.dataset.type;
+      const title = card.dataset.title;
+      const message = card.dataset.message;
 
       await markNotificationAsRead(id);
-      window.location.href = url;
+
+      // If Report Verdict or Report Filed, open modal
+      if (type === "report_verdict" || type === "report_filed") {
+        openNotifModal(title, message);
+        return;
+      }
+
+      if (url && url !== "#") {
+        window.location.href = url;
+      }
     });
 
     const btn = card.querySelector(".view-btn");
@@ -98,12 +125,39 @@ function displayNotifications(notifications) {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
+        const type = btn.dataset.type;
+        const title = btn.dataset.title;
+        const message = btn.dataset.message;
         const url = card.dataset.redirect;
+
         await markNotificationAsRead(id);
-        window.location.href = url;
+
+        // If Report Verdict, open modal
+        if (type === "report_verdict" || type === "report_filed") {
+          openNotifModal(title, message);
+          return;
+        }
+
+        if (url && url !== "#") {
+          window.location.href = url;
+        }
       });
     }
   });
+}
+
+function openNotifModal(title, message) {
+  const modal = document.getElementById("notifModal");
+  const titleEl = document.getElementById("notifModalTitle");
+  const bodyEl = document.getElementById("notifModalBody");
+
+  if (modal && titleEl && bodyEl) {
+    titleEl.textContent = title || "Notification";
+    bodyEl.textContent = message || "";
+    modal.style.display = "flex";
+    modal.style.alignItems = "center";
+    modal.style.justifyContent = "center";
+  }
 }
 
 async function markNotificationAsRead(notificationId) {
@@ -117,6 +171,16 @@ async function markNotificationAsRead(notificationId) {
 
     if (response.ok && window.checkAndUpdateNotificationDot) {
       window.checkAndUpdateNotificationDot();
+    }
+
+    // Update visuals locally without full reload
+    const card = document.querySelector(
+      `.card[data-notification-id="${notificationId}"]`
+    );
+    if (card) {
+      card.classList.remove("unread");
+      const badge = card.querySelector(".badge");
+      if (badge) badge.remove();
     }
   } catch (error) {
     console.error("[v0] Error marking notification as read:", error);

@@ -13,7 +13,6 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
-    <!-- Styles -->
     <link
       rel="stylesheet"
       href="{{ url_for('static', filename='css/applicant.css') }}"
@@ -24,7 +23,6 @@
     />
   </head>
   <body>
-    <!-- Header -->
     <header class="header">
       <div class="container">
         <div class="logo">
@@ -80,7 +78,6 @@
       </div>
     </section>
 
-    <!-- Container Section -->
     <section class="container">
       <h2>Real-Time Notifications</h2>
       <p>Stay updated with your application status and account activities</p>
@@ -112,6 +109,9 @@
               class="view-btn"
               data-notif-id="{{ notif.notification_id }}"
               data-related-ids="{{ notif.related_ids|tojson }}"
+              data-type="{{ notif.notification_type }}"
+              data-title="{{ notif.title }}"
+              data-message="{{ notif.message }}"
             >
               View
             </button>
@@ -124,6 +124,36 @@
         {% endif %}
       </div>
     </section>
+
+    <div id="notifModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 500px">
+        <span class="close" id="notifModalClose">&times;</span>
+        <div
+          class="modal-header"
+          style="
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          "
+        >
+          <h3 class="modal-title" style="margin: 0; color: #7b1113">
+            Notification
+          </h3>
+        </div>
+        <div
+          class="modal-body"
+          style="font-size: 1rem; color: #333; line-height: 1.6"
+        ></div>
+        <div style="margin-top: 20px; text-align: right">
+          <button
+            class="btn btn-secondary"
+            onclick="document.getElementById('notifModal').style.display='none'"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div
       id="jobDetailsModal"
@@ -152,12 +182,10 @@
         "
       >
         <div class="modal-body">
-          <!-- Job details will be loaded here via AJAX -->
           <div style="text-align: center; padding: 20px">
             Loading job details...
           </div>
         </div>
-        <!-- Added footer with cancel button to job details modal -->
         <div
           style="
             margin-top: 20px;
@@ -179,7 +207,47 @@
       </div>
     </div>
 
-    <!-- Confirm Cancel Modal -->
+    <div id="applicationDetailsModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div id="applicationDetailsContent"></div>
+        <div
+          class="modal-actions"
+          id="applicationModalActions"
+          style="margin-top: 20px; text-align: right"
+        >
+          <button
+            id="applicationCancelBtn"
+            class="btn btn-danger"
+            style="
+              margin-right: 10px;
+              background-color: #dc3545;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
+          >
+            Cancel Application
+          </button>
+          <button
+            id="applicationCloseBtn"
+            class="btn btn-secondary"
+            style="
+              background-color: #6c757d;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div id="cancelConfirmModal" class="confirm-overlay">
       <div class="confirm-box">
         <h3>Cancel Application</h3>
@@ -195,7 +263,6 @@
       </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
       <div class="container">
         <div class="footer-content">
@@ -261,75 +328,11 @@
       </div>
     </footer>
 
-    <div id="applicationDetailsModal" class="modal" style="display: none">
-      <div
-        class="modal-content"
-        style="
-          background: #fff;
-          border-radius: 12px;
-          padding: 30px;
-          width: 50%;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-          position: relative;
-        "
-      >
-        <div id="applicationDetailsContent">
-          <div style="text-align: center; padding: 20px">
-            Loading details...
-          </div>
-        </div>
-
-        <div
-          class="modal-actions"
-          id="applicationModalActions"
-          style="
-            margin-top: 20px;
-            text-align: right;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-          "
-        >
-          <button
-            id="applicationCancelBtn"
-            class="btn btn-danger"
-            style="
-              display: none;
-              margin-right: 10px;
-              background-color: #dc3545;
-              color: white;
-              padding: 8px 16px;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-            "
-          >
-            Cancel Application
-          </button>
-          <button
-            id="applicationCloseBtn"
-            class="btn btn-secondary"
-            style="
-              background-color: #6c757d;
-              color: white;
-              padding: 8px 16px;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-            "
-            onclick="document.getElementById('applicationDetailsModal').style.display='none'"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Global loader partial -->
     {% include 'partials/loader.html' %}
-    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/applicant_notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applicant-notification-dot.js') }}"></script>
   </body>
 </html>
+}
