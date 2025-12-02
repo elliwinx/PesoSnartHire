@@ -11,7 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const contextLabel = modal.querySelector("[data-report-context-label]");
   const reasonTextarea = modal.querySelector("[data-report-reason]");
   const detailsField = modal.querySelector("[data-report-details]");
-  const toast = modal.querySelector(".report-modal-toast");
+  const toast =
+    document.getElementById(modal.id + "Toast") ||
+    document.querySelector(".report-modal-toast");
   const submitBtn = modal.querySelector(".report-submit-btn");
   const hiddenType = form.querySelector("input[name='report_type']");
   const hiddenId = form.querySelector("input[name='reported_id']");
@@ -106,15 +108,30 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.style.overflow = "";
   };
 
+  // FIXED: Generate a standard system flash message (Top Middle) instead of custom toast
   const showToast = (message, type = "success") => {
-    if (!toast) return;
-    toast.textContent = message;
-    toast.classList.remove("show", "error");
-    if (type === "error") toast.classList.add("error");
-    requestAnimationFrame(() => {
-      toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 3200);
-    });
+    // Create flash element
+    const flashDiv = document.createElement("div");
+    // Map 'error' to 'danger' to match your CSS (.flash.success, .flash.danger)
+    const cssClass = type === "error" ? "danger" : "success";
+
+    flashDiv.className = `flash ${cssClass}`;
+    flashDiv.innerHTML = `
+      ${message}
+      <button class="close" onclick="this.parentElement.remove()">×</button>
+    `;
+
+    // Append to body so it uses fixed positioning from your CSS
+    document.body.insertBefore(flashDiv, document.body.firstChild);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+      flashDiv.classList.add("fade-out");
+      setTimeout(() => {
+        if (flashDiv.parentElement)
+          flashDiv.parentElement.removeChild(flashDiv);
+      }, 500);
+    }, 3000);
   };
 
   const setSubmitting = (isSubmitting) => {
@@ -127,13 +144,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const pageLoader = document.getElementById("ajaxLoader");
   const pageLoaderText = document.getElementById("ajaxLoaderText");
+
   const togglePageLoader = (isLoading, message = "Submitting report...") => {
     if (!pageLoader) return;
     if (isLoading) {
       if (pageLoaderText) pageLoaderText.textContent = message;
-      pageLoader.style.display = "flex";
+      pageLoader.style.display = "flex"; // Show the spinner overlay
     } else {
-      pageLoader.style.display = "none";
+      pageLoader.style.display = "none"; // Hide it
     }
   };
 

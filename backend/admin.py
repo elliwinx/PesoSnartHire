@@ -3861,143 +3861,116 @@ def update_report_status():
     cursor = conn.cursor(dictionary=True)
 
     try:
-        # Update the report status
+        # 1. Update the report status in the database
         cursor.execute("""
             UPDATE job_reports
             SET status = %s
             WHERE id = %s
         """, (new_status, report_id))
 
-        # If status is Confirmed, send emails and update job status
-        if new_status == "Confirmed":
-            # Get detailed report information
-            cursor.execute("""
-                SELECT 
-                    jr.job_id,
-                    jr.applicant_id AS reporter_id,
-                    j.job_position,
-                    j.employer_id,
-                    e.employer_name,
-                    e.email AS employer_email,
-                    a.email AS reporter_email,
-                    CONCAT(a.first_name, ' ', a.last_name) AS reporter_name
-                FROM job_reports jr
-                LEFT JOIN jobs j ON jr.job_id = j.job_id
-                LEFT JOIN employers e ON j.employer_id = e.employer_id
-                LEFT JOIN applicants a ON jr.applicant_id = a.applicant_id
-                WHERE jr.id = %s
-            """, (report_id,))
-            report = cursor.fetchone()
+        # 2. Fetch report details (Crucial for identifying who to notify)
+        cursor.execute("""
+            SELECT 
+                jr.job_id,
+                jr.applicant_id AS reporter_id,
+                jr.reason,
+                j.job_position,
+                j.employer_id,
+                e.employer_name,
+                e.email AS employer_email,
+                a.email AS reporter_email,
+                CONCAT(a.first_name, ' ', a.last_name) AS reporter_name
+            FROM job_reports jr
+            LEFT JOIN jobs j ON jr.job_id = j.job_id
+            LEFT JOIN employers e ON j.employer_id = e.employer_id
+            LEFT JOIN applicants a ON jr.applicant_id = a.applicant_id
+            WHERE jr.id = %s
+        """, (report_id,))
+        report = cursor.fetchone()
 
-            if report:
-                job_id = report['job_id']
-                job_position = report['job_position'] or "Job Post"
-                employer_email = report['employer_email']
+        if report:
+            job_id = report.get('job_id')
+            job_position = report.get('job_position') or "Job Post"
+            employer_id = report.get('employer_id')
+            reporter_id = report.get('reporter_id')
 
-                print(f"📊 Processing job {job_id}: {job_position}")
-
-                # 1. Update job status to suspended (sa employer side)
+            # === CASE A: CONFIRMED ===
+            if new_status == "Confirmed":
+                # [Existing] Update jobs and applications status
                 cursor.execute(
-                    "UPDATE jobs SET status = 'suspended' WHERE job_id = %s",
-                    (job_id,)
-                )
-
-                # 2. ✅ CORRECTED: Update applications status to 'Cancelled' (NOT 'Withdrawn')
+                    "UPDATE jobs SET status = 'suspended' WHERE job_id = %s", (job_id,))
                 cursor.execute(
-                    "UPDATE applications SET status = 'Cancelled' WHERE job_id = %s",
-                    (job_id,)
-                )
+                    "UPDATE applications SET status = 'Cancelled' WHERE job_id = %s", (job_id,))
 
-                # 3. Get all applicants for this job to notify them
+                # [Existing] Get impacted applicants for email
                 cursor.execute("""
-                    SELECT DISTINCT a.applicant_id, a.email, a.first_name, a.last_name
+                    SELECT DISTINCT a.applicant_id, a.email, a.first_name
                     FROM applications ap
                     JOIN applicants a ON ap.applicant_id = a.applicant_id
                     WHERE ap.job_id = %s AND a.email IS NOT NULL
                 """, (job_id,))
                 impacted_applicants = cursor.fetchall()
 
-                print(
-                    f"👥 Found {len(impacted_applicants)} applicants to notify")
+                # 1. Notify Employer (Using 'report_verdict' type)
+                if employer_id:
+                    create_notification(
+                        notification_type="report_verdict",
+                        title="Job Suspended",
+                        message=f"Your job post '{job_position}' has been suspended due to a confirmed report.",
+                        employer_id=employer_id,
+                        related_ids=[job_id]
+                    )
 
-                # 4. Send email to Employer
-                if employer_email:
-                    try:
+                # 2. Notify Reporter
+                if reporter_id:
+                    create_notification(
+                        notification_type="report_verdict",
+                        title="Report Confirmed",
+                        message=f"Your report against '{job_position}' has been confirmed. Action has been taken.",
+                        applicant_id=reporter_id,
+                        related_ids=[job_id]
+                    )
+
+                if report.get('employer_email'):
+                    safe_send_email(
+                        "Job Post Suspended", report['employer_email'], f"<p>Your job '{job_position}' was suspended.</p>")
+
+                if report.get('reporter_email'):
+                    safe_send_email(
+                        "Report Confirmed", report['reporter_email'], f"<p>Your report on '{job_position}' was confirmed.</p>")
+
+                for app_user in impacted_applicants:
+                    if app_user.get('email'):
                         safe_send_email(
-                            "Job Post Suspended - PESO SmartHire",
-                            employer_email,
-                            f"""
-                            <h3>Job Post Suspended</h3>
-                            <p>Dear {report['employer_name']},</p>
-                            <p>Your job post titled <strong>"{job_position}"</strong> has been reported and after review, has been confirmed.</p>
-                            <p>The job post is now <strong style="color: red;">SUSPENDED</strong> and all applications have been cancelled.</p>
-                            <p>You have <strong>{days} days</strong> to respond to this report.</p>
-                            <p>Please contact PESO SmartHire administration for more details.</p>
-                            <br>
-                            <p>Best regards,<br>PESO SmartHire Team</p>
-                            """
-                        )
-                        print(f"✅ Email sent to employer: {employer_email}")
-                    except Exception as e:
-                        print(f"❌ Failed to send email to employer: {e}")
+                            "Application Cancelled", app_user['email'], f"<p>Your application to '{job_position}' was cancelled.</p>")
 
-                # 5. Send emails to Applicants
-                for applicant in impacted_applicants:
-                    applicant_email = applicant['email']
-                    if applicant_email:
-                        try:
-                            safe_send_email(
-                                "Application Cancelled - PESO SmartHire",  # ✅ Changed subject
-                                applicant_email,
-                                f"""
-                                <h3>Application Cancelled</h3>
-                                <p>Dear {applicant['first_name']},</p>
-                                <p>Your application for the job post <strong>"{job_position}"</strong> has been <strong>CANCELLED</strong>.</p>
-                                <p>The job post was suspended after our investigation team confirmed a report against it.</p>
-                                <p>We apologize for any inconvenience this may cause.</p>
-                                <br>
-                                <p>Best regards,<br>PESO SmartHire Team</p>
-                                """
-                            )
-                            print(
-                                f"✅ Email sent to applicant: {applicant_email}")
-                        except Exception as e:
-                            print(
-                                f"❌ Failed to send email to applicant {applicant['applicant_id']}: {e}")
+            # === CASE B: REJECTED ===
+            elif new_status == "Rejected":
+                # --- FIX: SEND IN-APP NOTIFICATION ---
+                if reporter_id:
+                    create_notification(
+                        notification_type="report_verdict",
+                        title="Report Rejected",
+                        message=f"Your report against '{job_position}' was reviewed and rejected. No violation found.",
+                        applicant_id=reporter_id,
+                        related_ids=[job_id]
+                    )
 
-                # 6. Send email to Reporter
-                reporter_email = report.get('reporter_email')
-                if reporter_email:
-                    try:
-                        safe_send_email(
-                            "Report Confirmed - PESO SmartHire",
-                            reporter_email,
-                            f"""
-                            <h3>Report Confirmed</h3>
-                            <p>Dear {report.get('reporter_name', 'User')},</p>
-                            <p>Your report for the job post <strong>"{job_position}"</strong> has been reviewed and confirmed.</p>
-                            <p>The job post has been suspended and all applications cancelled.</p>
-                            <p>Thank you for helping maintain the quality and safety of our platform.</p>
-                            <br>
-                            <p>Best regards,<br>PESO SmartHire Team</p>
-                            """
-                        )
-                        print(f"✅ Email sent to reporter: {reporter_email}")
-                    except Exception as e:
-                        print(f"❌ Failed to send email to reporter: {e}")
+                # [Existing Email Logic]
+                if report.get('reporter_email'):
+                    safe_send_email(
+                        "Report Rejected",
+                        report['reporter_email'],
+                        f"<p>Your report for <strong>{job_position}</strong> was reviewed and rejected. We did not find sufficient evidence of a violation.</p>"
+                    )
 
         conn.commit()
-        print(f"✅ Successfully updated report {report_id} to {new_status}")
-
         return jsonify({"status": "success", "message": "Status updated and notifications sent!"})
 
     except Exception as e:
         conn.rollback()
         print(f"❌ Database error: {e}")
         return jsonify({"status": "error", "message": f"Database error: {str(e)}"})
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @admin_bp.route("/applicants/<int:applicant_id>")
