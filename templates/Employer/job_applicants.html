@@ -210,6 +210,17 @@
         </div>
         {% endfor %}
       </div>
+      <div
+        id="noApplicantsMessage"
+        class="empty-state"
+        style="display: none; text-align: center; padding: 40px; color: #666"
+      >
+        <i
+          class="fa-solid fa-user-slash"
+          style="font-size: 48px; margin-bottom: 10px; color: #ccc"
+        ></i>
+        <p>No applicants found matching the current filter.</p>
+      </div>
       {% endif %}
     </main>
 

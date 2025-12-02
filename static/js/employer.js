@@ -901,30 +901,24 @@ function filterApplicants() {
   const searchValue = document.getElementById("searchBar").value.toLowerCase();
   const statusValue = document.getElementById("statusFilter").value;
 
-  // All applicant cards
   const cards = document.querySelectorAll(".applicant-card");
-  let visibleCount = 0; // Track visible cards
+  let visibleCount = 0;
 
   cards.forEach((card) => {
     const name = card.querySelector("h3").innerText.toLowerCase();
-    // Get status text (ensure we handle case sensitivity or whitespace)
     const statusElement = card.querySelector(".status-badge");
     const status = statusElement ? statusElement.innerText.trim() : "";
 
-    // Search logic
     const matchesSearch = name.includes(searchValue);
 
-    // [FIX] Status logic: Hide Cancelled/Blacklisted by default
     let matchesStatus = false;
     if (statusValue === "") {
-      // If "All Status" is selected, SHOW everything EXCEPT Cancelled or Blacklisted
+      // Hide Cancelled/Blacklisted by default
       matchesStatus = status !== "Cancelled" && status !== "Blacklisted";
     } else {
-      // Otherwise, match exactly what the user selected
       matchesStatus = status === statusValue;
     }
 
-    // Show or hide
     if (matchesSearch && matchesStatus) {
       card.style.display = "block";
       visibleCount++;
@@ -933,18 +927,36 @@ function filterApplicants() {
     }
   });
 
-  const emptyState = document.querySelector(".empty-state-message");
-  if (emptyState)
-    emptyState.style.display = visibleCount === 0 ? "block" : "none";
+  // --- NEW: Toggle Empty State Message ---
+  const noResultMsg = document.getElementById("noApplicantsMessage");
+  const grid = document.querySelector(".applicants-grid");
+
+  if (noResultMsg) {
+    if (visibleCount === 0) {
+      noResultMsg.style.display = "block";
+      if (grid) grid.style.display = "none"; // Hide grid to fix spacing
+    } else {
+      noResultMsg.style.display = "none";
+      if (grid) grid.style.display = "grid"; // Restore grid
+    }
+  }
 }
 
 // Trigger on typing / dropdown change
-document
-  .getElementById("searchBar")
-  .addEventListener("keyup", filterApplicants);
-document
-  .getElementById("statusFilter")
-  .addEventListener("change", filterApplicants);
+// Initialize filters on load to hide "Cancelled"/"Blacklisted" immediately
+document.addEventListener("DOMContentLoaded", () => {
+  const searchBar = document.getElementById("searchBar");
+  const statusFilter = document.getElementById("statusFilter");
+
+  if (searchBar && statusFilter) {
+    // Attach event listeners
+    searchBar.addEventListener("keyup", filterApplicants);
+    statusFilter.addEventListener("change", filterApplicants);
+
+    // Run filter logic immediately
+    filterApplicants();
+  }
+});
 
 // ==========================================
 // APPLICANT REPORT MODERATION (Edit Status)
