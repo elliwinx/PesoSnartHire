@@ -663,19 +663,20 @@ def apply_job(job_id):
     try:
         applicant_id = session["applicant_id"]
 
-        # ✅ NEW: Check if applicant is blacklisted from this employer
         job_details = run_query(
             conn,
             """SELECT j.job_position, j.employer_id, e.employer_name 
-               FROM jobs j 
-               JOIN employers e ON j.employer_id = e.employer_id 
-               WHERE j.job_id = %s""",
+           FROM jobs j 
+           JOIN employers e ON j.employer_id = e.employer_id 
+           WHERE j.job_id = %s 
+           AND j.status = 'active' 
+           AND (j.job_expiration_date IS NULL OR j.job_expiration_date >= CURDATE())""",
             (job_id,),
             fetch="one"
         )
 
         if not job_details:
-            return jsonify({"success": False, "message": "Job not found."}), 404
+            return jsonify({"success": False, "message": "This job is no longer available."}), 404
 
         employer_id = job_details["employer_id"]
         employer_name = job_details["employer_name"]
@@ -800,6 +801,7 @@ def apply_job(job_id):
         conn.close()
 
 
+# Find the job_page function and update the query and return variables
 @applicants_bp.route("/job/<int:job_id>")
 def job_page(job_id):
     if "applicant_id" not in session:
@@ -823,21 +825,26 @@ def job_page(job_id):
         if not job:
             return "Job not found.", 404
 
-        # Fetch the applicant's application ID for this job
+        # Fetch the applicant's application ID AND STATUS for this job
         applicant_id = session.get("applicant_id")
+
+        # [FIX] Updated query to select 'status' as well
         application = run_query(
             conn,
-            "SELECT id FROM applications WHERE applicant_id=%s AND job_id=%s",
+            "SELECT id, status FROM applications WHERE applicant_id=%s AND job_id=%s",
             (applicant_id, job_id),
             fetch="one"
         )
         application_id = application["id"] if application else None
+        # [FIX] Get the status
+        application_status = application["status"] if application else None
 
-        # Return modal HTML with both job and application_id
+        # [FIX] Pass application_status to the template
         return render_template(
             "Applicant/job_modal_content.html",
             job=job,
-            application_id=application_id
+            application_id=application_id,
+            application_status=application_status
         )
 
     except Exception as e:

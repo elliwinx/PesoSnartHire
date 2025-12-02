@@ -127,10 +127,12 @@ document.addEventListener("DOMContentLoaded", () => {
           const doc = parser.parseFromString(html, "text/html");
           const metaDiv = doc.getElementById("applicationMeta");
           const applicationId = metaDiv ? metaDiv.dataset.applicationId : null;
-
+          const applicationStatus = metaDiv
+            ? metaDiv.dataset.applicationStatus
+            : null;
           const isValidAppId =
             applicationId && applicationId !== "None" && applicationId !== "";
-
+          const isCancelled = applicationStatus === "Cancelled";
           // >>> ROUTING FIX <<<
           // If it's an Interview/Status Notification AND we have an Application ID,
           // Open the APPLICATION Modal (via applicant.js function) instead of Job Modal.
@@ -169,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
               "#jobDetailsModalCancelBtn"
             );
             if (cancelBtn) {
-              if (isValidAppId) {
+              if (isValidAppId && !isCancelled) {
                 cancelBtn.style.display = "inline-block";
                 cancelBtn.dataset.applicationId = applicationId;
                 currentApplicationId = applicationId;

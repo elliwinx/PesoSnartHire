@@ -273,6 +273,20 @@
                 >
                   <i class="fa-solid fa-ban"></i> Cancelled
                 </button>
+                {% elif app.status == 'Blacklisted' %}
+                <button
+                  class="edit-status-btn"
+                  disabled
+                  style="
+                    background-color: #343a40;
+                    cursor: not-allowed;
+                    border: 1px solid #343a40;
+                    color: #fff;
+                  "
+                  title="This applicant is restricted from your company"
+                >
+                  <i class="fa-solid fa-user-slash"></i> Restricted
+                </button>
                 {% else %}
                 <button class="edit-status-btn" data-app-id="{{ app.id }}">
                   <i class="fa-solid fa-pencil"></i> Edit Status

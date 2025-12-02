@@ -895,30 +895,47 @@ document.addEventListener("DOMContentLoaded", () => {
 // SEARCH + STATUS FILTER
 // ----------------------------
 
+// Find the filterApplicants function and replace it with this updated version:
+
 function filterApplicants() {
   const searchValue = document.getElementById("searchBar").value.toLowerCase();
   const statusValue = document.getElementById("statusFilter").value;
 
   // All applicant cards
   const cards = document.querySelectorAll(".applicant-card");
+  let visibleCount = 0; // Track visible cards
 
   cards.forEach((card) => {
     const name = card.querySelector("h3").innerText.toLowerCase();
-    const status = card.querySelector(".status-badge").innerText.trim();
+    // Get status text (ensure we handle case sensitivity or whitespace)
+    const statusElement = card.querySelector(".status-badge");
+    const status = statusElement ? statusElement.innerText.trim() : "";
 
     // Search logic
     const matchesSearch = name.includes(searchValue);
 
-    // Status logic
-    const matchesStatus = statusValue === "" || status === statusValue;
+    // [FIX] Status logic: Hide Cancelled/Blacklisted by default
+    let matchesStatus = false;
+    if (statusValue === "") {
+      // If "All Status" is selected, SHOW everything EXCEPT Cancelled or Blacklisted
+      matchesStatus = status !== "Cancelled" && status !== "Blacklisted";
+    } else {
+      // Otherwise, match exactly what the user selected
+      matchesStatus = status === statusValue;
+    }
 
     // Show or hide
     if (matchesSearch && matchesStatus) {
       card.style.display = "block";
+      visibleCount++;
     } else {
       card.style.display = "none";
     }
   });
+
+  const emptyState = document.querySelector(".empty-state-message");
+  if (emptyState)
+    emptyState.style.display = visibleCount === 0 ? "block" : "none";
 }
 
 // Trigger on typing / dropdown change

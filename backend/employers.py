@@ -1670,6 +1670,15 @@ def create_job():
         flash("Please log in to create a job post.", "warning")
         return redirect(url_for("home"))
 
+    employer_status = run_query(
+        conn, "SELECT status, is_active FROM employers WHERE employer_id = %s", (employer_id,), fetch="one")
+
+    if not employer_status or employer_status['is_active'] != 1 or employer_status['status'] != 'Approved':
+        conn.close()
+        session.clear()  # Optional: Force logout
+        flash("Your account is suspended or inactive. Action denied.", "danger")
+        return redirect(url_for("home"))
+
     employer_id = session["employer_id"]
 
     job_position = request.form.get("job_position", "").strip()
@@ -2433,7 +2442,7 @@ def update_application_status(application_id):
         # Verify ownership and get details
         app_row = run_query(
             conn,
-            "SELECT a.id, a.job_id, a.applicant_id, j.employer_id, j.job_position FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s",
+            "SELECT a.id, a.status, a.job_id, a.applicant_id, j.employer_id, j.job_position FROM applications a JOIN jobs j ON a.job_id = j.job_id WHERE a.id = %s",
             (application_id,),
             fetch='one'
         )
@@ -2441,10 +2450,21 @@ def update_application_status(application_id):
         if not app_row or app_row.get('employer_id') != employer_id:
             return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
+        if app_row.get('status') == 'Blacklisted':
+            return jsonify({'success': False, 'message': 'Cannot update status: Applicant is restricted.'}), 403
+
         # 1. Handle Interview Schedule (Upsert Logic)
         if new_status == "For Interview" and interview_data:
             if not all(k in interview_data for k in ('date', 'time', 'type', 'location')):
                 return jsonify({'success': False, 'message': 'Missing interview details'}), 400
+
+            try:
+                interview_dt = datetime.strptime(
+                    f"{interview_data['date']} {interview_data['time']}", "%Y-%m-%d %H:%M")
+                if interview_dt < datetime.now():
+                    return jsonify({'success': False, 'message': 'Interview date cannot be in the past.'}), 400
+            except ValueError:
+                return jsonify({'success': False, 'message': 'Invalid date/time format.'}), 400
 
             # Check if an interview schedule already exists for this application
             existing_interview = run_query(
