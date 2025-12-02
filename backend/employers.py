@@ -1666,60 +1666,74 @@ def reactivate_employer_account():
 # ===== Job Posting Route =====
 @employers_bp.route("/create_job", methods=["POST"])
 def create_job():
+    # 1. Check Login
     if "employer_id" not in session:
         flash("Please log in to create a job post.", "warning")
         return redirect(url_for("home"))
 
-    employer_status = run_query(
-        conn, "SELECT status, is_active FROM employers WHERE employer_id = %s", (employer_id,), fetch="one")
-
-    if not employer_status or employer_status['is_active'] != 1 or employer_status['status'] != 'Approved':
-        conn.close()
-        session.clear()  # Optional: Force logout
-        flash("Your account is suspended or inactive. Action denied.", "danger")
-        return redirect(url_for("home"))
-
+    # 2. Define employer_id immediately
     employer_id = session["employer_id"]
 
-    job_position = request.form.get("job_position", "").strip()
-    work_schedule = request.form.get("work_schedule", "").strip()
-    num_vacancy = request.form.get("num_vacancy", "").strip()
-    min_salary = request.form.get("min_salary", "").strip()
-    max_salary = request.form.get("max_salary", "").strip()
-    job_description = request.form.get("job_description", "").strip()
-    qualifications = request.form.get("qualifications", "").strip()
-
-    if not all([job_position, work_schedule, num_vacancy, min_salary, max_salary, job_description, qualifications]):
-        flash("All fields are required.", "danger")
-        return redirect(url_for("employers.employer_home"))
-
-    try:
-        num_vacancy = int(num_vacancy)
-        min_salary = float(min_salary)
-        max_salary = float(max_salary)
-
-        if num_vacancy <= 0:
-            flash("Number of vacancies must be greater than 0.", "danger")
-            return redirect(url_for("employers.employer_home"))
-
-        if min_salary <= 0 or max_salary <= 0:
-            flash("Salary values must be greater than 0.", "danger")
-            return redirect(url_for("employers.employer_home"))
-
-        if max_salary < min_salary:
-            flash("Maximum salary cannot be less than minimum salary.", "danger")
-            return redirect(url_for("employers.employer_home"))
-
-    except ValueError:
-        flash("Invalid number format for vacancies or salary.", "danger")
-        return redirect(url_for("employers.employer_home"))
-
+    # 3. Open Connection NOW (before using it)
     conn = create_connection()
     if not conn:
         flash("Database connection failed.", "danger")
         return redirect(url_for("employers.employer_home"))
 
     try:
+        # 4. Check Employer Status
+        employer_status = run_query(
+            conn,
+            "SELECT status, is_active FROM employers WHERE employer_id = %s",
+            (employer_id,),
+            fetch="one"
+        )
+
+        if not employer_status or employer_status['is_active'] != 1 or employer_status['status'] != 'Approved':
+            # Connection is open, so we must close it before returning
+            conn.close()
+            session.clear()
+            flash("Your account is suspended or inactive. Action denied.", "danger")
+            return redirect(url_for("home"))
+
+        # 5. Get Form Data
+        job_position = request.form.get("job_position", "").strip()
+        work_schedule = request.form.get("work_schedule", "").strip()
+        num_vacancy = request.form.get("num_vacancy", "").strip()
+        min_salary = request.form.get("min_salary", "").strip()
+        max_salary = request.form.get("max_salary", "").strip()
+        job_description = request.form.get("job_description", "").strip()
+        qualifications = request.form.get("qualifications", "").strip()
+
+        # 6. Basic Validation
+        if not all([job_position, work_schedule, num_vacancy, min_salary, max_salary, job_description, qualifications]):
+            conn.close()  # distinct close because we are returning early
+            flash("All fields are required.", "danger")
+            return redirect(url_for("employers.employer_home"))
+
+        # 7. Numeric Validation
+        try:
+            num_vacancy = int(num_vacancy)
+            min_salary = float(min_salary)
+            max_salary = float(max_salary)
+
+            if num_vacancy <= 0:
+                raise ValueError("Number of vacancies must be greater than 0.")
+            if min_salary <= 0 or max_salary <= 0:
+                raise ValueError("Salary values must be greater than 0.")
+            if max_salary < min_salary:
+                raise ValueError(
+                    "Maximum salary cannot be less than minimum salary.")
+
+        except ValueError as ve:
+            conn.close()  # distinct close because we are returning early
+            # Catch custom ValueErrors or conversion errors
+            msg = str(ve) if str(
+                ve) else "Invalid number format for vacancies or salary."
+            flash(msg, "danger")
+            return redirect(url_for("employers.employer_home"))
+
+        # 8. Insert Job
         query = """
             INSERT INTO jobs
             (employer_id, job_position, work_schedule, num_vacancy, 
@@ -1738,8 +1752,11 @@ def create_job():
     except Exception as e:
         conn.rollback()
         flash(f"Error creating job: {str(e)}", "danger")
+
     finally:
-        conn.close()
+        # 9. Ensure connection always closes
+        if conn:
+            conn.close()
 
     return redirect(url_for("employers.employer_home"))
 
