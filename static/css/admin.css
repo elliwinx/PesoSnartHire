@@ -888,11 +888,13 @@ input[type="email"] {
   z-index: 10000;
 }
 
+/*To edit view job modal*/
 .modal-content {
   background: white;
   border-radius: 10px;
   padding: 40px;
   width: 30%;
+  height: 50%;
 }
 
 .modal-content-edit-status {

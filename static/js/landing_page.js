@@ -758,3 +758,39 @@ document.querySelectorAll(".faq-question").forEach((button) => {
     faqItem.classList.toggle("active");
   });
 });
+
+function showLoader(text = "Processing...") {
+  const loader = document.getElementById("ajaxLoader");
+  const loaderText = document.getElementById("ajaxLoaderText");
+  if (loaderText) loaderText.textContent = text;
+  if (loader) loader.style.display = "flex";
+}
+
+// Target all login/register forms by ID
+const formsToLoad = [
+  "applicantLoginForm",
+  "employerLogInForm",
+  "adminLoginForm",
+  "applicantRegistrationForm",
+  "employerRegistrationForm",
+];
+
+formsToLoad.forEach((id) => {
+  const form = document.getElementById(id);
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      // Only show loader if the form is valid (browser validation)
+      if (form.checkValidity()) {
+        // Check if reCAPTCHA is checked (if present)
+        const recaptchaResponse = form.querySelector(
+          '[name="g-recaptcha-response"]'
+        );
+        if (recaptchaResponse && !recaptchaResponse.value) {
+          // Don't show loader if captcha missing (let backend or default alert handle it)
+          return;
+        }
+        showLoader("Processing request...");
+      }
+    });
+  }
+});
