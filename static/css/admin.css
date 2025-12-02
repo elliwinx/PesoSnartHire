@@ -890,11 +890,22 @@ input[type="email"] {
 
 /*To edit view job modal*/
 .modal-content {
-  background: white;
-  border-radius: 10px;
-  padding: 40px;
-  width: 30%;
-  height: 50%;
+  background-color: #fff;
+  margin: 5% auto; /* Adjusted margin for better vertical centering */
+  padding: 30px;
+  border-radius: 12px;
+  width: 90%; /* Responsive width */
+  max-width: 700px; /* Wider max-width for job details */
+  max-height: 85vh; /* Prevent overflowing screen height */
+  overflow-y: auto; /* Scroll internal content if needed */
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease-out;
+}
+
+.modal-content img {
+  max-width: 100%;
+  height: auto;
 }
 
 .modal-content-edit-status {

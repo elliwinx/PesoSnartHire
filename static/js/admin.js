@@ -1090,7 +1090,7 @@ document.querySelectorAll(".edit-status-btn[data-report-id]").forEach((btn) => {
   });
 });
 
-const jobModalElement = document.getElementById("viewJobModal");
+const jobModalElement = document.getElementById("jobDetailsModal");
 const jobActionButtons = document.querySelectorAll(".job-action-btn");
 const jobActionFeedback = document.getElementById("jobActionFeedback");
 const modalJobStatus = document.getElementById("modalJobStatus");
@@ -1125,31 +1125,35 @@ if (jobActionButtons.length) {
 document.querySelectorAll(".view-job-btn").forEach((btn) => {
   btn.addEventListener("click", function () {
     const jobId = this.dataset.jobId;
+    // Ensure we are targeting the correct modal ID
     const jobDetailsModal = document.getElementById("jobDetailsModal");
 
-    jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
-      "<p style='text-align: center; padding: 20px;'>Loading job details...</p>";
+    if (!jobDetailsModal) return;
+
+    const bodyContainer = jobDetailsModal.querySelector("#modal-body-unique");
+    if (bodyContainer) {
+      bodyContainer.innerHTML =
+        "<p style='text-align: center; padding: 20px;'>Loading job details...</p>";
+    }
+
     jobDetailsModal.dataset.modalJobId = jobId;
-    jobDetailsModal.style.display = "flex";
+    jobDetailsModal.style.display = "flex"; // Use flex to center if your CSS supports it, or 'block'
     console.log("[v0] Modal displayed");
 
-    // CHANGE THIS LINE: Use admin route instead of applicants route
     fetch(`/admin/job/${jobId}`, { credentials: "same-origin" })
       .then((res) => {
-        console.log("[v0] Response status:", res.status);
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         return res.text();
       })
       .then((html) => {
-        console.log("[v0] Loaded HTML length:", html.length);
-        jobDetailsModal.querySelector("#modal-body-unique").innerHTML = html;
+        if (bodyContainer) bodyContainer.innerHTML = html;
       })
       .catch((err) => {
         console.error("[v0] Fetch error:", err);
-        jobDetailsModal.querySelector("#modal-body-unique").innerHTML =
-          "<p style='color: red; text-align: center;'>Failed to load job details. Please try again.</p>";
+        if (bodyContainer) {
+          bodyContainer.innerHTML =
+            "<p style='color: red; text-align: center;'>Failed to load job details. Please try again.</p>";
+        }
       });
   });
 });
@@ -1338,17 +1342,20 @@ function hideJobModal() {
 }
 
 if (jobModalElement) {
-  jobModalElement.addEventListener("click", (event) => {
-    if (event.target === jobModalElement && !hasBootstrapModalSupport()) {
-      hideJobModal();
+  // 1. Close when clicking the 'x' span
+  const closeSpan = jobModalElement.querySelector(".close");
+  if (closeSpan) {
+    closeSpan.addEventListener("click", () => {
+      jobModalElement.style.display = "none";
+    });
+  }
+
+  // 2. Close when clicking outside the modal content (on the backdrop)
+  window.addEventListener("click", (event) => {
+    if (event.target === jobModalElement) {
+      jobModalElement.style.display = "none";
     }
   });
-
-  jobModalElement.querySelectorAll('[data-bs-dismiss="modal"]').forEach((btn) =>
-    btn.addEventListener("click", () => {
-      if (!hasBootstrapModalSupport()) hideJobModal();
-    })
-  );
 }
 
 async function handleJobAction(action) {
@@ -1593,26 +1600,108 @@ async function checkUnreadChats() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const applicantReportBtns = document.querySelectorAll(
-    ".edit-applicant-status-btn"
+  // 1. Job/Employer Reports (Found in Applicant's Management)
+  const jobReportBtns = document.querySelectorAll(
+    ".edit-status-btn[data-report-id]"
   );
 
-  console.log(
-    "[v0] Found applicant report buttons:",
-    applicantReportBtns.length
-  );
-
-  applicantReportBtns.forEach((btn) => {
-    // Remove any existing listeners to be safe (cloning trick)
+  jobReportBtns.forEach((btn) => {
+    // Clone to remove old listeners
     const newBtn = btn.cloneNode(true);
     btn.parentNode.replaceChild(newBtn, btn);
 
     newBtn.addEventListener("click", function (e) {
       e.preventDefault();
       const reportId = this.dataset.reportId;
-      console.log("[v0] Edit Status clicked for report:", reportId);
+      console.log("[v0] Reviewing Job Report:", reportId);
 
       // Step 1: Choose Action
+      Swal.fire({
+        title: "Review Job Post Report",
+        text: "Choose an action for this reported job post.",
+        icon: "question",
+        input: "select",
+        inputOptions: {
+          confirm: "Confirm (Suspend Job)",
+          reject: "Reject (Dismiss Report)",
+        },
+        inputPlaceholder: "Select an action",
+        showCancelButton: true,
+        confirmButtonText: "Next",
+        confirmButtonColor: "#7b1113",
+        cancelButtonText: "Cancel",
+      }).then((result) => {
+        if (!result.value) return;
+        const action = result.value;
+
+        if (action === "confirm") {
+          // Step 2 (Confirm): Ask for details
+          Swal.fire({
+            title: "Confirm Suspension",
+            html:
+              '<label style="display:block;text-align:left;font-weight:600;margin-bottom:5px;">Suspension Duration (Days)</label>' +
+              '<input id="swal-job-days" class="swal2-input" type="number" value="30" min="1">' +
+              '<label style="display:block;text-align:left;font-weight:600;margin-top:15px;margin-bottom:5px;">Note to Employer</label>' +
+              '<textarea id="swal-job-note" class="swal2-textarea" placeholder="Reason for suspension..."></textarea>',
+            showCancelButton: true,
+            confirmButtonText: "Confirm & Suspend",
+            confirmButtonColor: "#dc3545", // Red for restriction
+            preConfirm: () => {
+              const days = document.getElementById("swal-job-days").value;
+              const note = document.getElementById("swal-job-note").value;
+              if (!days || days < 1) {
+                Swal.showValidationMessage("Please enter valid days (min 1)");
+              }
+              return { days, note };
+            },
+          }).then((confirmResult) => {
+            if (confirmResult.isConfirmed) {
+              submitJobReportAction(
+                reportId,
+                "Confirmed", // API expects capitalized status
+                confirmResult.value.days,
+                confirmResult.value.note
+              );
+            }
+          });
+        } else {
+          // Step 2 (Reject): Ask for note
+          Swal.fire({
+            title: "Reject Report",
+            input: "textarea",
+            inputLabel: "Reason for rejection (Optional)",
+            inputPlaceholder: "Explain why this report is being rejected...",
+            showCancelButton: true,
+            confirmButtonText: "Reject Report",
+            confirmButtonColor: "#6c757d", // Gray for reject
+          }).then((rejectResult) => {
+            if (rejectResult.isConfirmed) {
+              submitJobReportAction(
+                reportId,
+                "Rejected", // API expects capitalized status
+                null,
+                rejectResult.value
+              );
+            }
+          });
+        }
+      });
+    });
+  });
+
+  // 2. Applicant Reports (Found in Employer's Management)
+  const applicantReportBtns = document.querySelectorAll(
+    ".edit-applicant-status-btn"
+  );
+
+  applicantReportBtns.forEach((btn) => {
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+
+    newBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const reportId = this.dataset.reportId;
+
       Swal.fire({
         title: "Review Applicant Report",
         text: "Choose an action for this report.",
@@ -1632,7 +1721,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const action = result.value;
 
         if (action === "confirm") {
-          // Step 2 (Confirm): Ask for details
           Swal.fire({
             title: "Confirm Restriction",
             html:
@@ -1659,7 +1747,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           });
         } else {
-          // Step 2 (Reject): Ask for note
           Swal.fire({
             title: "Reject Report",
             input: "textarea",
@@ -1684,9 +1771,57 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-// Helper API Call for Applicant Reports
+function submitJobReportAction(reportId, status, days, note) {
+  Swal.fire({
+    title: "Processing...",
+    text: "Updating status and notifying users",
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    },
+  });
+
+  const formData = new FormData();
+  formData.append("report_id", reportId);
+  formData.append("status", status);
+  if (days) formData.append("days", days);
+  if (note) formData.append("moderator_note", note); // Pass note if your backend supports it
+
+  fetch("/admin/update_report_status", {
+    method: "POST",
+    body: formData,
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      Swal.close();
+      if (data.status === "success") {
+        Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text:
+            status === "Confirmed"
+              ? `Job suspended for ${days} days. Notifications sent.`
+              : "Report rejected and closed.",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#7b1113",
+        }).then(() => location.reload());
+      } else {
+        Swal.fire("Error!", data.message || "Failed to update status", "error");
+      }
+    })
+    .catch((err) => {
+      Swal.close();
+      console.error(err);
+      Swal.fire("Error!", "An unexpected error occurred.", "error");
+    });
+}
+
+// Submit Applicant Report Action (Existing Helper)
 function submitApplicantReportAction(reportId, action, days, note) {
-  if (typeof showLoader === "function") showLoader("Processing action...");
+  Swal.fire({
+    title: "Processing...",
+    didOpen: () => Swal.showLoading(),
+  });
 
   const payload = {
     action: action,
@@ -1701,8 +1836,6 @@ function submitApplicantReportAction(reportId, action, days, note) {
   })
     .then((res) => res.json())
     .then((data) => {
-      if (typeof hideLoader === "function") hideLoader();
-
       if (data.success) {
         Swal.fire({
           icon: "success",
@@ -1711,15 +1844,14 @@ function submitApplicantReportAction(reportId, action, days, note) {
           confirmButtonColor: "#7b1113",
         }).then(() => location.reload());
       } else {
-        Swal.fire({
-          icon: "error",
-          title: "Error",
-          text: data.message || "Failed to process request",
-        });
+        Swal.fire(
+          "Error",
+          data.message || "Failed to process request",
+          "error"
+        );
       }
     })
     .catch((err) => {
-      if (typeof hideLoader === "function") hideLoader();
       console.error(err);
       Swal.fire("Error", "An unexpected error occurred", "error");
     });
