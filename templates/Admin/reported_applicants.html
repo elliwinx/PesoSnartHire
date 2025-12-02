@@ -189,14 +189,14 @@
                 >
                   <i class="fa-solid fa-building"></i> Employer
                 </a>
-                {% endif %}
-
+                {% endif %} {% if report.status == 'Pending' %}
                 <button
                   class="btn btn-sm btn-outline-warning edit-applicant-status-btn"
                   data-report-id="{{ report.report_id }}"
                 >
                   <i class="fa-solid fa-pen-to-square"></i> Edit Status
                 </button>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}

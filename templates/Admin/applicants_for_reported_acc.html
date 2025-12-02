@@ -420,22 +420,14 @@
                 >
                   <i class="fa-solid fa-user-tie"></i> Employer
                 </a>
-                {% else %}
-                <button
-                  class="btn btn-sm btn-secondary"
-                  disabled
-                  style="width: 108px"
-                >
-                  <i class="fa-solid fa-user-slash"></i>
-                </button>
-                {% endif %}
-
+                {% endif %} {% if report.status == 'Pending' %}
                 <button
                   class="btn btn-sm btn-outline-warning edit-status-btn"
                   data-report-id="{{ report.report_id }}"
                 >
                   <i class="fa-solid fa-pen-to-square"></i> Edit Status
                 </button>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
