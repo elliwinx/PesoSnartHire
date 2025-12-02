@@ -119,3 +119,38 @@
 .chat-option-btn:active {
     transform: scale(0.95);
 }
+
+/* Add this to your chat.css file */
+#chat-trigger {
+    position: relative;
+}
+
+.chat-notif-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #ff4757;
+    color: white;
+    border-radius: 50%;
+    width: 8px;
+    height: 8px;
+    font-size: 0;
+    display: none;
+    animation: pulse 1.5s infinite;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(255, 71, 87, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
+    }
+}

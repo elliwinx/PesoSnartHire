@@ -4,13 +4,23 @@ let isChatOpen = false;
 let quickOptionsContainer = null;
 let showSecondaryNext = false;
 window.postChatShown = false;
-let chatSessionEnded = false; // <-- track if chat was closed
+let chatSessionEnded = false;
 
 document.addEventListener("DOMContentLoaded", () => {
     chatBody = document.getElementById("chat-body");
     const chatInterface = document.getElementById("chat-interface");
 
+    // 1. START POLLING IMMEDIATELY (Even if chat is closed)
+    // This ensures we catch messages and show the badge on page load
+    loadMessages();
+    
+    // Check for new messages every 3 seconds perpetually
+    if (!chatInterval) {
+        chatInterval = setInterval(loadMessages, 3000);
+    }
+
     // Expose toggle function globally
+// Expose toggle function globally
     window.toggleChatWindow = function () {
         if (!chatInterface) return;
 
@@ -18,6 +28,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (isChatOpen) {
             chatInterface.classList.remove("hidden");
+
+            // 1. Hide Badge Immediately
+            const chatNotifBadge = document.getElementById("chatNotifBadge");
+            if (chatNotifBadge) chatNotifBadge.style.display = "none";
+
+            // 2. FORCE DATA LOAD IMMEDIATELY
+            // This runs renderMessages(), which triggers the LocalStorage update
+            // so the system knows you've "Seen" the message instantly.
+            loadMessages(); 
 
             // If chat session ended, show the fixed message
             if (chatSessionEnded) {
@@ -32,19 +51,15 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     `;
                 }
-                return; // Do not load previous messages
+                return; 
             }
-
-            loadMessages();
-            chatInterval = setInterval(loadMessages, 3000);
+            
             scrollToBottom();
         } else {
             chatInterface.classList.add("hidden");
 
             // Mark session as ended
             chatSessionEnded = true;
-
-            if (chatInterval) clearInterval(chatInterval);
         }
     };
 
@@ -102,7 +117,6 @@ function renderMessages(messages) {
     // Save existing quick options container
     const existingQuickOptions = quickOptionsContainer;
 
-    // Clear only message elements, keep quick options
     chatBody.innerHTML = "";
     if (existingQuickOptions) chatBody.appendChild(existingQuickOptions);
 
@@ -110,6 +124,11 @@ function renderMessages(messages) {
     messages.forEach(m => {
         const div = document.createElement("div");
         div.className = `msg ${m.sender_type === "user" ? "user" : "admin"}`;
+        
+        // Ensure we have a valid ID or fallback to timestamp for tracking
+        const msgId = m.id || m.created_at;
+        div.setAttribute("data-msg-id", msgId); // Helpful for debugging
+
         div.innerHTML = `
             ${escapeHtml(m.message)}
             <div style="font-size:9px; opacity:0.7; text-align:${m.sender_type === "user" ? "right" : "left"}; margin-top:2px;">
@@ -126,21 +145,9 @@ function renderMessages(messages) {
         chatBody.appendChild(quickOptionsContainer);
     }
 
-    // Add Step 2 if Yes was clicked
+    // Add Step 2 if needed
     if (showSecondaryNext && !document.getElementById("post-chat-options-step2")) {
-        quickOptionsContainer.innerHTML = `
-            <div class="msg admin" id="post-chat-options-step2" style="
-                padding:15px; border-radius:10px; background:#f1f1f1; 
-                margin:10px 0; box-shadow:0 2px 6px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:10px;
-            ">
-                <p style="margin:0 0 6px; font-size:12px; color:#666;">Or pick a quick option:</p>
-                <div class="quick-options" style="display:flex; gap:8px; flex-wrap:wrap;">
-                    <button class="chat-option-btn" onclick="quickSelect('Check my application')">Check my application</button>
-                    <button class="chat-option-btn" onclick="quickSelect('Report a job')">Report a job</button>
-                    <button class="chat-option-btn" onclick="quickSelect('Reset my password')">Reset my password</button>
-                </div>
-            </div>
-        `;
+        showStep2Options(); // Refactored to reuse the existing function
     }
 
     // Auto-show post-chat options Step 1 for admin message
@@ -153,7 +160,39 @@ function renderMessages(messages) {
         }, 1500);
     }
 
-    scrollToBottom();
+    // === UPDATED NOTIFICATION BADGE LOGIC ===
+    const chatNotifBadge = document.getElementById("chatNotifBadge");
+    const lastMsg = messages[messages.length - 1];
+    
+    // Unique ID for the last message (prefer ID, fallback to timestamp)
+    const lastMsgId = lastMsg ? (lastMsg.id || lastMsg.created_at) : null;
+    
+    // Get the last message ID that the user actually SAW
+    const seenMsgId = localStorage.getItem("chat_last_seen_id");
+
+    if (isChatOpen) {
+        // Since chat is open, we "read" the message immediately
+        if (lastMsgId) {
+            localStorage.setItem("chat_last_seen_id", lastMsgId);
+        }
+        // Hide badge while chat is open
+        if (chatNotifBadge) chatNotifBadge.style.display = "none";
+        
+        scrollToBottom();
+    } else {
+        // Chat is CLOSED. Check if we should show badge.
+        // Show ONLY if:
+        // 1. Last sender is Admin
+        // 2. AND The current last message ID is NOT the same as the one we last saw
+        if (lastMsg?.sender_type === "admin" && lastMsgId != seenMsgId) {
+            if (chatNotifBadge) {
+                chatNotifBadge.style.display = "inline-block";
+                chatNotifBadge.classList.add("pulse-animation"); // Optional: add simple animation class if defined
+            }
+        } else {
+            if (chatNotifBadge) chatNotifBadge.style.display = "none";
+        }
+    }
 }
 
 // ===== Append Message =====
@@ -219,10 +258,19 @@ function showPostChatOptions() {
 // ===== Handle Yes/No =====
 function handleYesNo(option) {
     quickSelect(option);
-    if (option === "Yes") showSecondaryNext = true;
-    else {
-        if (quickOptionsContainer) quickOptionsContainer.innerHTML = '';
+
+    if (option === "Yes") {
+        showSecondaryNext = true;
+
+        setTimeout(() => {
+            if (quickOptionsContainer) quickOptionsContainer.innerHTML = "";
+            showStep2Options();
+            scrollToBottom();
+        }, 500);
+
+    } else {
         showSecondaryNext = false;
+        if (quickOptionsContainer) quickOptionsContainer.innerHTML = "";
     }
 }
 
@@ -230,5 +278,36 @@ function handleYesNo(option) {
 window.quickSelect = function (option) {
     const input = document.getElementById("userMsgInput");
     input.value = option;
+
     sendUserMessage();
+
+    if (option === "Check my application" || 
+        option === "Report a job" || 
+        option === "Reset my password") {
+
+        setTimeout(() => {
+            if (quickOptionsContainer) quickOptionsContainer.innerHTML = "";
+            showSecondaryNext = false;
+            showPostChatOptions();
+            scrollToBottom();
+        }, 1000);
+    }
 };
+
+function showStep2Options() {
+    if (!quickOptionsContainer) return;
+
+    quickOptionsContainer.innerHTML = `
+        <div class="msg admin" id="post-chat-options-step2" style="
+            padding:15px; border-radius:10px; background:#f1f1f1; 
+            margin:10px 0; box-shadow:0 2px 6px rgba(0,0,0,0.1); display:flex; flex-direction:column; gap:10px;
+        ">
+            <p style="margin:0 0 6px; font-size:12px; color:#666;">Or pick a quick option:</p>
+            <div class="quick-options" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="chat-option-btn" onclick="quickSelect('Check my application')">Check my application</button>
+                <button class="chat-option-btn" onclick="quickSelect('Report a job')">Report a job</button>
+                <button class="chat-option-btn" onclick="quickSelect('Reset my password')">Reset my password</button>
+            </div>
+        </div>
+    `;
+}
