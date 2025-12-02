@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (badge) {
           if (count > 0) {
             // Show the dot (inline usually works best for spans inside links)
-            badge.style.display = "inline";
+            badge.style.display = "inline-block";
             // Optional: If you want to show the number, uncomment the next line
             // badge.textContent = count > 99 ? '99+' : count;
           } else {

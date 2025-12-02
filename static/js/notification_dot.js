@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (badge) {
           if (count > 0) {
-            badge.style.display = "inline";
+            badge.style.display = "inline-block";
             // Optional: Uncomment to show the number
             // badge.textContent = count > 99 ? '99+' : count;
           } else {

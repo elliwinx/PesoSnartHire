@@ -790,7 +790,11 @@ body {
   margin-left: 44%;
 }
 
-/*notif*/
+.notifications-container {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 2rem;
+}
 
 .container h2 {
   font-size: 2rem;
@@ -803,67 +807,119 @@ body {
   color: #555;
 }
 
-.notification-card {
+/* Card List Layout */
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-bottom: 40px;
+  margin: 0 auto;
+}
+
+/* Individual Card */
+.card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: #f2f2f2;
-  border-radius: 8px;
-  padding: 1.2rem;
-  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  position: relative;
 }
 
-.notification-card .left {
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+  border-color: #7b1113;
+}
+
+/* Unread State - Yellow Accent */
+.card.unread {
+  background: #fffdf5;
+  border-left: 4px solid #ffc20e;
+}
+
+/* Left Side: Content */
+.card-details {
+  flex: 1;
+  padding-right: 20px;
+}
+
+.card-details h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.card-details p {
+  margin: 0 0 10px 0;
+  color: #555;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.card-details small {
+  color: #888;
+  font-size: 0.85rem;
+  display: block;
+  margin-top: 5px;
+  font-weight: 500;
+}
+
+/* Right Side: Actions */
+.card-actions {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+  min-width: 120px;
 }
 
-.notification-card .icon {
-  font-size: 1.5rem;
-  padding: 0.7rem;
+/* New Badge Style */
+.card-actions .badge {
+  background: #ffc20e;
+  color: black;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* View Button Style */
+.view-btn {
+  background: #7b1113;
+  color: #fff;
+  border: 1px solid #7b1113;
+  padding: 8px 20px;
   border-radius: 6px;
-  background: #fff;
-  display: flex;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
 }
 
-.notification-card.success .icon {
-  color: #fff;
-  background: #2e7d32;
+.view-btn:hover {
+  background: #fff;
+  color: #7b1113;
 }
 
-.notification-card.info .icon {
-  color: #000;
-  background: #ddd;
-}
-
-.notification-card .details h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: bold;
-}
-
-.notification-card .details p {
-  margin: 0.3rem 0 0;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.badge-new {
-  display: inline-block;
-  background: #fbc02d;
-  color: #000;
-  font-size: 0.75rem;
-  font-weight: bold;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  margin-left: 0.5rem;
-}
-
-.time {
-  font-size: 0.8rem;
-  color: #777;
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #999;
 }
 
 /*Application_Management*/

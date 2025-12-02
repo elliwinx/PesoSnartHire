@@ -55,6 +55,13 @@ def time_ago(dt):
     if not dt:
         return "some time ago"
 
+    # FIX: If dt is a string (from JSON), convert it back to datetime
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt)
+        except ValueError:
+            return dt  # Return original string if parsing fails
+
     now = datetime.now()
     diff = now - dt
 

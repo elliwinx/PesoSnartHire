@@ -82,40 +82,47 @@
 
     <!-- Container Section -->
     <section class="container">
-      <h2>Real - Time Notifications</h2>
+      <h2>Real-Time Notifications</h2>
       <p>Stay updated with your application status and account activities</p>
 
-      {% if notifications and notifications|length > 0 %} {% for notif in
-      notifications %}
-      <div
-        class="notification-card {% if notif.notification_type in ['job_application','applicant_approval'] %}success{% else %}info{% endif %} {% if notif.is_read %}read{% endif %}"
-        data-notif-id="{{ notif.notification_id }}"
-      >
-        <div class="left">
-          <!--<div class="icon"><i class="fa-solid fa-bell"></i></div>-->
-          <div class="details">
-            <h3>
-              {{ notif.title }} {% if not notif.is_read %}
-              <span class="badge-new">NEW</span>
-              {% endif %}
-            </h3>
+      <div class="card-list">
+        {% if notifications and notifications|length > 0 %} {% for notif in
+        notifications %}
+        <div
+          class="card {% if not notif.is_read %}unread{% endif %}"
+          data-notif-id="{{ notif.notification_id }}"
+        >
+          <div class="card-details">
+            <h3>{{ notif.title }}</h3>
             <p>{{ notif.message }}</p>
+
+            <small>
+              <i class="fa-regular fa-clock"></i> {{ notif.created_at|timeago }}
+              {% if notif.notification_type %} &bull; {{
+              notif.notification_type|replace('_', ' ')|title }} {% endif %}
+            </small>
+          </div>
+
+          <div class="card-actions">
+            {% if not notif.is_read %}
+            <span class="badge">NEW</span>
+            {% endif %}
+
+            <button
+              class="view-btn"
+              data-notif-id="{{ notif.notification_id }}"
+              data-related-ids="{{ notif.related_ids|tojson }}"
+            >
+              View
+            </button>
           </div>
         </div>
-        <div class="actions">
-          <button
-            class="btn btn-view-notif"
-            data-notif-id="{{ notif.notification_id }}"
-            data-related-ids="{{ notif.related_ids|tojson }}"
-          >
-            View
-          </button>
+        {% endfor %} {% else %}
+        <div class="empty-state">
+          <p>No notifications yet.</p>
         </div>
-        <div class="time">{{ notif.created_at }}</div>
+        {% endif %}
       </div>
-      {% endfor %} {% else %}
-      <p>No notifications yet.</p>
-      {% endif %}
     </section>
 
     <div
@@ -323,6 +330,6 @@
     <script src="{{ url_for('static', filename='js/applicant_notifications.js') }}"></script>
     <script src="{{ url_for('static', filename='js/applicant.js') }}"></script>
     <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/applicant-notification_dot.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/applicant-notification-dot.js') }}"></script>
   </body>
 </html>
