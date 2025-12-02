@@ -4392,13 +4392,83 @@ def update_local_employer_status(employer_id):
                 success_message = "Local employer rejected. Notification email sent."
 
         elif action == "reupload":
-            pass
+            # Logic from your request
+            if not employer.get("temp_password"):
+                temp_password_plain = secrets.token_urlsafe(8)
+                password_hash = generate_password_hash(temp_password_plain)
+
+                cursor.execute(
+                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    (password_hash, temp_password_plain, employer_id)
+                )
+            else:
+                temp_password_plain = employer["temp_password"]
+
+            new_status = "Reupload"
+
+            requested = data.get("document_name")
+            if isinstance(requested, list):
+                requested_list = requested
+            elif isinstance(requested, str) and requested:
+                requested_list = [requested]
+            else:
+                requested_list = []
+
+            # Normalize names so they match DB field prefixes
+            normalized_map = {
+                "Business Permit": "business_permit",
+                "PhilJobNet Registration": "philiobnet_registration",
+                "Job Orders of Client": "job_orders_of_client",
+                "DOLE - No Pending Case Certificate": "dole_no_pending_case",
+                "DOLE - Authority to Recruit": "dole_authority_to_recruit",
+                "DMW - No Pending Case Certificate": "dmw_no_pending_case",
+                "DMW - License to Recruit": "license_to_recruit",
+                "Company Logo": "company_logo"
+            }
+
+            normalized_docs = [
+                normalized_map.get(doc.strip(), doc.strip(
+                ).lower().replace(' ', '_').replace('-', '_'))
+                for doc in requested_list
+            ]
+
+            # Save normalized field names in JSON column
+            documents_to_reupload = json.dumps(
+                normalized_docs) if normalized_docs else None
+
+            docs_block = ""
+            if requested_list:
+                docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
+                docs_block = f"<p>The documents we specifically request you to re-upload are:</p><ul>{docs_html}</ul>"
+
+            subject = "PESO SmartHire - Local Recruitment Documents Update Required"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>We have reviewed your local recruitment account and noticed that some of your required documents need to be updated or are missing important information.</p>
+            {docs_block}
+            <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
+            <p>Here are your login credentials:</p>
+            <ul>
+                <li>Employer ID: {employer['employer_code']}</li>
+                <li>Email: {employer['email']}</li>
+                <li>Phone Number: {employer['phone']}</li>
+                <li>Password: {temp_password_plain}</li>
+            </ul>
+            <p><strong>Please change your password after logging in for security purposes.</strong></p>
+            <p>Once you have updated your documents, we will review them promptly and notify you of the status.</p>
+            <p>If you need any assistance, please contact our support team.</p>
+            <p>Thank you for your cooperation!</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "Re-upload request sent. Email notification with login credentials sent to local employer."
 
         else:
             cursor.close()
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
+        # Update employer status and optional rejection reason
         if new_status == "Approved":
             is_active_value = 1
         else:
@@ -4406,19 +4476,23 @@ def update_local_employer_status(employer_id):
 
         if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
-                (new_status, reason, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s, documents_to_reupload = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value,
+                 documents_to_reupload, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
-                (new_status, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s, documents_to_reupload = %s, approved_at = NOW() WHERE employer_id = %s",
+                (new_status, is_active_value, documents_to_reupload, employer_id)
             )
         conn.commit()
 
-        msg = Message(subject=subject, recipients=[
-                      employer["email"]], html=body)
-        mail.send(msg)
+        try:
+            msg = Message(subject=subject, recipients=[
+                          employer["email"]], html=body)
+            mail.send(msg)
+        except Exception as e:
+            print(f"Failed to send email: {e}")
 
         cursor.close()
         conn.close()
@@ -4579,13 +4653,80 @@ def update_international_employer_status(employer_id):
                 success_message = "International employer rejected. Notification email sent."
 
         elif action == "reupload":
-            pass
+            if not employer.get("temp_password"):
+                temp_password_plain = secrets.token_urlsafe(8)
+                password_hash = generate_password_hash(temp_password_plain)
+
+                cursor.execute(
+                    "UPDATE employers SET password_hash = %s, temp_password = %s WHERE employer_id = %s",
+                    (password_hash, temp_password_plain, employer_id)
+                )
+            else:
+                temp_password_plain = employer["temp_password"]
+
+            new_status = "Reupload"
+
+            requested = data.get("document_name")
+            if isinstance(requested, list):
+                requested_list = requested
+            elif isinstance(requested, str) and requested:
+                requested_list = [requested]
+            else:
+                requested_list = []
+
+            normalized_map = {
+                "Business Permit": "business_permit",
+                "PhilJobNet Registration": "philiobnet_registration",
+                "Job Orders of Client": "job_orders_of_client",
+                "DOLE - No Pending Case Certificate": "dole_no_pending_case",
+                "DOLE - Authority to Recruit": "dole_authority_to_recruit",
+                "DMW - No Pending Case Certificate": "dmw_no_pending_case",
+                "DMW - License to Recruit": "license_to_recruit",
+                "Company Logo": "company_logo"
+            }
+
+            normalized_docs = [
+                normalized_map.get(doc.strip(), doc.strip(
+                ).lower().replace(' ', '_').replace('-', '_'))
+                for doc in requested_list
+            ]
+
+            documents_to_reupload = json.dumps(
+                normalized_docs) if normalized_docs else None
+
+            docs_block = ""
+            if requested_list:
+                docs_html = "".join([f"<li>{d}</li>" for d in requested_list])
+                docs_block = f"<p>The documents we specifically request you to re-upload are:</p><ul>{docs_html}</ul>"
+
+            subject = "PESO SmartHire - International Recruitment Documents Update Required"
+            body = f"""
+            <p>Dear {employer['employer_name']},</p>
+            <p>This is PESO SmartHire Team.</p>
+            <p>We have reviewed your international recruitment account and noticed that some of your required documents need to be updated or are missing important information.</p>
+            {docs_block}
+            <p>Please log in to your account and re-upload the required documents through your employer dashboard as soon as possible.</p>
+            <p>Here are your login credentials:</p>
+            <ul>
+                <li>Employer ID: {employer['employer_code']}</li>
+                <li>Email: {employer['email']}</li>
+                <li>Phone Number: {employer['phone']}</li>
+                <li>Password: {temp_password_plain}</li>
+            </ul>
+            <p><strong>Please change your password after logging in for security purposes.</strong></p>
+            <p>Once you have updated your documents, we will review them promptly and notify you of the status.</p>
+            <p>If you need any assistance, please contact our support team.</p>
+            <p>Thank you for your cooperation!</p>
+            <p>— PESO SmartHire Admin</p>
+            """
+            success_message = "Re-upload request sent. Email notification with login credentials sent to international employer."
 
         else:
             cursor.close()
             conn.close()
             return jsonify({"success": False, "message": "Invalid action."}), 400
 
+        # Update employer status and save which documents need reupload
         if new_status == "Approved":
             is_active_value = 1
         else:
@@ -4593,19 +4734,23 @@ def update_international_employer_status(employer_id):
 
         if reason:
             cursor.execute(
-                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s WHERE employer_id = %s",
-                (new_status, reason, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, rejection_reason = %s, is_active = %s, documents_to_reupload = %s WHERE employer_id = %s",
+                (new_status, reason, is_active_value,
+                 documents_to_reupload, employer_id)
             )
         else:
             cursor.execute(
-                "UPDATE employers SET status = %s, is_active = %s, approved_at = NOW() WHERE employer_id = %s",
-                (new_status, is_active_value, employer_id)
+                "UPDATE employers SET status = %s, is_active = %s, documents_to_reupload = %s, approved_at = NOW() WHERE employer_id = %s",
+                (new_status, is_active_value, documents_to_reupload, employer_id)
             )
         conn.commit()
 
-        msg = Message(subject=subject, recipients=[
-                      employer["email"]], html=body)
-        mail.send(msg)
+        try:
+            msg = Message(subject=subject, recipients=[
+                          employer["email"]], html=body)
+            mail.send(msg)
+        except Exception as e:
+            print(f"Failed to send email: {e}")
 
         cursor.close()
         conn.close()
