@@ -106,6 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- CASE 1: REPORT & GENERIC NOTIFICATIONS ---
     // Stop here if it is a report verdict. Do not fetch job details.
     if (
+      notifType === "verdict" ||
       notifType === "report_verdict" ||
       notifType === "report_filed" ||
       notifType === "applicant_reported" ||
@@ -114,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ) {
       const modal = document.getElementById("notifModal");
 
-      // Use explicit IDs from your HTML template
+      // Use specific IDs for Title and Body
       const titleEl = document.getElementById("notifModalTitle");
       const bodyEl = document.getElementById("notifModalBody");
       const jobLink = document.querySelector("#notifModal .modal-job-link");
@@ -133,7 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.style.alignItems = "center";
         modal.style.justifyContent = "center";
       }
-      return; // STOP EXECUTION HERE
+      return; // STOP EXECUTION HERE (Prevents Job Modal from opening)
     }
 
     // --- CASE 2: JOB / APPLICATION NOTIFICATIONS ---

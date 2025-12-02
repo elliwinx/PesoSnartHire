@@ -103,8 +103,9 @@
           <div class="card-actions">
             {% if not notif.is_read %}
             <span class="badge">NEW</span>
-            {% endif %}
-
+            {% endif %} {% if notif.notification_type not in ['report_verdict',
+            'verdict', 'report_filed', 'applicant_reported',
+            'employer_reported'] %}
             <button
               class="view-btn"
               data-notif-id="{{ notif.notification_id }}"
@@ -115,6 +116,7 @@
             >
               View
             </button>
+            {% endif %}
           </div>
         </div>
         {% endfor %} {% else %}
@@ -136,14 +138,21 @@
             margin-bottom: 15px;
           "
         >
-          <h3 class="modal-title" style="margin: 0; color: #7b1113">
+          <h3
+            class="modal-title"
+            id="notifModalTitle"
+            style="margin: 0; color: #7b1113"
+          >
             Notification
           </h3>
         </div>
+
         <div
           class="modal-body"
+          id="notifModalBody"
           style="font-size: 1rem; color: #333; line-height: 1.6"
         ></div>
+
         <div style="margin-top: 20px; text-align: right">
           <button
             class="btn btn-secondary"
