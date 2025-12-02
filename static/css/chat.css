@@ -93,3 +93,29 @@
   cursor: pointer;
   font-size: 18px;
 }
+
+.quick-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chat-option-btn {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.chat-option-btn:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+}
+
+.chat-option-btn:active {
+    transform: scale(0.95);
+}

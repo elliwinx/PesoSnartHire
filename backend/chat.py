@@ -49,38 +49,103 @@ def get_my_messages():
 
 @chat_bp.route("/api/send_message", methods=["POST"])
 def send_message():
+    # 1️⃣ Get user from session
     user_id, user_type = get_current_user()
-    data = request.get_json()
-    message_text = data.get('message', '').strip()
+    if not user_id:
+        return jsonify({"error": "User not logged in"}), 401
 
-    if not user_id or not message_text:
-        return jsonify({"error": "Invalid data"}), 400
+    data = request.get_json()
+    message = data.get("message", "").strip()
+
+    if not message:
+        return jsonify({"error": "Message cannot be empty"}), 400
 
     conn = create_connection()
 
-    # Ensure conversation exists
-    convo = run_query(conn, "SELECT conversation_id FROM support_conversations WHERE user_id=%s AND user_type=%s",
-                      (user_id, user_type), fetch="one")
-    if not convo:
-        run_query(
-            conn, "INSERT INTO support_conversations (user_id, user_type) VALUES (%s, %s)", (user_id, user_type))
-        conn.commit()
+    try:
+        # 2️⃣ Ensure conversation exists
         convo = run_query(
-            conn, "SELECT conversation_id FROM support_conversations WHERE user_id=%s AND user_type=%s", (user_id, user_type), fetch="one")
+            conn,
+            "SELECT conversation_id FROM support_conversations WHERE user_id=%s AND user_type=%s",
+            (user_id, user_type),
+            fetch="one"
+        )
+        if not convo:
+            run_query(
+                conn,
+                "INSERT INTO support_conversations (user_id, user_type) VALUES (%s, %s)",
+                (user_id, user_type)
+            )
+            conn.commit()
+            convo = run_query(
+                conn,
+                "SELECT conversation_id FROM support_conversations WHERE user_id=%s AND user_type=%s",
+                (user_id, user_type),
+                fetch="one"
+            )
 
-    convo_id = convo['conversation_id']
+        convo_id = convo['conversation_id']
 
-    # Insert Message
-    run_query(conn, "INSERT INTO support_messages (conversation_id, sender_type, message) VALUES (%s, 'user', %s)",
-              (convo_id, message_text))
+        # 3️⃣ Insert user message
+        run_query(
+            conn,
+            "INSERT INTO support_messages (conversation_id, sender_type, message) VALUES (%s, 'user', %s)",
+            (convo_id, message)
+        )
 
-    # Update Conversation Timestamp (to bubble up for Admin)
-    run_query(
-        conn, "UPDATE support_conversations SET last_message_at=NOW() WHERE conversation_id=%s", (convo_id,))
+        # 4️⃣ Update last message timestamp
+        run_query(
+            conn,
+            "UPDATE support_conversations SET last_message_at=NOW() WHERE conversation_id=%s",
+            (convo_id,)
+        )
 
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
+        # 5️⃣ QUICK-SELECT AUTO REPLIES
+        lower_msg = message.lower()
+
+        quick_replies = {
+            "yes": "Sure! What else can I help you with?",
+            "no": "Thank you! If you need anything else, feel free to message anytime.",
+            "check my application": "No problem! Please wait a moment while we assist with your application status.",
+            "report a job": "Got it! Let me guide you on how to report a job properly.",
+            "reset my password": "Sure! Click 'Forgot password' on the login page to reset your password."
+        }
+
+        if lower_msg in quick_replies:
+            auto_reply = quick_replies[lower_msg]
+            run_query(
+                conn,
+                "INSERT INTO support_messages (conversation_id, sender_type, message) VALUES (%s, 'admin', %s)",
+                (convo_id, auto_reply)
+            )
+            conn.commit()
+            return jsonify({"success": True})
+
+        # 6️⃣ Outside Office Hours auto reply
+        now = datetime.now()
+        start_time = now.replace(hour=8, minute=0, second=0, microsecond=0)
+        end_time = now.replace(hour=17, minute=0, second=0, microsecond=0)
+
+        if now.weekday() > 4 or not (start_time <= now <= end_time):
+            auto_reply = (
+                "Hello! You've reached us outside office hours (8 AM - 5 PM). "
+                "We have received your message and an admin will reply as soon as we're back online."
+            )
+            run_query(
+                conn,
+                "INSERT INTO support_messages (conversation_id, sender_type, message) VALUES (%s, 'admin', %s)",
+                (convo_id, auto_reply)
+            )
+
+        conn.commit()
+        return jsonify({"success": True})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        conn.close()
 
 # --- ADMIN SIDE ---
 
