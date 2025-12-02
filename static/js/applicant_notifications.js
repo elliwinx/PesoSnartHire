@@ -76,7 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // 3. Main View Button Handler (The Fix)
+  // 3. Main View Button Handler (FIXED)
   document.body.addEventListener("click", async (e) => {
     const btn = e.target.closest(".btn-view-notif, .view-btn");
     if (!btn) return;
@@ -85,8 +85,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const notifId = btn.dataset.notifId || btn.dataset.id;
     const notifType = btn.dataset.type;
-    const notifTitle = btn.dataset.title;
-    const notifMessage = btn.dataset.message;
+
+    // Grab content directly from data attributes
+    // Ensure your HTML uses data-title and data-message on the button
+    const notifTitle = btn.getAttribute("data-title") || btn.dataset.title;
+    const notifMessage =
+      btn.getAttribute("data-message") || btn.dataset.message;
 
     let related = [];
     try {
@@ -96,155 +100,90 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const jobId = related && related.length ? related[0] : null;
 
-    // Mark read first
+    // Mark read
     await markNotificationAsRead(notifId);
 
-    // --- CASE 1: REPORT NOTIFICATIONS (Show generic modal) ---
-    if (notifType === "report_verdict" || notifType === "report_filed") {
-      if (modal) {
-        const titleEl = modal.querySelector(".modal-title");
-        const bodyEl = modal.querySelector(".modal-body");
+    // --- CASE 1: REPORT & GENERIC NOTIFICATIONS ---
+    // Stop here if it is a report verdict. Do not fetch job details.
+    if (
+      notifType === "report_verdict" ||
+      notifType === "report_filed" ||
+      notifType === "applicant_reported" ||
+      notifType === "employer_reported" ||
+      !jobId
+    ) {
+      const modal = document.getElementById("notifModal");
 
-        if (titleEl) titleEl.textContent = notifTitle || "Report Notification";
+      // Use explicit IDs from your HTML template
+      const titleEl = document.getElementById("notifModalTitle");
+      const bodyEl = document.getElementById("notifModalBody");
+      const jobLink = document.querySelector("#notifModal .modal-job-link");
+      const notifCancelBtn = document.getElementById("notifModalCancelBtn");
+
+      if (modal) {
+        if (titleEl) titleEl.textContent = notifTitle || "Notification";
         if (bodyEl)
           bodyEl.textContent = notifMessage || "No details available.";
 
+        // Hide unrelated buttons inside this generic modal
+        if (jobLink) jobLink.style.display = "none";
+        if (notifCancelBtn) notifCancelBtn.style.display = "none";
+
         modal.style.display = "flex";
+        modal.style.alignItems = "center";
+        modal.style.justifyContent = "center";
       }
-      return; // Stop execution, don't try to load job details
+      return; // STOP EXECUTION HERE
     }
 
-    // --- DETECTION LOGIC START ---
-    // Find the card to read its title/content
-    const card = btn.closest(".notification-card, .card");
-    let notifText = "";
-    if (card) {
-      const titleEl =
-        card.querySelector(".details h3") || card.querySelector("h3");
-      if (titleEl) notifText = titleEl.textContent.toLowerCase();
-    }
-
-    // Determine if this is an Interview or Status update
-    const isInterviewOrStatus =
-      notifText.includes("interview") ||
-      notifText.includes("status") ||
-      notifText.includes("application");
-    // --- DETECTION LOGIC END ---
-
-    // --- CASE 2: JOB RELATED NOTIFICATIONS ---
+    // --- CASE 2: JOB / APPLICATION NOTIFICATIONS ---
     if (jobId) {
       try {
-        // We must fetch the job HTML to find the Application ID (hidden in metadata)
         const response = await fetch(`/applicants/job/${jobId}`, {
           credentials: "same-origin",
         });
-
         if (response.ok) {
           const html = await response.text();
-
-          // Extract Application ID from the response HTML
           const parser = new DOMParser();
           const doc = parser.parseFromString(html, "text/html");
           const metaDiv = doc.getElementById("applicationMeta");
           const applicationId = metaDiv ? metaDiv.dataset.applicationId : null;
-          const applicationStatus = metaDiv
-            ? metaDiv.dataset.applicationStatus
-            : null;
           const isValidAppId =
             applicationId && applicationId !== "None" && applicationId !== "";
-          const isCancelled = applicationStatus === "Cancelled";
 
-          // If it's an Interview/Status Notification AND we have an Application ID,
-          // Open the APPLICATION Modal (via applicant.js function) instead of Job Modal.
+          // If user has applied, show the Application Details Modal (Status/Interview)
           if (
-            isInterviewOrStatus &&
             isValidAppId &&
             typeof window.viewApplicationDetails === "function"
           ) {
-            console.log(
-              "[v0] Routing to Application Details for ID:",
-              applicationId
-            );
-            if (modal) modal.style.display = "none"; // Close generic notif modal if open
+            if (modal) modal.style.display = "none";
             window.viewApplicationDetails(applicationId);
-            return; // STOP here, do not show Job Details
+            return;
           }
 
-          // Else: Fallback to showing Job Details (Description, Salary, etc.)
+          // Otherwise, show Job Details Modal (Description/Salary)
           if (jobDetailsModal) {
-            const modalBody =
-              jobDetailsModal.querySelector(".modal-body") || jobDetailsModal;
-            // If jobDetailsModal has a specific structure in HTML, target the body container
-            const contentContainer =
-              jobDetailsModal.querySelector(".modal-content .modal-body") ||
-              jobDetailsModal.querySelector(".modal-content");
-
-            if (contentContainer) {
-              // Clean previous content if needed, or just replace
-              // For jobDetailsModal structure in HTML:
-              // It has: <div class="modal-body"> ... </div>
-              // But fetching /job/id returns partial HTML (job_modal_content.html)
-
-              // Let's try to find the inner container.
-              const innerBody = jobDetailsModal.querySelector(".modal-body");
-              if (innerBody) {
-                innerBody.innerHTML = html;
-              } else {
-                // fallback
-                contentContainer.innerHTML = html;
-              }
-            }
-
+            const innerBody =
+              jobDetailsModal.querySelector("#modal-body-unique") ||
+              jobDetailsModal.querySelector(".modal-body");
+            if (innerBody) innerBody.innerHTML = html;
             if (modal) modal.style.display = "none";
             jobDetailsModal.style.display = "flex";
 
-            // Setup Cancel Button inside Job Modal (if needed)
             const cancelBtn = jobDetailsModal.querySelector(
               "#jobDetailsModalCancelBtn"
             );
-            if (cancelBtn) {
-              if (isValidAppId && !isCancelled) {
-                cancelBtn.style.display = "inline-block";
-                cancelBtn.dataset.applicationId = applicationId;
-                currentApplicationId = applicationId;
-                cancelBtn.onclick = () =>
-                  window.cancelApplication(applicationId);
-              } else {
-                cancelBtn.style.display = "none";
-              }
-            }
+            if (cancelBtn) cancelBtn.style.display = "none";
           }
           return;
         }
       } catch (err) {
-        console.error("Failed to fetch job details:", err);
+        console.error("Failed to fetch details:", err);
       }
     }
 
-    // 4. Fallback: Generic Notification Modal (Text Only) if no job ID
-    if (!modal) return;
-    const titleEl = modal.querySelector(".modal-title");
-    const bodyEl = modal.querySelector(".modal-body");
-    const jobLink = modal.querySelector(".modal-job-link");
-    const notifCancelBtn = modal.querySelector("#notifModalCancelBtn");
-
-    const details = card ? card.querySelector(".details") : null;
-
-    if (titleEl) {
-      titleEl.textContent = details
-        ? details.querySelector("h3").textContent.trim()
-        : "Notification";
-    }
-    if (bodyEl) {
-      bodyEl.textContent = details
-        ? details.querySelector("p").textContent.trim()
-        : "";
-    }
-
-    if (jobLink) jobLink.style.display = "none";
-    if (notifCancelBtn) notifCancelBtn.style.display = "none";
-
-    modal.style.display = "flex";
+    // Final fallback
+    if (modal) modal.style.display = "flex";
   });
 
   // --- Confirm Cancel Modal Buttons ---

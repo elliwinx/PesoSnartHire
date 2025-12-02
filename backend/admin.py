@@ -2520,7 +2520,6 @@ def applications_trend():
 # ===== API: Get Notifications =====
 @admin_bp.route("/api/notifications", methods=["GET"])
 def api_get_notifications():
-
     filter_param = request.args.get("filter", "all")
     notification_type = request.args.get("type")
 
@@ -2529,27 +2528,40 @@ def api_get_notifications():
         is_read = True
     elif filter_param == "unread":
         is_read = False
-    elif filter_param == "all":
-        is_read = None
-    else:
-        if not notification_type:
-            notification_type = filter_param
 
-    # Admin should only see system notifications, not employer job applications
-    notifications = get_notifications(
+    # 1. Fetch ALL notifications first (we will filter in Python)
+    # We don't use exclude_types here anymore to avoid leaking new types
+    all_notifications = get_notifications(
         notification_type=notification_type,
-        is_read=is_read,
-        exclude_types=['job_application', 'report_verdict']
+        is_read=is_read
     )
+
+    # 2. Define STRICT list of Admin-only notification types
+    admin_types = {
+        'applicant_approval',
+        'employer_approval',
+        'applicant_reported',
+        'employer_reported',
+        'applicant_outdated_docu',
+        'employer_outdated_docu',
+        'applicant_batch'
+    }
+
+    # 3. Filter: Keep only notifications that belong to Admin
+    final_notifications = [
+        n for n in all_notifications
+        if n.get('notification_type') in admin_types
+    ]
 
     return jsonify({
         "success": True,
-        "notifications": notifications,
-        "count": len(notifications)
+        "notifications": final_notifications,
+        "count": len(final_notifications)
     })
 
-
 # ===== API: Mark Notification as Read =====
+
+
 @admin_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
 def api_mark_notification_read(notification_id):
 
@@ -2564,10 +2576,42 @@ def api_mark_notification_read(notification_id):
 # ===== API: Get Unread Count =====
 @admin_bp.route("/api/notifications/unread-count", methods=["GET"])
 def api_unread_count():
+    # Use the same strict Allowlist to ensure the dot matches the list
+    admin_types = [
+        'applicant_approval',
+        'employer_approval',
+        'applicant_reported',
+        'employer_reported',
+        'applicant_outdated_docu',
+        'employer_outdated_docu',
+        'applicant_batch'
+    ]
 
-    count = get_unread_count(
-        exclude_types=['job_application', 'report_verdict'])
-    return jsonify({"success": True, "unread_count": count})
+    conn = create_connection()
+    if not conn:
+        return jsonify({"success": False, "unread_count": 0})
+
+    try:
+        # Dynamically build the placeholder string based on the list length
+        placeholders = ', '.join(['%s'] * len(admin_types))
+
+        query = f"""
+            SELECT COUNT(*) as count 
+            FROM notifications 
+            WHERE is_read = 0 
+            AND notification_type IN ({placeholders})
+        """
+
+        # Pass the list as parameters
+        result = run_query(conn, query, tuple(admin_types), fetch="one")
+        count = result['count'] if result else 0
+
+        return jsonify({"success": True, "unread_count": count})
+    except Exception as e:
+        print(f"[admin] Error counting unread: {e}")
+        return jsonify({"success": False, "unread_count": 0})
+    finally:
+        conn.close()
 
 
 @admin_bp.route("/approve-reupload/<int:applicant_id>", methods=["POST"])
