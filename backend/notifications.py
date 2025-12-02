@@ -206,16 +206,22 @@ def build_redirect_url(notif, admin_prefix="/admin"):
         if applicant_id:
             return f"{admin_prefix}/applicants/{applicant_id}"
         return f"{admin_prefix}/applicants"
+
     if ntype == "employer_approval" and employer_id:
         return f"{admin_prefix}/employers/{employer_id}"
+
     if ntype == "applicant_reported":
         return f"{admin_prefix}/reported_applicants"
+
     if ntype == "employer_reported":
         return f"{admin_prefix}/applicants_for_reported_acc"
+
     if ntype == "applicant_outdated_docu" and applicant_id:
-        return f"{admin_prefix}/applicants/{applicant_id}/documents"
+        return f"{admin_prefix}/applicants/{applicant_id}"
+
     if ntype == "employer_outdated_docu" and employer_id:
-        return f"{admin_prefix}/employers/{employer_id}/documents"
+        return f"{admin_prefix}/employers/{employer_id}"
+
     if ntype == "applicant_batch":
         return f"{admin_prefix}/applicants/batch"
 
