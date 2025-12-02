@@ -3446,6 +3446,7 @@ def handle_job_report_action(report_id):
         job_id = report.get("job_id")
         job_position = report.get("job_position", "Job")
         employer_id = report.get("employer_id")
+        reporter_id = report.get("reporter_id")  # The applicant who reported
 
         print(
             f"📊 Report found - job_id: {job_id}, job_position: {job_position}")
@@ -3478,6 +3479,24 @@ def handle_job_report_action(report_id):
 
             conn.commit()
             print("✅ Database updates committed")
+
+            if employer_id:
+                create_notification(
+                    notification_type="employer_reported",
+                    title="Job Suspended",
+                    message=f"Your job post '{job_position}' has been suspended due to a confirmed report. Please check your email for details.",
+                    employer_id=employer_id,
+                    related_ids=[job_id]
+                )
+
+            if reporter_id:
+                create_notification(
+                    notification_type="applicant_reported",  # Reusing type for feedback
+                    title="Report Confirmed",
+                    message=f"Your report against '{job_position}' has been confirmed. The job has been suspended.",
+                    applicant_id=reporter_id,
+                    related_ids=[job_id]
+                )
 
             # ========== EMAIL SENDING ==========
             email_count = 0
@@ -3559,6 +3578,15 @@ def handle_job_report_action(report_id):
                 ("Rejected", report_id)
             )
             conn.commit()
+
+            if reporter_id:
+                create_notification(
+                    notification_type="applicant_reported",
+                    title="Report Rejected",
+                    message=f"Your report against '{job_position}' was reviewed and rejected. No violation found.",
+                    applicant_id=reporter_id,
+                    related_ids=[job_id]
+                )
 
             # Send rejection email to reporter
             reporter_email = report.get("reporter_email")

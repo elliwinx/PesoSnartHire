@@ -234,6 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      showLoader("Updating profile...");
       accountForm.submit();
     });
   }
@@ -683,10 +684,10 @@ function showLoader(text = "Processing — please wait...") {
   const loader = document.getElementById("ajaxLoader");
   const loaderText = document.getElementById("ajaxLoaderText");
   if (loaderText) loaderText.textContent = text;
-  loader.style.display = "flex";
+  if (loader) loader.style.display = "flex";
 }
 
 function hideLoader() {
   const loader = document.getElementById("ajaxLoader");
-  loader.style.display = "none";
+  if (loader) loader.style.display = "none";
 }

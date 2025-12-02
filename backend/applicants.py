@@ -865,7 +865,7 @@ def notifications():
         notifications = []
         # Normalize types that should NOT be shown to applicants (admin-only)
         admin_only_types = {
-            'employer_approval', 'applicant_approval', 'employer_reported', 'employer_outdated_docu', 'applicant_batch'
+            'employer_approval', 'applicant_approval', 'applicant_reported', 'employer_reported', 'employer_outdated_docu', 'applicant_batch'
         }
         for n in (all_notifs or []):
             try:

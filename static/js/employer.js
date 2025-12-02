@@ -496,13 +496,13 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
           const errorMsg = data.message || "Unable to load job details.";
           console.error("[v0] API Error:", errorMsg);
-          alert("Error: " + errorMsg);
+          showFlash("Error: " + errorMsg, "danger");
           hideLoader();
         }
       } catch (err) {
         hideLoader();
         console.error("[v0] Fetch Error:", err.message);
-        alert("Failed to load job details: " + err.message);
+        showFlash("Failed to load job details: " + err.message, "danger");
       }
     });
   });
@@ -599,6 +599,22 @@ document.addEventListener("DOMContentLoaded", () => {
       const jobId = fd.get("ej_job_id");
       showLoader("Saving changes...");
 
+      function showFlash(message, type = "success") {
+        // Create flash element
+        const flashDiv = document.createElement("div");
+        flashDiv.className = `flash ${type}`; // 'success' or 'danger'
+        flashDiv.innerHTML = `${message} <button class="close" onclick="this.parentElement.remove()">×</button>`;
+
+        // Insert at top of body
+        document.body.insertBefore(flashDiv, document.body.firstChild);
+
+        // Auto remove after 3s
+        setTimeout(() => {
+          flashDiv.classList.add("fade-out");
+          setTimeout(() => flashDiv.remove(), 500);
+        }, 3000);
+      }
+
       try {
         const res = await fetch(`/employers/job/${jobId}/update`, {
           method: "POST",
@@ -608,7 +624,7 @@ document.addEventListener("DOMContentLoaded", () => {
         hideLoader();
 
         if (result.success) {
-          // Use SweetAlert if available, otherwise standard alert
+          // Use SweetAlert if available, otherwise standard flash
           if (typeof Swal !== "undefined") {
             Swal.fire({
               icon: "success",
@@ -620,18 +636,21 @@ document.addEventListener("DOMContentLoaded", () => {
               location.reload();
             });
           } else {
-            alert("Job updated successfully!");
+            // REPLACED ALERT
+            showFlash("Job updated successfully!", "success");
             editModal.style.display = "none";
-            location.reload();
+            setTimeout(() => location.reload(), 1000);
           }
         } else {
           console.error(result.message || "Update failed.");
-          alert(result.message || "Failed to update job.");
+          // REPLACED ALERT
+          showFlash(result.message || "Failed to update job.", "danger");
         }
       } catch (err) {
         hideLoader();
         console.error(err);
-        alert("An error occurred while saving.");
+        // REPLACED ALERT
+        showFlash("An error occurred while saving.", "danger");
       }
     });
 
@@ -850,6 +869,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Hide the modal first
     if (forcePasswordModal) forcePasswordModal.style.display = "none";
 
+    showLoader("Updating password...");
     // Then submit the form
     forcePasswordForm.submit();
   });
@@ -908,3 +928,127 @@ document
 document
   .getElementById("statusFilter")
   .addEventListener("change", filterApplicants);
+
+// ==========================================
+// APPLICANT REPORT MODERATION (Edit Status)
+// ==========================================
+document.addEventListener("DOMContentLoaded", () => {
+  // Attach click event to all "Edit Status" buttons for applicants
+  document.querySelectorAll(".edit-applicant-status-btn").forEach((btn) => {
+    btn.addEventListener("click", function () {
+      const reportId = this.dataset.reportId;
+
+      // Step 1: Choose Action (Confirm or Reject)
+      Swal.fire({
+        title: "Review Applicant Report",
+        input: "select",
+        inputOptions: {
+          confirm: "Confirm (Restrict Applicant)",
+          reject: "Reject (Dismiss Report)",
+        },
+        inputPlaceholder: "Select an action",
+        showCancelButton: true,
+        confirmButtonText: "Next",
+        confirmButtonColor: "#7b1113",
+        cancelButtonText: "Cancel",
+      }).then((result) => {
+        if (!result.value) return;
+        const action = result.value;
+
+        if (action === "confirm") {
+          // Step 2 (Confirm): Ask for blacklist duration & note
+          Swal.fire({
+            title: "Confirm Report & Restrict",
+            html:
+              '<label style="display:block; text-align:left; margin-bottom:5px; font-weight:600;">Restriction Duration (Days)</label>' +
+              '<input id="swal-blacklist-days" class="swal2-input" type="number" placeholder="365" value="365" min="1">' +
+              '<label style="display:block; text-align:left; margin:15px 0 5px; font-weight:600;">Moderator Note</label>' +
+              '<textarea id="swal-note" class="swal2-textarea" placeholder="Reason for restriction..."></textarea>',
+            showCancelButton: true,
+            confirmButtonText: "Confirm",
+            confirmButtonColor: "#dc3545", // Red for restrictive action
+            preConfirm: () => {
+              const days = document.getElementById("swal-blacklist-days").value;
+              const note = document.getElementById("swal-note").value;
+              if (!days || days < 1) {
+                Swal.showValidationMessage(
+                  "Please enter a valid number of days"
+                );
+              }
+              return { days, note };
+            },
+          }).then((confirmResult) => {
+            if (confirmResult.isConfirmed) {
+              submitApplicantReportAction(
+                reportId,
+                "confirm",
+                confirmResult.value.days,
+                confirmResult.value.note
+              );
+            }
+          });
+        } else {
+          // Step 2 (Reject): Ask for optional note to reporter
+          Swal.fire({
+            title: "Reject Report",
+            input: "textarea",
+            inputPlaceholder: "Reason for rejection (optional)...",
+            showCancelButton: true,
+            confirmButtonText: "Reject Report",
+            confirmButtonColor: "#6c757d",
+          }).then((rejectResult) => {
+            if (rejectResult.isConfirmed) {
+              submitApplicantReportAction(
+                reportId,
+                "reject",
+                null,
+                rejectResult.value
+              );
+            }
+          });
+        }
+      });
+    });
+  });
+});
+
+// Helper function to send the API request
+function submitApplicantReportAction(reportId, action, days, note) {
+  // Show loader using existing helper in admin.js
+  showLoader("Processing action...");
+
+  const payload = {
+    action: action,
+    moderator_note: note,
+    blacklist_days: days ? parseInt(days) : null,
+  };
+
+  fetch(`/admin/applicant_reports/${reportId}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      hideLoader();
+      if (data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: data.message,
+          confirmButtonColor: "#7b1113",
+        }).then(() => location.reload());
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message || "Failed to process request",
+        });
+      }
+    })
+    .catch((err) => {
+      hideLoader();
+      console.error(err);
+      Swal.fire("Error", "An unexpected error occurred", "error");
+    });
+}

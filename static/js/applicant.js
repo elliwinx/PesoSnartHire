@@ -360,6 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.copyDynamicBarangayToInput();
       }
 
+      showLoader("Updating profile...");
       accountForm.submit();
     });
   }
@@ -973,6 +974,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const modal = document.getElementById("forcePasswordModal");
       if (modal) modal.style.display = "none";
+
+      if (typeof window.showLoader === "function") {
+        window.showLoader("Updating password...");
+      }
 
       forcePasswordForm.submit();
     });

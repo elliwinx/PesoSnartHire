@@ -177,37 +177,26 @@
               <td class="table-actions">
                 {% if report.applicant_id %}
                 <a
-                  class="btn btn-sm btn-outline-primary"
+                  class="btn btn-sm btn-primary"
                   href="{{ url_for('admin.view_applicant', applicant_id=report.applicant_id) }}"
                 >
                   <i class="fa-solid fa-user"></i> Applicant
                 </a>
                 {% endif %} {% if report.employer_id %}
                 <a
-                  class="btn btn-sm btn-outline-secondary"
+                  class="btn btn-sm btn-info"
                   href="{{ url_for('admin.view_employer', employer_id=report.employer_id) }}"
                 >
                   <i class="fa-solid fa-building"></i> Employer
                 </a>
                 {% endif %}
-                <div class="action-chip-group">
-                  <button
-                    class="btn btn-sm btn-outline-success applicant-action-btn"
-                    data-report-id="{{ report.report_id }}"
-                    data-action="confirm"
-                    title="Confirm report"
-                  >
-                    <i class="fa-solid fa-check"></i>
-                  </button>
-                  <button
-                    class="btn btn-sm btn-outline-danger applicant-action-btn"
-                    data-report-id="{{ report.report_id }}"
-                    data-action="reject"
-                    title="Reject report"
-                  >
-                    <i class="fa-solid fa-xmark"></i>
-                  </button>
-                </div>
+
+                <button
+                  class="btn btn-sm btn-outline-warning edit-applicant-status-btn"
+                  data-report-id="{{ report.report_id }}"
+                >
+                  <i class="fa-solid fa-pen-to-square"></i> Edit Status
+                </button>
               </td>
             </tr>
             {% endfor %}

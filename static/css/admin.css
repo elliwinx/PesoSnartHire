@@ -1736,6 +1736,62 @@ tbody tr:hover {
   flex: 1;
 }
 
+/* ... existing code ... */
+
+/* === SweetAlert2 Custom Theme (Matches Admin) === */
+div:where(.swal2-container) div:where(.swal2-popup) {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Warning Icon Color */
+div:where(.swal2-icon).swal2-warning {
+  border-color: #7b1113 !important;
+  color: #7b1113 !important;
+}
+
+/* Confirm Button */
+div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm {
+  background-color: #7b1113 !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 10px 24px;
+}
+
+div:where(.swal2-container) button:where(.swal2-styled).swal2-confirm:hover {
+  background-color: #5d0d0f !important; /* Darker maroon on hover */
+}
+
+/* Cancel/Deny Buttons */
+div:where(.swal2-container) button:where(.swal2-styled).swal2-cancel {
+  background-color: #6c757d !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+div:where(.swal2-container) button:where(.swal2-styled).swal2-deny {
+  background-color: #dc3545 !important; /* Red for reject actions */
+  color: #fff !important;
+}
+
+/* Input fields inside SweetAlert */
+div:where(.swal2-container) input.swal2-input,
+div:where(.swal2-container) textarea.swal2-textarea,
+div:where(.swal2-container) select.swal2-select {
+  border-color: #d0d0d0 !important;
+  font-size: 0.95rem;
+}
+
+div:where(.swal2-container) input.swal2-input:focus,
+div:where(.swal2-container) textarea.swal2-textarea:focus,
+div:where(.swal2-container) select.swal2-select:focus {
+  box-shadow: 0 0 0 2px rgba(123, 17, 19, 0.2) !important;
+  border-color: #7b1113 !important;
+}
+
 @media (max-width: 768px) {
   .job-modal-header {
     flex-direction: column;

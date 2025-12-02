@@ -201,9 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
       reported_id: hiddenId.value || undefined,
     };
 
-    const contextValue = contextWrapper.hidden
-      ? ""
-      : contextSelect.value || "";
+    const contextValue = contextWrapper.hidden ? "" : contextSelect.value || "";
     if (contextValue) {
       payload.context = contextValue;
       hiddenContext.value = contextValue;
@@ -222,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     setSubmitting(true);
-    togglePageLoader(true);
+    togglePageLoader(true, "Sending report...");
     try {
       const response = await fetch(currentEndpoint, {
         method: currentMethod,
@@ -249,4 +247,3 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 });
-

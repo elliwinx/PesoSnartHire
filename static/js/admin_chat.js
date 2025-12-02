@@ -151,7 +151,12 @@ document.addEventListener("DOMContentLoaded", () => {
       loadConversations(); // Update sidebar timestamp/order
     } catch (e) {
       console.error("Failed to send:", e);
-      alert("Failed to send message.");
+
+      if (typeof showFlashMessage === "function") {
+        showFlashMessage("Failed to send message.", "danger");
+      } else {
+        console.warn("showFlashMessage not found, unable to display UI error.");
+      }
     }
   };
 

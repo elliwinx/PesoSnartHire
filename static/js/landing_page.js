@@ -341,6 +341,35 @@ document.addEventListener("DOMContentLoaded", () => {
   if (provinceSelect) loadProvinces();
   updateRecommendationRequirementFromLipa();
 
+  function showFlash(message, type = "danger") {
+    // Check for existing container or create one
+    let container = document.getElementById("flash-container");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "flash-container";
+      document.body.insertBefore(container, document.body.firstChild);
+    }
+
+    const flash = document.createElement("div");
+    flash.className = `flash ${type}`;
+    flash.innerHTML = `${message} <button class="close" onclick="this.parentElement.remove()">×</button>`;
+
+    container.appendChild(flash);
+
+    // Auto remove
+    setTimeout(() => {
+      flash.classList.add("fade-out");
+      setTimeout(() => flash.remove(), 500);
+    }, 3000);
+  }
+
+  function showLoader(text = "Processing — please wait...") {
+    const loader = document.getElementById("ajaxLoader");
+    const loaderText = document.getElementById("ajaxLoaderText");
+    if (loaderText) loaderText.textContent = text;
+    if (loader) loader.style.display = "flex";
+  }
+
   // === Form submit validation (client-side) ===
   if (form) {
     form.addEventListener("submit", function (e) {
@@ -352,13 +381,13 @@ document.addEventListener("DOMContentLoaded", () => {
         // file inputs: check files length; text/select: check value
         if (f.type === "file") {
           if (!f.files || f.files.length === 0) {
-            alert("Please upload all required files.");
+            showFlash("Please upload all required files.", "danger");
             f.focus();
             e.preventDefault();
             return;
           }
         } else if (!f.value || !f.value.trim()) {
-          alert("Please fill in all required fields.");
+          showFlash("Please fill in all required fields.", "danger");
           f.focus();
           e.preventDefault();
           return;
@@ -376,7 +405,7 @@ document.addEventListener("DOMContentLoaded", () => {
           .pop()
           .toLowerCase();
         if (ext !== "png") {
-          alert("Profile picture must be a PNG file.");
+          showFlash("Profile picture must be a PNG file.", "danger");
           e.preventDefault();
           return;
         }
@@ -384,7 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (resumeInput && resumeInput.files && resumeInput.files[0]) {
         const ext = resumeInput.files[0].name.split(".").pop().toLowerCase();
         if (ext !== "pdf") {
-          alert("Resume must be a PDF file.");
+          showFlash("Resume must be a PDF file.", "danger");
           e.preventDefault();
           return;
         }
@@ -400,11 +429,12 @@ document.addEventListener("DOMContentLoaded", () => {
           .pop()
           .toLowerCase();
         if (ext !== "pdf") {
-          alert("Recommendation letter must be a PDF file.");
+          showFlash("Recommendation letter must be a PDF file.", "danger");
           e.preventDefault();
           return;
         }
       }
+      showLoader("Registering... please wait");
     });
   }
   setTimeout(() => {
@@ -499,20 +529,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (field.type === "file") {
           if (!field.files || field.files.length === 0) {
-            alert(`Please upload: ${field.previousElementSibling.textContent}`);
+            showFlash(
+              `Please upload: ${field.previousElementSibling.textContent}`,
+              "danger"
+            );
             field.focus();
             e.preventDefault();
             console.log("[v0] Missing required file:", field.name);
             return;
           }
         } else if (!field.value || !field.value.trim()) {
-          alert(
-            `Please fill in: ${
-              field.previousElementSibling
-                ? field.previousElementSibling.textContent
-                : field.name
-            }`
-          );
+          // Get label text if available
+          const label = field.previousElementSibling
+            ? field.previousElementSibling.textContent
+            : field.name;
+          showFlash(`Please fill in: ${label}`, "danger");
           field.focus();
           e.preventDefault();
           console.log("[v0] Missing required field:", field.name);
@@ -526,8 +557,9 @@ document.addEventListener("DOMContentLoaded", () => {
           !doleNoPendingInput.files ||
           doleNoPendingInput.files.length === 0
         ) {
-          alert(
-            "Please upload DOLE - No Pending Case Certificate for Local recruitment."
+          showFlash(
+            "Please upload DOLE - No Pending Case Certificate for Local recruitment.",
+            "danger"
           );
           doleNoPendingInput.focus();
           e.preventDefault();
@@ -537,8 +569,9 @@ document.addEventListener("DOMContentLoaded", () => {
           !doleAuthorityInput.files ||
           doleAuthorityInput.files.length === 0
         ) {
-          alert(
-            "Please upload DOLE - Authority to Recruit for Local recruitment."
+          showFlash(
+            "Please upload DOLE - Authority to Recruit for Local recruitment.",
+            "danger"
           );
           doleAuthorityInput.focus();
           e.preventDefault();
@@ -546,16 +579,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       } else if (recruitmentTypeValue === "International") {
         if (!dmwNoPendingInput.files || dmwNoPendingInput.files.length === 0) {
-          alert(
-            "Please upload DMW - No Pending Case Certificate for International recruitment."
+          showFlash(
+            "Please upload DMW - No Pending Case Certificate for International recruitment.",
+            "danger"
           );
           dmwNoPendingInput.focus();
           e.preventDefault();
           return;
         }
         if (!licenseInput.files || licenseInput.files.length === 0) {
-          alert(
-            "Please upload DMW - License to Recruit for International recruitment."
+          showFlash(
+            "Please upload DMW - License to Recruit for International recruitment.",
+            "danger"
           );
           licenseInput.focus();
           e.preventDefault();
@@ -564,6 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       console.log("[v0] Form validation passed, submitting...");
+      showLoader("Registering... please wait");
     });
   }
 });

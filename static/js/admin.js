@@ -1384,7 +1384,8 @@ async function handleJobAction(action) {
     }
   }
 
-  setJobActionBusy(true);
+  showLoader("Updating job status...");
+  // setJobActionBusy(true);
   try {
     const res = await fetch(
       `/admin/job_reports/${activeJobContext.reportId}/action`,
@@ -1395,6 +1396,7 @@ async function handleJobAction(action) {
       }
     );
     const data = await res.json();
+    hideLoader();
     if (!res.ok || !data.success) {
       throw new Error(data.message || "Failed to update job status.");
     }
@@ -1405,6 +1407,7 @@ async function handleJobAction(action) {
     updateReportRowBadge(data.report_status || "Reviewed");
     showJobActionFeedback(data.message || "Status updated.", "success");
   } catch (err) {
+    hideLoader();
     console.error("[v0] Failed to process job action", err);
     showJobActionFeedback(err.message || "Failed to update job.", "danger");
   } finally {
@@ -1471,13 +1474,14 @@ async function handleApplicantReportAction(button) {
         }
       }
     }
-
+    showLoader("Processing action...");
     const res = await fetch(`/admin/applicant_reports/${reportId}/action`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     const data = await res.json();
+    hideLoader();
     if (!res.ok || !data.success) {
       throw new Error(data.message || "Failed to update applicant report.");
     }
@@ -1488,6 +1492,7 @@ async function handleApplicantReportAction(button) {
     );
     showFlashMessage(data.message || "Applicant status updated.", "success");
   } catch (err) {
+    hideLoader();
     console.error("[v0] Failed to process applicant report action", err);
     showFlashMessage(err.message || "Failed to update applicant.", "danger");
   } finally {
@@ -1585,4 +1590,137 @@ async function checkUnreadChats() {
     // Silent fail for background polling
     console.warn("Failed to check unread messages", e);
   }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const applicantReportBtns = document.querySelectorAll(
+    ".edit-applicant-status-btn"
+  );
+
+  console.log(
+    "[v0] Found applicant report buttons:",
+    applicantReportBtns.length
+  );
+
+  applicantReportBtns.forEach((btn) => {
+    // Remove any existing listeners to be safe (cloning trick)
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+
+    newBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const reportId = this.dataset.reportId;
+      console.log("[v0] Edit Status clicked for report:", reportId);
+
+      // Step 1: Choose Action
+      Swal.fire({
+        title: "Review Applicant Report",
+        text: "Choose an action for this report.",
+        icon: "question",
+        input: "select",
+        inputOptions: {
+          confirm: "Confirm (Restrict Applicant)",
+          reject: "Reject (Dismiss Report)",
+        },
+        inputPlaceholder: "Select an action",
+        showCancelButton: true,
+        confirmButtonText: "Next",
+        confirmButtonColor: "#7b1113",
+        cancelButtonText: "Cancel",
+      }).then((result) => {
+        if (!result.value) return;
+        const action = result.value;
+
+        if (action === "confirm") {
+          // Step 2 (Confirm): Ask for details
+          Swal.fire({
+            title: "Confirm Restriction",
+            html:
+              '<label style="display:block;text-align:left;font-weight:600;margin-bottom:5px;">Restriction Days (0 = Forever)</label>' +
+              '<input id="swal-blacklist-days" class="swal2-input" type="number" value="365" min="0">' +
+              '<label style="display:block;text-align:left;font-weight:600;margin-top:15px;margin-bottom:5px;">Note to Applicant</label>' +
+              '<textarea id="swal-note" class="swal2-textarea" placeholder="Reason for restriction..."></textarea>',
+            showCancelButton: true,
+            confirmButtonText: "Confirm & Restrict",
+            confirmButtonColor: "#dc3545",
+            preConfirm: () => {
+              const days = document.getElementById("swal-blacklist-days").value;
+              const note = document.getElementById("swal-note").value;
+              return { days, note };
+            },
+          }).then((confirmResult) => {
+            if (confirmResult.isConfirmed) {
+              submitApplicantReportAction(
+                reportId,
+                "confirm",
+                confirmResult.value.days,
+                confirmResult.value.note
+              );
+            }
+          });
+        } else {
+          // Step 2 (Reject): Ask for note
+          Swal.fire({
+            title: "Reject Report",
+            input: "textarea",
+            inputLabel: "Reason for rejection (Optional)",
+            inputPlaceholder: "Explain why this report is being rejected...",
+            showCancelButton: true,
+            confirmButtonText: "Reject Report",
+            confirmButtonColor: "#6c757d",
+          }).then((rejectResult) => {
+            if (rejectResult.isConfirmed) {
+              submitApplicantReportAction(
+                reportId,
+                "reject",
+                null,
+                rejectResult.value
+              );
+            }
+          });
+        }
+      });
+    });
+  });
+});
+
+// Helper API Call for Applicant Reports
+function submitApplicantReportAction(reportId, action, days, note) {
+  if (typeof showLoader === "function") showLoader("Processing action...");
+
+  const payload = {
+    action: action,
+    moderator_note: note,
+    blacklist_days: days ? parseInt(days) : null,
+  };
+
+  fetch(`/admin/applicant_reports/${reportId}/action`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (typeof hideLoader === "function") hideLoader();
+
+      if (data.success) {
+        Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: data.message,
+          confirmButtonColor: "#7b1113",
+        }).then(() => location.reload());
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message || "Failed to process request",
+        });
+      }
+    })
+    .catch((err) => {
+      if (typeof hideLoader === "function") hideLoader();
+      console.error(err);
+      Swal.fire("Error", "An unexpected error occurred", "error");
+    });
 }
