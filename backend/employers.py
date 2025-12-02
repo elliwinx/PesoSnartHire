@@ -2083,8 +2083,15 @@ def get_notifications():
         query = """SELECT notification_id, notification_type, title, message, is_read, created_at, related_ids
                    FROM notifications 
                    WHERE employer_id = %s 
-                   AND notification_type = 'job_application'"""
+                   AND notification_type IN ('job_application', 'report_verdict')"""
+
         params = [employer_id]
+
+        # Optional: Filter specific tabs if you want to separate them in UI later
+        if filter_type == 'job_application':
+            query += " AND notification_type = 'job_application'"
+        elif filter_type == 'reports':
+            query += " AND notification_type IN ('employer_reported', 'applicant_reported')"
 
         if filter_type == 'unread':
             query += " AND is_read = 0"
@@ -2098,7 +2105,6 @@ def get_notifications():
             """SELECT COUNT(*) as count 
                FROM notifications 
                WHERE employer_id = %s 
-               AND notification_type = 'job_application'
                AND is_read = 0""",
             (employer_id,),
             fetch="one"
@@ -2106,7 +2112,7 @@ def get_notifications():
 
         normalized = []
         for notif in notifications or []:
-            # parse related_ids if present
+            # ... (keep existing related_ids parsing logic) ...
             related = []
             if notif.get('related_ids'):
                 try:
@@ -2114,14 +2120,19 @@ def get_notifications():
                 except Exception:
                     related = []
 
-            # determine redirect url: prefer job-specific applicants list when related_ids contains a job id
+            # Logic to determine where clicking the notification goes
             redirect_url = "/employers/application_management"
-            if related and len(related) > 0:
+
+            # If it is a report verdict, maybe go to a specific page or stay on notifications
+            if notif['notification_type'] in ['employer_reported', 'applicant_reported']:
+                # Currently no specific "Report Detail" page for employers, so we keep them on notifications page
+                # or you can route them to the specific job if applicable
+                redirect_url = "#"
+            elif related and len(related) > 0:
                 try:
                     possible_job_id = int(related[0])
                     redirect_url = f"/employers/job/{possible_job_id}/applicants"
                 except Exception:
-                    # fall back to default
                     redirect_url = "/employers/application_management"
 
             normalized.append({
@@ -2158,14 +2169,13 @@ def get_unread_notif_count():
         return jsonify({'success': False, 'count': 0})
 
     try:
-        # Match the logic in your existing get_notifications route
-        # currently set to only show 'job_application' types
+        # KEY FIX: Removed "AND notification_type = 'job_application'"
         query = """
         SELECT COUNT(*) as count 
         FROM notifications 
         WHERE employer_id = %s 
           AND is_read = 0 
-          AND notification_type = 'job_application'
+          AND notification_type IN ('job_application', 'report_verdict')
         """
         result = run_query(conn, query, (employer_id,), fetch="one")
         count = result['count'] if result else 0
@@ -2176,8 +2186,6 @@ def get_unread_notif_count():
         return jsonify({'success': False, 'count': 0})
     finally:
         conn.close()
-
-# New endpoint to mark single notification as read (matches front-end usage)
 
 
 @employers_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])

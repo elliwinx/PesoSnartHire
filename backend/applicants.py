@@ -858,46 +858,62 @@ def notifications():
         flash("Please complete your document reupload first.", "info")
         return redirect(url_for("applicants.account_security"))
 
-    # Fetch notifications for the current applicant and pass to template
     try:
+        # Fetch all notifications (the get_notifications function sorts by date)
+        # We will filter them here in Python to ensure logic is correct
         all_notifs = get_notifications(limit=200)
         applicant_id = session.get('applicant_id')
         notifications = []
-        # Normalize types that should NOT be shown to applicants (admin-only)
+
+        # Types that are STRICTLY for admin only (e.g., approvals)
+        # We removed 'applicant_reported' and 'employer_reported' from this list
+        # so they can pass through if they belong to the user.
         admin_only_types = {
-            'employer_approval', 'applicant_approval', 'applicant_reported', 'employer_reported', 'employer_outdated_docu', 'applicant_batch'
+            'employer_approval',
+            'applicant_approval',
+            'employer_outdated_docu',
+            'applicant_batch'
         }
+
         for n in (all_notifs or []):
             try:
-                # First, always skip admin-only notification types regardless of FK (defensive for existing bad rows)
+                # 1. Skip strict admin types
                 if n.get('notification_type') in admin_only_types:
                     continue
 
-                # direct FK match
+                # 2. KEY FIX: If it's a report notification, ONLY show if it is
+                #    explicitly assigned to this applicant (Foreign Key match).
+                #    This prevents applicants from seeing Admin-level global reports.
+                if n.get('notification_type') in ['applicant_reported', 'employer_reported']:
+                    if n.get('applicant_id') != applicant_id:
+                        continue
+
+                # 3. Standard ownership check
+                # Direct FK match
                 if n.get('applicant_id') == applicant_id:
                     notifications.append(n)
                     continue
 
-                # fallback: related_ids may contain the applicant id (stored as ints or strings)
+                # Fallback: related_ids match (legacy support)
                 related = n.get('related_ids') or []
                 related_norm = [int(x) if isinstance(x, (int, str)) and str(
                     x).isdigit() else None for x in related]
-                related_norm = [x for x in related_norm if x is not None]
                 if applicant_id in related_norm:
                     notifications.append(n)
+
             except Exception:
-                # be resilient to malformed related_ids
                 continue
+
+        # Sort locally just in case
         notifications.sort(key=lambda x: x.get(
             'created_at') or '', reverse=True)
         notifications.sort(key=lambda x: int(x.get('is_read', 1)))
+
     except Exception as e:
         print('[v0] Failed to load notifications:', e)
         notifications = []
 
     return render_template("Applicant/notif.html", notifications=notifications)
-
-# In applicants.py
 
 
 @applicants_bp.route('/api/notifications/unread-count')
@@ -911,14 +927,14 @@ def get_unread_notif_count():
         return jsonify({'success': False, 'count': 0})
 
     try:
-        # Count only unread notifications for this specific applicant
-        # Filtering out admin-only types to be safe
+        # UPDATED QUERY: Removed 'applicant_reported' and 'employer_reported' from the exclusion list
+        # so the red dot appears when a verdict arrives.
         query = """
         SELECT COUNT(*) as count 
         FROM notifications 
         WHERE applicant_id = %s 
           AND is_read = 0 
-          AND notification_type NOT IN ('employer_approval', 'applicant_approval', 'employer_reported', 'employer_outdated_docu', 'applicant_batch', 'job_application')
+          AND notification_type NOT IN ('employer_approval', 'applicant_approval', 'employer_reported', 'employer_outdated_docu', 'applicant_batch', 'job_application', 'applicant_reported')
         """
         result = run_query(conn, query, (applicant_id,), fetch="one")
         count = result['count'] if result else 0
