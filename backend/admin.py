@@ -3502,22 +3502,37 @@ def handle_job_report_action(report_id):
 
             # NOTIFY EMPLOYER (The Reported Party)
             if employer_id:
+                print(
+                    f"[notify] creating notification -> EMPLOYER {employer_id} (reported). job_id={job_id}")
                 create_notification(
                     notification_type="report_verdict",
                     title="Job Suspended",
-                    message=f"Your job '{job_position}' has been suspended. Reason: {report_reason}. Consequences: Applications cancelled, {days} days to respond.",
+                    message=(
+                        f"Your job '{job_position}' has been suspended. "
+                        f"Reason: {report_reason}. Consequences: Applications cancelled, {days} days to respond."
+                    ),
                     employer_id=employer_id,
-                    related_ids=[job_id]
+                    related_ids=[job_id, report_id]
                 )
+            else:
+                print(
+                    f"[warn] employer_id missing for job report {report_id} - cannot notify reported employer.")
 
             if reporter_id:
+                print(
+                    f"[notify] creating notification -> APPLICANT {reporter_id} (reporter). job_id={job_id}")
                 create_notification(
                     notification_type="report_verdict",
                     title="Report Confirmed",
-                    message=f"Your report against '{job_position}' was confirmed. The job has been suspended.",
+                    message=(
+                        f"Your report against '{job_position}' was confirmed. The job has been suspended."
+                    ),
                     applicant_id=reporter_id,
-                    related_ids=[job_id]
+                    related_ids=[job_id, report_id]
                 )
+            else:
+                print(
+                    f"[warn] reporter_id missing for job report {report_id} - cannot notify reporter.")
 
             # Update job status to suspended
             cursor.execute(
@@ -3626,16 +3641,22 @@ def handle_job_report_action(report_id):
             )
             conn.commit()
 
-            # NOTIFY REPORTER (The Applicant)
+            verdict_note = moderator_note if moderator_note else "No violation found."
             if reporter_id:
-                verdict_note = moderator_note if moderator_note else "No violation found."
+                print(
+                    f"[notify] creating REJECT notification -> APPLICANT {reporter_id}. report_id={report_id}")
                 create_notification(
                     notification_type="report_verdict",
                     title="Report Rejected",
-                    message=f"Your report against '{job_position}' was rejected. Verdict: {verdict_note}",
+                    message=(
+                        f"Your report against '{job_position}' was rejected. Verdict: {verdict_note}"
+                    ),
                     applicant_id=reporter_id,
-                    related_ids=[job_id]
+                    related_ids=[job_id, report_id]
                 )
+            else:
+                print(
+                    f"[warn] reporter_id missing for job report {report_id} - cannot notify reporter on reject.")
 
             # Send rejection email to reporter
             reporter_email = report.get("reporter_email")
@@ -3768,22 +3789,44 @@ def handle_applicant_report_action(report_id):
 
             report_reason = report.get('reason', 'Violation')
 
-            # NOTIFY APPLICANT (The Reported Party)
-            create_notification(
-                notification_type="report_verdict",
-                title="Account Restricted",
-                message=f"You have been restricted from {employer_name}. Reason: {report.get('reason')}. Duration: {blacklist_days} days.",
-                applicant_id=applicant_id
-            )
+            if applicant_id:
+                print(
+                    f"[notify] creating notification -> APPLICANT {applicant_id} (reported). report_id={report_id}, employer_id={employer_id}")
+                create_notification(
+                    notification_type="report_verdict",
+                    title="Account Restricted",
+                    message=(
+                        f"You have been restricted from {employer_name}. "
+                        f"Reason: {report.get('reason')}. Duration: {blacklist_days} days."
+                    ),
+                    applicant_id=applicant_id,
+                    related_ids=[report_id, employer_id] if employer_id else [
+                        report_id]
+                )
+            else:
+                print(
+                    f"[warn] applicant_id missing for report {report_id} - cannot notify reported party.")
 
-            # [Notify EMPLOYER (Reporter)
-            create_notification(
-                notification_type="report_verdict",
-                title="Report Rejected",
-                message=f"Your report against {report.get('applicant_name')} was confirmed. They are now restricted.",
-                employer_id=employer_id
-            )
+            # 2. NOTIFY REPORTER (The Employer) - FIXED TITLE & MESSAGE
+            if employer_id:
+                print(
+                    f"[notify] creating notification -> EMPLOYER {employer_id} (reporter). report_id={report_id}")
+                create_notification(
+                    notification_type="report_verdict",
+                    title="Report Confirmed",
+                    message=(
+                        f"Your report against {report.get('applicant_name', 'an applicant')} was confirmed. "
+                        f"They are now restricted from applying to your jobs."
+                    ),
+                    employer_id=employer_id,
+                    related_ids=[report_id, applicant_id] if applicant_id else [
+                        report_id]
+                )
+            else:
+                print(
+                    f"[warn] employer_id missing for report {report_id} - cannot notify reporter.")
 
+            # Send Email to Applicant
             safe_send_email(
                 "Application Restrictions - PESO SmartHire",
                 report.get("applicant_email"),
@@ -3806,14 +3849,7 @@ def handle_applicant_report_action(report_id):
                 """
             )
 
-            # Notify Employer (The Reporter)
-            create_notification(
-                notification_type="report_verdict",
-                title="Report Rejected",
-                message=f"Your report against {report.get('applicant_name')} was rejected. Verdict: {verdict_note}",
-                employer_id=employer_id
-            )
-
+            # Send Email to Employer
             safe_send_email(
                 "Report Confirmed - PESO SmartHire",
                 report.get("employer_email"),
@@ -3843,14 +3879,23 @@ def handle_applicant_report_action(report_id):
             conn.commit()
 
             verdict_note = moderator_note if moderator_note else "Insufficient evidence."
-
-            # NOTIFY EMPLOYER (The Reporter)
-            create_notification(
-                notification_type="report_verdict",
-                title="Report Rejected",
-                message=f"Your report against {report.get('applicant_name')} was rejected. Verdict: {verdict_note}",
-                employer_id=employer_id
-            )
+            if employer_id:
+                print(
+                    f"[notify] creating REJECT notification -> EMPLOYER {employer_id}. report_id={report_id}")
+                create_notification(
+                    notification_type="report_verdict",
+                    title="Report Rejected",
+                    message=(
+                        f"Your report against {report.get('applicant_name', 'an applicant')} was rejected. "
+                        f"Verdict: {verdict_note}"
+                    ),
+                    employer_id=employer_id,
+                    related_ids=[report_id, applicant_id] if applicant_id else [
+                        report_id]
+                )
+            else:
+                print(
+                    f"[warn] employer_id missing for report {report_id} - cannot notify reporter on reject.")
 
             safe_send_email(
                 "Report Rejected - PESO SmartHire",
