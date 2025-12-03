@@ -901,6 +901,10 @@ def notifications():
                     notifications.append(n)
                     continue
 
+                # FIX: If notification is explicitly for an employer, skip it (do not fallback to related_ids)
+                if n.get('employer_id'):
+                    continue
+
                 # Fallback: related_ids match (legacy support)
                 related = n.get('related_ids') or []
                 related_norm = [int(x) if isinstance(x, (int, str)) and str(
