@@ -3779,7 +3779,7 @@ def handle_applicant_report_action(report_id):
             # [Notify EMPLOYER (Reporter)
             create_notification(
                 notification_type="report_verdict",
-                title="Report Confirmed",
+                title="Report Rejected",
                 message=f"Your report against {report.get('applicant_name')} was confirmed. They are now restricted.",
                 employer_id=employer_id
             )
@@ -3794,10 +3794,10 @@ def handle_applicant_report_action(report_id):
                 
                 <p><strong>What this means:</strong></p>
                 <ul>
-                    <li>✅ You can still apply to all other companies on our platform</li>
-                    <li>✅ You can still login and use all platform features</li>
-                    <li>✅ You can still update your profile and resume</li>
-                    <li>❌ You cannot apply to {employer_name}'s job posts</li>
+                    <li> You can still apply to all other companies on our platform</li>
+                    <li> You can still login and use all platform features</li>
+                    <li> You can still update your profile and resume</li>
+                    <li> You cannot apply to {employer_name}'s job posts</li>
                 </ul>
                 
                 <p>This restriction will {'expire automatically after ' + str(blacklist_days) + ' days' if blacklist_days > 0 else 'remain in place until further review'}.</p>

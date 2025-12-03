@@ -21,6 +21,16 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/loader.css') }}"
     />
+    <style>
+      /* Force hide view button for report types regardless of how they are rendered */
+      .card[data-type="report_verdict"] .view-btn,
+      .card[data-type="verdict"] .view-btn,
+      .card[data-type="report_filed"] .view-btn,
+      .card[data-type="applicant_reported"] .view-btn,
+      .card[data-type="employer_reported"] .view-btn {
+        display: none !important;
+      }
+    </style>
   </head>
   <body>
     <header class="header">

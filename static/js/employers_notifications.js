@@ -62,6 +62,14 @@ function displayNotifications(notifications) {
     return;
   }
 
+    const reportTypes = [
+        "report_verdict",
+        "report_filed",
+        "applicant_reported",
+        "employer_reported",
+        "verdict"
+      ];
+
   container.innerHTML = notifications
     .map((notif) => {
       const timeAgo = formatTimeAgo(notif.created_at);
@@ -70,6 +78,8 @@ function displayNotifications(notifications) {
       // Fix safe strings for attributes
       const safeTitle = (notif.title || "").replace(/"/g, "&quot;");
       const safeMsg = (notif.message || "").replace(/"/g, "&quot;");
+
+      const shouldHideButton = reportTypes.includes(notif.notification_type);
 
       return `
             <div class="card ${isUnread ? "unread" : ""}" 
@@ -81,17 +91,21 @@ function displayNotifications(notifications) {
               <div class="card-details">
                 <h3>${notif.title}</h3>
                 <p>${notif.message}</p>
-                <small>Type: ${notif.notification_type} | ${timeAgo}</small>
+                <small>Type: ${notif.notification_type ? notif.notification_type.replace('_', ' ') : 'Notification'} | ${timeAgo}</small>              
               </div>
               <div class="card-actions">
                 ${badge}
-                <button class="view-btn" 
+                ${
+                  shouldHideButton
+                    ? "" // HIDE BUTTON
+                    : `<button class="view-btn" 
                         data-id="${notif.notification_id}"
                         data-type="${notif.notification_type}"
                         data-title="${safeTitle}"
                         data-message="${safeMsg}">
                     View
-                </button>
+                </button>`
+                }
               </div>
             </div>
           `;
@@ -110,7 +124,8 @@ function displayNotifications(notifications) {
       await markNotificationAsRead(id);
 
       // If Report Verdict or Report Filed, open modal
-      if (type === "report_verdict" || type === "report_filed") {
+      // FIXED: Use includes() to catch all report types defined in reportTypes array
+      if (reportTypes.includes(type)) {
         openNotifModal(title, message);
         return;
       }
@@ -132,8 +147,8 @@ function displayNotifications(notifications) {
 
         await markNotificationAsRead(id);
 
-        // If Report Verdict, open modal
-        if (type === "report_verdict" || type === "report_filed") {
+      // FIXED: Use includes() to catch all report types
+        if (reportTypes.includes(type)) {
           openNotifModal(title, message);
           return;
         }
