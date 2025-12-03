@@ -14,11 +14,19 @@ def create_connection():
     """
     try:
         connection = mysql.connector.connect(
+<<<<<<< HEAD
             host=os.getenv("DB_HOST", "localhost"),
             port=int(os.getenv("DB_PORT", 3306)),
             user=os.getenv("DB_USER", "root"),
             password=os.getenv("DB_PASSWORD", ""),
             database=os.getenv("DB_NAME", "peso_smarthire")
+=======
+            host="localhost",
+            port=3307,
+            user="root",
+            password="",
+            database="peso_smarthire"
+>>>>>>> support
         )
 
         if connection.is_connected():
