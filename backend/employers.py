@@ -2106,11 +2106,14 @@ def get_notifications():
         return jsonify({"success": False, "notifications": []})
 
     try:
-        # [FIX] Expanded the list of notification types to include reports
+        # [FIX] Reverted to only show job_application and report_verdict
+        # report_verdict covers both:
+        # 1. When the employer reported someone (Confirmation/Rejection)
+        # 2. When the employer was reported and action was taken (Notice of being reported)
         query = """SELECT notification_id, notification_type, title, message, is_read, created_at, related_ids
                    FROM notifications 
                    WHERE employer_id = %s 
-                   AND notification_type IN ('job_application', 'report_verdict', 'employer_reported', 'applicant_reported', 'report_filed')"""
+                   AND notification_type IN ('job_application', 'report_verdict')"""
 
         params = [employer_id]
 
@@ -2196,13 +2199,13 @@ def get_unread_notif_count():
         return jsonify({'success': False, 'count': 0})
 
     try:
-        # [FIX] Added report types to the IN clause
+        # [FIX] Reverted to only count relevant types
         query = """
         SELECT COUNT(*) as count 
         FROM notifications 
         WHERE employer_id = %s 
           AND is_read = 0 
-          AND notification_type IN ('job_application', 'report_verdict', 'employer_reported', 'applicant_reported', 'report_filed')
+          AND notification_type IN ('job_application', 'report_verdict')
         """
         result = run_query(conn, query, (employer_id,), fetch="one")
         count = result['count'] if result else 0
