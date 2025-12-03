@@ -2521,22 +2521,33 @@ def applications_trend():
 @admin_bp.route("/api/notifications", methods=["GET"])
 def api_get_notifications():
     filter_param = request.args.get("filter", "all")
-    notification_type = request.args.get("type")
 
+    # Initialize filters
     is_read = None
+    notification_type = None
+
+    # 1. Interpret the filter parameter
     if filter_param == "read":
         is_read = True
     elif filter_param == "unread":
         is_read = False
+    elif filter_param != "all":
+        # Map frontend filter names to database notification_types
+        # (See templates/Admin/admin_notif.html data-filter attributes)
+        type_mapping = {
+            "applicant_outdated": "applicant_outdated_docu",
+            "employer_outdated": "employer_outdated_docu"
+        }
+        # Use mapped value or fallback to the param itself (e.g., 'applicant_approval')
+        notification_type = type_mapping.get(filter_param, filter_param)
 
-    # 1. Fetch ALL notifications first (we will filter in Python)
-    # We don't use exclude_types here anymore to avoid leaking new types
+    # 2. Fetch filtered notifications
     all_notifications = get_notifications(
         notification_type=notification_type,
         is_read=is_read
     )
 
-    # 2. Define STRICT list of Admin-only notification types
+    # 3. Define STRICT list of Admin-only notification types (Security Allowlist)
     admin_types = {
         'applicant_approval',
         'employer_approval',
@@ -2547,7 +2558,7 @@ def api_get_notifications():
         'applicant_batch'
     }
 
-    # 3. Filter: Keep only notifications that belong to Admin
+    # 4. Filter: Ensure we only return admin-allowed types
     final_notifications = [
         n for n in all_notifications
         if n.get('notification_type') in admin_types
@@ -2558,8 +2569,6 @@ def api_get_notifications():
         "notifications": final_notifications,
         "count": len(final_notifications)
     })
-
-# ===== API: Mark Notification as Read =====
 
 
 @admin_bp.route("/api/notifications/<int:notification_id>/read", methods=["POST"])
