@@ -4,6 +4,7 @@
     data-application-id="{{ application_id }}"
     data-job-id="{{ job.job_id }}"
     data-application-status="{{ application_status }}"
+    data-has-cancelled-once="{{ has_cancelled_once|lower if has_cancelled_once is defined else 'false' }}"
   ></div>
 
   <div class="job-title-row">

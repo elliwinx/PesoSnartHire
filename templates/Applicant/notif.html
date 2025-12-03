@@ -98,6 +98,10 @@
         <div
           class="card {% if not notif.is_read %}unread{% endif %}"
           data-notif-id="{{ notif.notification_id }}"
+          data-type="{{ notif.notification_type }}"
+          data-title="{{ notif.title }}"
+          data-message="{{ notif.message }}"
+          data-related-ids="{{ (notif.related_ids or [])|tojson }}"
         >
           <div class="card-details">
             <h3>{{ notif.title }}</h3>
@@ -119,7 +123,7 @@
             <button
               class="view-btn"
               data-notif-id="{{ notif.notification_id }}"
-              data-related-ids="{{ notif.related_ids|tojson }}"
+              data-related-ids="{{ (notif.related_ids or [])|tojson }}"
               data-type="{{ notif.notification_type }}"
               data-title="{{ notif.title }}"
               data-message="{{ notif.message }}"
@@ -213,11 +217,33 @@
             padding-top: 16px;
           "
         >
-          <button id="jobDetailsModalCancelBtn" data-application-id="123">
+          <button
+            id="jobDetailsModalCancelBtn"
+            class="btn btn-danger"
+            style="
+              margin-right: 10px;
+              background-color: #dc3545;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              display: none;
+            "
+          >
             Cancel Application
           </button>
           <button
             id="jobDetailsModalCloseBtn"
+            class="btn btn-secondary"
+            style="
+              background-color: #6c757d;
+              color: white;
+              padding: 8px 16px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+            "
             onclick="document.getElementById('jobDetailsModal').style.display='none'"
           >
             Close
@@ -278,6 +304,44 @@
         <div class="confirm-actions">
           <button id="confirmCancelYes" class="btn-yes">Yes, Cancel</button>
           <button id="confirmCancelNo" class="btn-no">No, Keep It</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 500px">
+        <span class="close" id="reportModalClose">&times;</span>
+        <div
+          class="modal-header"
+          style="
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+          "
+        >
+          <h3
+            class="modal-title"
+            id="reportModalTitle"
+            style="margin: 0; color: #7b1113"
+          >
+            Report Notification
+          </h3>
+        </div>
+
+        <div
+          class="modal-body"
+          id="reportModalBody"
+          style="font-size: 1rem; color: #333; line-height: 1.6"
+        ></div>
+
+        <div style="margin-top: 20px; text-align: right">
+          <button
+            class="btn btn-secondary"
+            onclick="document.getElementById('reportModal').style.display='none'"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

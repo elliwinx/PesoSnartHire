@@ -3780,14 +3780,6 @@ def handle_applicant_report_action(report_id):
                 expires_at
             ))
 
-            # Update any existing applications to this employer to "Blacklisted"
-            cursor.execute("""
-                UPDATE applications 
-                SET status = 'Blacklisted' 
-                WHERE applicant_id = %s 
-                AND job_id IN (SELECT job_id FROM jobs WHERE employer_id = %s)
-            """, (applicant_id, employer_id))
-
             # Mark report as confirmed
             cursor.execute(
                 "UPDATE applicant_reports SET status = %s, updated_at = NOW() WHERE id = %s",

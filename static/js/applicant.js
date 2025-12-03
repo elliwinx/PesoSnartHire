@@ -1575,14 +1575,32 @@ document.addEventListener("DOMContentLoaded", () => {
           ${interviewHtml}
         `;
 
-      // Button visibility logic
+      // Button visibility logic - show cancel button if:
+      // 1. Status is NOT "Cancelled" AND
+      // 2. Has NOT cancelled once before (has_cancelled_once is false/undefined/null)
       if (cancelBtn) {
-        if (app.status === "Pending") {
+        // Handle undefined/null cases - default to false (hasn't cancelled)
+        const hasCancelledOnce = app.has_cancelled_once === true || app.has_cancelled_once === "true";
+        const status = (app.status || "").toLowerCase();
+        const isCancelled = status === "cancelled";
+        
+        console.log("[v0] Cancel button logic:", {
+          status,
+          isCancelled,
+          has_cancelled_once: app.has_cancelled_once,
+          hasCancelledOnce,
+          shouldShow: !isCancelled && !hasCancelledOnce
+        });
+        
+        // Show button unless: status is Cancelled OR has cancelled once before
+        if (!isCancelled && !hasCancelledOnce) {
           cancelBtn.style.display = "inline-block";
           cancelBtn.onclick = () => window.cancelApplication(app.id);
         } else {
           cancelBtn.style.display = "none";
         }
+      } else {
+        console.warn("[v0] Cancel button element not found!");
       }
       if (closeBtn)
         closeBtn.onclick = () => {

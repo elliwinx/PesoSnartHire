@@ -838,13 +838,29 @@ def job_page(job_id):
         application_id = application["id"] if application else None
         # [FIX] Get the status
         application_status = application["status"] if application else None
+        
+        # Check if application was cancelled before
+        has_cancelled_once = False
+        if application_id:
+            cancellation_history = run_query(
+                conn,
+                """
+                SELECT COUNT(*) as count
+                FROM applications_history
+                WHERE application_id = %s AND new_status = 'Cancelled'
+                """,
+                (application_id,),
+                fetch="one"
+            )
+            has_cancelled_once = (cancellation_history.get('count', 0) > 0) if cancellation_history else False
 
-        # [FIX] Pass application_status to the template
+        # [FIX] Pass application_status and has_cancelled_once to the template
         return render_template(
             "Applicant/job_modal_content.html",
             job=job,
             application_id=application_id,
-            application_status=application_status
+            application_status=application_status,
+            has_cancelled_once=has_cancelled_once
         )
 
     except Exception as e:
@@ -1128,6 +1144,20 @@ def api_get_application_details(application_id):
             print('[v0] Application not found')
             return jsonify({'success': False, 'message': 'Application not found'}), 404
 
+        # Check if application was cancelled before (check history for 'Cancelled' status)
+        application_id = row.get('id')
+        cancellation_history = run_query(
+            conn,
+            """
+            SELECT COUNT(*) as count
+            FROM applications_history
+            WHERE application_id = %s AND new_status = 'Cancelled'
+            """,
+            (application_id,),
+            fetch='one'
+        )
+        has_cancelled_once = (cancellation_history.get('count', 0) > 0) if cancellation_history else False
+
         # Format salary range
         min_salary = row.get('min_salary', 0)
         max_salary = row.get('max_salary', 0)
@@ -1142,6 +1172,7 @@ def api_get_application_details(application_id):
 
         application = {
             'id': row.get('id'),
+            'job_id': row.get('job_id'),
             'job_position': row.get('job_position') or 'N/A',
             'employer_name': row.get('employer_name') or 'N/A',
             'location': row.get('city') or 'Not specified',
@@ -1151,7 +1182,8 @@ def api_get_application_details(application_id):
             'salary_range': salary_range,
             'num_vacancy': row.get('num_vacancy', 0),
             'applied_at': applied_date_str,
-            'status': row.get('status') or 'Pending'
+            'status': row.get('status') or 'Pending',
+            'has_cancelled_once': has_cancelled_once
         }
 
         return jsonify({'success': True, 'application': application})
@@ -1756,11 +1788,12 @@ def report_job(job_id):
     try:
         ensure_job_report_details_column(cursor)
         cursor.execute("""
-            INSERT INTO job_reports (job_id, applicant_id, reason, details, created_at, job_title, employer_name, status)
-            VALUES (%s, %s, %s, %s, NOW(), %s, %s, %s)
+            INSERT INTO job_reports (job_id, applicant_id, reporter_id, reason, details, created_at, job_title, employer_name, status)
+            VALUES (%s, %s, %s, %s, %s, NOW(), %s, %s, %s)
         """, (
             job_id,
             applicant_id,
+            applicant_id,  # reporter_id is the same as applicant_id since applicant is reporting
             reason,
             details if details else None,
             job.get('job_position'),
