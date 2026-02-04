@@ -9,6 +9,9 @@ from extensions import mail
 from flask_mail import Message
 from .notifications import create_notification
 
+import os, shutil
+from datetime import datetime
+from flask import request, jsonify
 
 applicants_bp = Blueprint("applicants", __name__)
 

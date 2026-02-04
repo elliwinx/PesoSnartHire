@@ -7,6 +7,8 @@ import json
 import traceback
 from db_connection import create_connection, run_query
 
+from flask import Blueprint
+notifications_bp = Blueprint("notifications", __name__)
 
 def create_notification(
     notification_type,
