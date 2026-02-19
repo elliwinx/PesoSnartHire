@@ -1,11 +1,78 @@
 from db_connection import create_connection, run_query
 from datetime import datetime
 import json
-
-
-import json
 import traceback
-from db_connection import create_connection, run_query
+
+
+def ensure_notification_type_value(target_value, conn=None):
+    """
+    Ensure the notifications.notification_type ENUM includes the provided value.
+    Automatically alters the column to append the missing type when needed.
+    """
+    if not target_value:
+        return
+
+    local_conn = conn or create_connection()
+    if not local_conn:
+        return
+
+    close_conn = conn is None
+    cursor = None
+
+    try:
+        cursor = local_conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT COLUMN_TYPE, DATA_TYPE, IS_NULLABLE, COLUMN_DEFAULT
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'notifications'
+              AND COLUMN_NAME = 'notification_type'
+        """)
+        column = cursor.fetchone()
+
+        if not column or (column.get("DATA_TYPE") != "enum"):
+            return
+
+        column_type = column.get("COLUMN_TYPE") or ""
+        if not column_type.lower().startswith("enum("):
+            return
+
+        raw_values = column_type[5:-1]  # strip leading "enum(" and trailing ")"
+        enum_options = []
+        for item in raw_values.split("','"):
+            cleaned = item.strip("'").strip()
+            if cleaned:
+                enum_options.append(cleaned)
+
+        if target_value in enum_options:
+            return
+
+        enum_options.append(target_value)
+        enum_clause = ",".join(f"'{opt}'" for opt in enum_options)
+
+        nullable = column.get("IS_NULLABLE") == "YES"
+        column_default = column.get("COLUMN_DEFAULT")
+
+        alter_sql = f"ALTER TABLE notifications MODIFY notification_type ENUM({enum_clause})"
+        if not nullable:
+            alter_sql += " NOT NULL"
+        if column_default is not None:
+            alter_sql += f" DEFAULT '{column_default}'"
+
+        cursor.execute(alter_sql)
+        local_conn.commit()
+
+    except Exception as exc:
+        print(f"[notifications] Failed to extend notification_type enum: {exc}")
+        try:
+            local_conn.rollback()
+        except Exception:
+            pass
+    finally:
+        if cursor:
+            cursor.close()
+        if close_conn:
+            local_conn.close()
 
 
 def create_notification(
@@ -29,6 +96,9 @@ def create_notification(
     conn = create_connection()
     if not conn:
         return False, "DB connection failed"
+
+    # Ensure ENUM columns include the desired notification_type value (for legacy DBs)
+    ensure_notification_type_value(notification_type, conn)
 
     # Normalize related_ids into a Python list
     parsed_related = None
@@ -228,7 +298,13 @@ def build_redirect_url(notif, admin_prefix="/admin"):
     return "#"
 
 
-def get_notifications(notification_type=None, is_read=None, limit=50, exclude_types=None):
+def get_notifications(
+        notification_type=None,
+        is_read=None,
+        limit=50,
+        exclude_types=None,
+        applicant_id=None,
+        employer_id=None):
     """
     Fetch notifications with optional filtering and normalize the returned dict keys
     so frontend can reliably use: notification_id, title, message, is_read, created_at, redirect_url, related_ids
@@ -249,6 +325,14 @@ def get_notifications(notification_type=None, is_read=None, limit=50, exclude_ty
     if is_read is not None:
         query += " AND is_read = %s"
         params.append(is_read)
+
+    if applicant_id:
+        query += " AND applicant_id = %s"
+        params.append(applicant_id)
+
+    if employer_id:
+        query += " AND employer_id = %s"
+        params.append(employer_id)
 
     if exclude_types and len(exclude_types) > 0:
         placeholders = ", ".join(["%s"] * len(exclude_types))

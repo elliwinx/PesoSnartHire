@@ -882,10 +882,10 @@ def notifications():
         return redirect(url_for("applicants.account_security"))
 
     try:
-        # Fetch all notifications (the get_notifications function sorts by date)
-        # We will filter them here in Python to ensure logic is correct
-        all_notifs = get_notifications(limit=200)
         applicant_id = session.get('applicant_id')
+        # Fetch notifications scoped to this applicant to avoid dropping
+        # verdict updates when the global notification table grows large.
+        all_notifs = get_notifications(limit=200, applicant_id=applicant_id)
         notifications = []
 
         # Types that are STRICTLY for admin only (e.g., approvals)

@@ -13,8 +13,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import os
 import json
 import traceback
-
-from .admin import is_applicant_blacklisted
 import magic
 
 employers_bp = Blueprint("employers", __name__)
@@ -1785,9 +1783,7 @@ def application_management():
 
 @employers_bp.route("/update_job_status/<int:job_id>/<new_status>", methods=["POST"])
 def update_job_status_route(job_id, new_status):
-    # NOTE: 'suspended' is a special admin-only status set when a job is sanctioned.
-    # Employers are NOT allowed to move a job out of 'suspended' via this route.
-    valid_statuses = ["active", "inactive", "archived", "deleted", "suspended"]
+    valid_statuses = ["active", "inactive", "archived", "deleted"]
     if new_status not in valid_statuses:
         return jsonify({"success": False, "message": "Invalid status."})
     return update_job_status(job_id, new_status)
@@ -1799,23 +1795,7 @@ def update_job_status(job_id, new_status):
         return jsonify({"success": False, "message": "Database connection failed."})
 
     try:
-        cursor = conn.cursor(dictionary=True)
-
-        # Fetch current status
-        cursor.execute("SELECT status FROM jobs WHERE job_id = %s", (job_id,))
-        row = cursor.fetchone()
-        if not row:
-            return jsonify({"success": False, "message": "Job not found."}), 404
-
-        current_status = (row.get("status") or "").lower()
-
-        # If the job is suspended, only admins (not this employer route) may change it.
-        if current_status == "suspended" and new_status.lower() != "suspended":
-            return jsonify({
-                "success": False,
-                "message": "This job post is suspended and its status cannot be changed by the employer."
-            }), 403
-
+        cursor = conn.cursor()
         cursor.execute(
             "UPDATE jobs SET status = %s WHERE job_id = %s", (new_status, job_id))
         conn.commit()
@@ -1980,24 +1960,6 @@ def update_job(job_id):
         return jsonify({"success": False, "message": "DB connection failed."}), 500
 
     try:
-        # Check current job status first – suspended jobs cannot be edited by employer
-        existing = run_query(
-            conn,
-            "SELECT status FROM jobs WHERE job_id = %s",
-            (job_id,),
-            fetch="one",
-        )
-
-        if not existing:
-            return jsonify({"success": False, "message": "Job not found."}), 404
-
-        current_status = (existing.get("status") or "").lower()
-        if current_status == "suspended":
-            return jsonify({
-                "success": False,
-                "message": "This job post is suspended and cannot be edited. Please contact the administrator."
-            }), 403
-
         form = request.form
         job_position = (form.get("ej_job_position") or "").strip()
         job_description = (form.get("ej_job_description") or "").strip()
@@ -2516,23 +2478,8 @@ def update_application_status(application_id):
         if not app_row or app_row.get('employer_id') != employer_id:
             return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
-        # If applicant is blacklisted/restricted for this employer, freeze status
-        applicant_id = app_row.get('applicant_id')
-        job_id = app_row.get('job_id')
-
-        # Double-check against blacklist table using shared helper
-        try:
-            blacklisted = is_applicant_blacklisted(applicant_id, employer_id)
-        except Exception as _e:
-            # Fail-safe: treat unknown errors conservatively and block updates
-            print(f"[v0] Error checking applicant blacklist for app_id={application_id}: {_e}")
-            blacklisted = True
-
-        if blacklisted:
-            return jsonify({
-                'success': False,
-                'message': 'This applicant is currently restricted. Status changes are disabled until the restriction is lifted.'
-            }), 403
+        if app_row.get('status') == 'Blacklisted':
+            return jsonify({'success': False, 'message': 'Cannot update status: Applicant is restricted.'}), 403
 
         # 1. Handle Interview Schedule (Upsert Logic)
         if new_status == "For Interview" and interview_data:
