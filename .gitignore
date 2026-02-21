@@ -32,6 +32,7 @@ flask_session/
 
 # Environment Variables
 backend/.env
+password.py
 
 # IDEs
 .vscode/
